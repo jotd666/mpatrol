@@ -39,6 +39,7 @@
 ;    a0        background #2 y position
 ;    c0        background control
 
+; E04C: bit 0: cocktail flip
 
 0000: F3          di
 0001: 31 00 E8    ld   sp,$E800
@@ -141,14 +142,14 @@
 00CD: A7          and  a
 00CE: 20 05       jr   nz,$00D5
 00D0: 3E 02       ld   a,$02
-00D2: 32 48 E0    ld   ($E048),a
+00D2: 32 48 E0    ld   (nb_credits_e048),a
 00D5: 21 46 E0    ld   hl,$E046
 00D8: 46          ld   b,(hl)
 00D9: CB 78       bit  7,b
 00DB: 20 15       jr   nz,$00F2
 00DD: CB 48       bit  1,b
 00DF: 20 1B       jr   nz,$00FC
-00E1: 3A 48 E0    ld   a,($E048)
+00E1: 3A 48 E0    ld   a,(nb_credits_e048)
 00E4: A7          and  a
 00E5: 20 1D       jr   nz,$0104
 00E7: CB 50       bit  2,b
@@ -238,7 +239,7 @@
 01AA: A7          and  a
 01AB: 3A 54 E0    ld   a,($E054)
 01AE: 28 E2       jr   z,$0192
-01B0: 3A 48 E0    ld   a,($E048)
+01B0: 3A 48 E0    ld   a,(nb_credits_e048)
 01B3: A7          and  a
 01B4: 20 0B       jr   nz,$01C1
 01B6: 21 57 2C    ld   hl,$2C57
@@ -569,7 +570,7 @@ jump_table_02D3
 046A: 3C          inc  a
 046B: 18 02       jr   $046F
 046D: D6 08       sub  $08
-046F: 21 48 E0    ld   hl,$E048
+046F: 21 48 E0    ld   hl,nb_credits_e048
 0472: 86          add  a,(hl)
 0473: 27          daa
 0474: 30 02       jr   nc,$0478
@@ -677,13 +678,13 @@ jump_table_02D3
 0526: C9          ret
 0527: 21 E2 2A    ld   hl,$2AE2
 052A: CD 00 03    call $0300
-052D: 3A 48 E0    ld   a,($E048)
+052D: 3A 48 E0    ld   a,(nb_credits_e048)
 0530: C3 AE 03    jp   $03AE
 0533: 21 D1 2A    ld   hl,$2AD1
 0536: CD 74 03    call $0374
 0539: CD 27 05    call $0527
 053C: 21 86 2A    ld   hl,$2A86
-053F: 3A 48 E0    ld   a,($E048)
+053F: 3A 48 E0    ld   a,(nb_credits_e048)
 0542: 3D          dec  a
 0543: 28 03       jr   z,$0548
 0545: 21 97 2A    ld   hl,$2A97
@@ -692,7 +693,7 @@ jump_table_02D3
 054E: E6 03       and  $03
 0550: C8          ret  z
 0551: 1F          rra
-0552: 3A 48 E0    ld   a,($E048)
+0552: 3A 48 E0    ld   a,(nb_credits_e048)
 0555: 06 80       ld   b,$80
 0557: 38 06       jr   c,$055F
 0559: D6 01       sub  $01
@@ -702,12 +703,13 @@ jump_table_02D3
 055F: D6 01       sub  $01
 0561: 27          daa
 0562: F3          di
-0563: 32 48 E0    ld   ($E048),a
+0563: 32 48 E0    ld   (nb_credits_e048),a
 0566: 78          ld   a,b
 0567: 32 46 E0    ld   ($E046),a
 056A: 3C          inc  a
 056B: FB          ei
 056C: C9          ret
+
 056D: 21 00 E1    ld   hl,$E100
 0570: 11 40 C8    ld   de,$C840
 0573: 01 40 00    ld   bc,$0040
@@ -744,7 +746,7 @@ jump_table_02D3
 05AD: A8          xor  b
 05AE: 5F          ld   e,a
 05AF: ED A3       outi
-05B1: 3A 00 88    ld   a,($8800)
+05B1: 3A 00 88    ld   a,($8800)		; protection
 05B4: E6 07       and  $07
 05B6: BB          cp   e
 05B7: C2 C3 00    jp   nz,$00C3
@@ -969,6 +971,7 @@ clear_area_05fa:
 072F: 23          inc  hl
 0730: 77          ld   (hl),a
 0731: C9          ret
+
 0732: 1F          rra
 0733: 1F          rra
 0734: 2F          cpl
@@ -1076,6 +1079,7 @@ clear_area_05fa:
 0806: 2B          dec  hl
 0807: 10 F9       djnz $0802
 0809: C9          ret
+
 080A: 21 61 E2    ld   hl,$E261
 080D: 06 12       ld   b,$12
 080F: 18 F1       jr   $0802
@@ -1194,7 +1198,7 @@ clear_area_05fa:
 08D6: 23          inc  hl
 08D7: 4E          ld   c,(hl)
 08D8: 06 00       ld   b,$00
-08DA: 21 F5 08    ld   hl,$08F5
+08DA: 21 F5 08    ld   hl,jump_table_08F5
 08DD: 09          add  hl,bc
 08DE: 4E          ld   c,(hl)
 08DF: 23          inc  hl
@@ -1205,55 +1209,21 @@ clear_area_05fa:
 08E8: CD ED 08    call $08ED
 08EB: AF          xor  a
 08EC: E9          jp   (hl)
+
+
 08ED: 2F          cpl
 08EE: 47          ld   b,a
-08EF: 3A 3C E0    ld   a,($E03C)
+08EF: 3A 3C E0    ld   a,(jeep_base_y_e03c)
 08F2: 80          add  a,b
 08F3: 47          ld   b,a
 08F4: C9          ret
-08F5: 69          ld   l,c
-08F6: 09          add  hl,bc
-08F7: 5A          ld   e,d
-08F8: 09          add  hl,bc
-08F9: CF          rst  $08
-08FA: 09          add  hl,bc
-08FB: CD 09 F5    call $F509
-08FE: 0A          ld   a,(bc)
-08FF: 43          ld   b,e
-0900: 09          add  hl,bc
-0901: E2 0A 90    jp   po,$900A
-0904: 0A          ld   a,(bc)
-0905: 56          ld   d,(hl)
-0906: 0A          ld   a,(bc)
-0907: B7          or   a
-0908: 0A          ld   a,(bc)
-0909: 52          ld   d,d
-090A: 0A          ld   a,(bc)
-090B: 9F          sbc  a,a
-090C: 0A          ld   a,(bc)
-090D: C9          ret
-090E: 09          add  hl,bc
-090F: 25          dec  h
-0910: 0B          dec  bc
-0911: 76          halt
-0912: 09          add  hl,bc
-0913: 97          sub  a
-0914: 09          add  hl,bc
-0915: BA          cp   d
-0916: 09          add  hl,bc
-0917: 1E 0A       ld   e,$0A
-0919: 44          ld   b,h
-091A: 0A          ld   a,(bc)
-091B: 34          inc  (hl)
-091C: 09          add  hl,bc
-091D: 25          dec  h
-091E: 09          add  hl,bc
-091F: 1D          dec  e
-0920: 0B          dec  bc
-0921: B0          or   b
-0922: 09          add  hl,bc
-0923: 83          add  a,e
-0924: 09          add  hl,bc
+
+jump_table_08F5:
+	.word	$0969,$095A,$09CF,$09CD,$0AF5,$0943,$0AE2,$0A90
+	.word	$0A56,$0AB7,$0A52,$0A9F,$09C9,$0B25,$0976,$0997
+	.word	$09BA,$0A1E,$0A44,$0934,$0925,$0B1D,$09B0,$0983
+
+
 0925: DD 34 0A    inc  (ix+$0a)
 0928: DD 7E 0A    ld   a,(ix+$0a)
 092B: E6 1F       and  $1F
@@ -1326,6 +1296,7 @@ clear_area_05fa:
 09B5: 28 BF       jr   z,$0976
 09B7: 14          inc  d
 09B8: 18 BC       jr   $0976
+
 09BA: 3E 0E       ld   a,$0E
 09BC: 80          add  a,b
 09BD: 60          ld   h,b
@@ -1765,7 +1736,7 @@ display_status_bar_0b8a:
 0D4A: 32 4C E0    ld   ($E04C),a
 0D4D: 21 04 D0    ld   hl,$D004
 0D50: AE          xor  (hl)
-0D51: 21 3C E0    ld   hl,$E03C
+0D51: 21 3C E0    ld   hl,jeep_base_y_e03c
 0D54: 36 EF       ld   (hl),$EF
 0D56: 16 FF       ld   d,$FF
 0D58: 1F          rra
@@ -3181,7 +3152,7 @@ display_title_1218:
 1888: 32 D9 E1    ld   ($E1D9),a
 188B: 7C          ld   a,h
 188C: 2F          cpl
-188D: 21 3D E0    ld   hl,$E03D
+188D: 21 3D E0    ld   hl,x_scroll_horizon_e03d
 1890: 86          add  a,(hl)
 1891: 32 C0 E1    ld   ($E1C0),a
 1894: 2A 14 E3    ld   hl,($E314)
