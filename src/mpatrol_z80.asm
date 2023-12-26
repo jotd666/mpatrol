@@ -66,7 +66,7 @@
 
 0038: 08          ex   af,af'
 0039: D9          exx
-003A: CD 6D 05    call $056D
+003A: CD 6D 05    call update_sprites_056D
 003D: 21 4E E0    ld   hl,$E04E
 0040: 34          inc  (hl)
 0041: 7E          ld   a,(hl)
@@ -710,19 +710,28 @@ jump_table_02D3
 056B: FB          ei
 056C: C9          ret
 
-056D: 21 00 E1    ld   hl,$E100
+update_sprites_056D:
+; copy E100 => C800 ($40 bytes)
+056D: 21 00 E1    ld   hl,sprite_shadow_E100
 0570: 11 40 C8    ld   de,$C840
 0573: 01 40 00    ld   bc,$0040
 0576: ED B0       ldir
+; copy E140 => C820 ($20 bytes)
 0578: 1E 20       ld   e,$20
 057A: 0E 20       ld   c,$20
 057C: ED B0       ldir
 057E: 1E C0       ld   e,$C0
 0580: 0E 40       ld   c,$40
+; copy E160 => C8C0 ($40 bytes)
 0582: ED B0       ldir
+; copy E1A0 => C8A0 ($20 bytes)
 0584: 11 A0 C8    ld   de,$C8A0
 0587: 0E 20       ld   c,$20
 0589: ED B0       ldir
+; update scroll layers
+; E1C0: scroll X offset for ground
+; E1C1: scroll X offset for green background
+; E1C2: scroll X offset for blue background
 058B: 0E 1C       ld   c,$1C
 058D: 7E          ld   a,(hl)
 058E: 06 04       ld   b,$04
@@ -749,6 +758,7 @@ jump_table_02D3
 05B1: 3A 00 88    ld   a,($8800)		; protection
 05B4: E6 07       and  $07
 05B6: BB          cp   e
+; a must be the same as e
 05B7: C2 C3 00    jp   nz,$00C3
 05BA: 0E 80       ld   c,$80
 05BC: ED A3       outi
@@ -1551,7 +1561,7 @@ display_status_bar_0b8a:
 0BB2: 23          inc  hl
 0BB3: 22 16 E5    ld   ($E516),hl
 0BB6: C9          ret
-0BB7: 21 00 E1    ld   hl,$E100
+0BB7: 21 00 E1    ld   hl,sprite_shadow_E100
 0BBA: 01 00 04    ld   bc,$0400
 0BBD: CD FA 05    call clear_area_05fa
 0BC0: DD 21 00 E3 ld   ix,$E300
@@ -1722,7 +1732,7 @@ display_status_bar_0b8a:
 0D29: 21 00 80    ld   hl,$8000
 0D2C: 01 00 08    ld   bc,$0800
 0D2F: CD FA 05    call clear_area_05fa	; clear screen
-0D32: 21 00 E1    ld   hl,$E100
+0D32: 21 00 E1    ld   hl,sprite_shadow_E100
 0D35: 01 C6 00    ld   bc,$00C6
 0D38: CD FA 05    call clear_area_05fa	; clear part of RAM
 0D3B: 3A 43 E0    ld   a,($E043)
@@ -3154,7 +3164,7 @@ display_title_1218:
 188C: 2F          cpl
 188D: 21 3D E0    ld   hl,x_scroll_horizon_e03d
 1890: 86          add  a,(hl)
-1891: 32 C0 E1    ld   ($E1C0),a
+1891: 32 C0 E1    ld   (scroll_x_value_ground_layer_E1C0),a
 1894: 2A 14 E3    ld   hl,($E314)
 1897: 54          ld   d,h
 1898: 5D          ld   e,l
@@ -3171,7 +3181,7 @@ display_title_1218:
 18AB: 22 04 E5    ld   ($E504),hl
 18AE: 7C          ld   a,h
 18AF: 2F          cpl
-18B0: 32 C1 E1    ld   ($E1C1),a
+18B0: 32 C1 E1    ld   (scroll_x_value_green_layer_E1C1),a
 18B3: CB 3A       srl  d
 18B5: CB 1B       rr   e
 18B7: 2A 06 E5    ld   hl,($E506)
@@ -3179,7 +3189,7 @@ display_title_1218:
 18BB: 22 06 E5    ld   ($E506),hl
 18BE: 7C          ld   a,h
 18BF: 2F          cpl
-18C0: 32 C2 E1    ld   ($E1C2),a
+18C0: 32 C2 E1    ld   (scroll_x_value_blue_layer_E1C2),a
 18C3: CD 33 15    call $1533
 18C6: FE C4       cp   $C4
 18C8: 30 02       jr   nc,$18CC
@@ -4353,13 +4363,13 @@ display_title_1218:
 2944: A7          and  a
 2945: ED 52       sbc  hl,de
 2947: C9          ret
-2948: 21 00 E1    ld   hl,$E100
+2948: 21 00 E1    ld   hl,sprite_shadow_E100
 294B: 01 A4 00    ld   bc,$00A4
 294E: CD FA 05    call clear_area_05fa
 2951: 01 20 02    ld   bc,$0220
 2954: 21 E0 80    ld   hl,$80E0
 2957: C3 FA 05    jp   clear_area_05fa
-295A: 21 00 E1    ld   hl,$E100
+295A: 21 00 E1    ld   hl,sprite_shadow_E100
 295D: 01 C6 00    ld   bc,$00C6
 2960: CD FA 05    call clear_area_05fa
 2963: 01 20 03    ld   bc,$0320
@@ -4458,7 +4468,7 @@ service_mode_3300:
 3300: 3E FF       ld   a,$FF
 3302: D3 C0       out  ($C0),a
 3304: 32 C5 E1    ld   ($E1C5),a
-3307: 21 00 E1    ld   hl,$E100
+3307: 21 00 E1    ld   hl,sprite_shadow_E100
 330A: 36 00       ld   (hl),$00
 330C: 54          ld   d,h
 330D: 5D          ld   e,l
@@ -4599,7 +4609,7 @@ service_mode_3300:
 33EB: 21 66 3A    ld   hl,$3A66
 33EE: DD 21 F5 33 ld   ix,$33F5
 33F2: C3 65 34    jp   $3465
-33F5: 21 00 E1    ld   hl,$E100
+33F5: 21 00 E1    ld   hl,sprite_shadow_E100
 33F8: 36 00       ld   (hl),$00
 33FA: 54          ld   d,h
 33FB: 5D          ld   e,l
@@ -5263,7 +5273,7 @@ service_mode_3300:
 3965: C9          ret
 
 3966: CD AD 38    call $38AD
-3969: 11 00 E1    ld   de,$E100
+3969: 11 00 E1    ld   de,sprite_shadow_E100
 396C: 21 6D 3E    ld   hl,$3E6D
 396F: 01 10 00    ld   bc,$0010
 3972: ED B0       ldir
@@ -5274,7 +5284,7 @@ service_mode_3300:
 397F: 3A 00 D0    ld   a,($D000)
 3982: CB 4F       bit  1,a
 3984: 20 F9       jr   nz,$397F
-3986: 21 00 E1    ld   hl,$E100
+3986: 21 00 E1    ld   hl,sprite_shadow_E100
 3989: 36 00       ld   (hl),$00
 398B: 54          ld   d,h
 398C: 5D          ld   e,l
