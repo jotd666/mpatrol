@@ -1,0 +1,464 @@
+	.global	unknown_E000
+	.global	unknown_E008
+	.global	unknown_E00A
+	.global	unknown_E00B
+	.global	unknown_E00C
+	.global	unknown_E03E
+	.global	unknown_E03F
+	.global	unknown_E040
+	.global	unknown_E041
+	.global	unknown_E042
+	.global	unknown_E043
+	.global	unknown_E044
+	.global	unknown_E045
+	.global	unknown_E046
+	.global	unknown_E047
+	.global	unknown_E049
+	.global	unknown_E04A
+	.global	unknown_E04C
+	.global	unknown_E04D
+	.global	unknown_E04E
+	.global	unknown_E050
+	.global	unknown_E051
+	.global	unknown_E052
+	.global	unknown_E053
+	.global	unknown_E054
+	.global	unknown_E057
+	.global	unknown_E05B
+	.global	unknown_E05F
+	.global	unknown_E062
+	.global	unknown_E068
+	.global	unknown_E094
+	.global	unknown_E095
+	.global	unknown_E096
+	.global	unknown_E098
+	.global	unknown_E099
+	.global	unknown_E0D4
+	.global	unknown_E0D6
+	.global	unknown_E0D8
+	.global	unknown_E0DA
+	.global	unknown_E0DC
+	.global	unknown_E0E4
+	.global	unknown_E0E6
+	.global	unknown_E0E8
+	.global	unknown_E0E9
+	.global	unknown_E0EB
+	.global	unknown_E0ED
+	.global	unknown_E0EE
+	.global	unknown_E0EF
+	.global	unknown_E0F1
+	.global	unknown_E0F3
+	.global	unknown_E0F4
+	.global	unknown_E0F6
+	.global	unknown_E0F9
+	.global	unknown_E172
+	.global	unknown_E174
+	.global	unknown_E1A2
+	.global	unknown_E1A4
+	.global	unknown_E1A6
+	.global	unknown_E1AA
+	.global	unknown_E1AE
+	.global	unknown_E1C3
+	.global	unknown_E1C4
+	.global	unknown_E1C5
+	.global	unknown_E1C6
+	.global	unknown_E1C9
+	.global	unknown_E1CF
+	.global	unknown_E1D0
+	.global	unknown_E1D1
+	.global	unknown_E1D2
+	.global	unknown_E1D3
+	.global	unknown_E1D4
+	.global	unknown_E1D5
+	.global	unknown_E1D6
+	.global	unknown_E1D7
+	.global	unknown_E1D8
+	.global	unknown_E1D9
+	.global	unknown_E1DA
+	.global	unknown_E1DC
+	.global	unknown_E1DD
+	.global	unknown_E1DE
+	.global	unknown_E1DF
+	.global	unknown_E1E0
+	.global	unknown_E1E1
+	.global	unknown_E1E2
+	.global	unknown_E210
+	.global	unknown_E23F
+	.global	unknown_E242
+	.global	unknown_E261
+	.global	unknown_E277
+	.global	unknown_E300
+	.global	unknown_E302
+	.global	unknown_E303
+	.global	unknown_E304
+	.global	unknown_E305
+	.global	unknown_E306
+	.global	unknown_E307
+	.global	unknown_E308
+	.global	unknown_E309
+	.global	unknown_E30A
+	.global	unknown_E30D
+	.global	unknown_E30E
+	.global	unknown_E314
+	.global	unknown_E31A
+	.global	unknown_E31C
+	.global	unknown_E320
+	.global	unknown_E322
+	.global	unknown_E323
+	.global	unknown_E327
+	.global	unknown_E32A
+	.global	unknown_E32D
+	.global	unknown_E32F
+	.global	unknown_E330
+	.global	unknown_E370
+	.global	unknown_E372
+	.global	unknown_E3B0
+	.global	unknown_E3C0
+	.global	unknown_E3FF
+	.global	unknown_E400
+	.global	unknown_E4F0
+	.global	unknown_E500
+	.global	unknown_E501
+	.global	unknown_E502
+	.global	unknown_E503
+	.global	unknown_E504
+	.global	unknown_E506
+	.global	unknown_E508
+	.global	unknown_E509
+	.global	unknown_E50B
+	.global	unknown_E50D
+	.global	unknown_E50E
+	.global	unknown_E50F
+	.global	unknown_E512
+	.global	unknown_E513
+	.global	unknown_E514
+	.global	unknown_E516
+	.global	unknown_E518
+	.global	unknown_E523
+	.global	unknown_E52E
+	.global	unknown_E700
+	.global	unknown_E701
+	.global	unknown_E702
+	.global	unknown_E705
+	.global	unknown_E706
+	.global	unknown_E707
+	.global	unknown_E708
+	.global	unknown_E70B
+	.global	unknown_E70D
+	.global	unknown_E70E
+	.global	unknown_E70F
+	.global	unknown_E710
+	.global	unknown_E711
+	.global	unknown_E712
+	.global	unknown_E800
+	.global	unknown_pointer_E0F7
+
+unknown_E000:
+	ds.b	8
+unknown_E008:
+	ds.b	2
+unknown_E00A:
+	ds.b	1
+unknown_E00B:
+	ds.b	1
+unknown_E00C:
+	ds.b	50
+unknown_E03E:
+	ds.b	1
+unknown_E03F:
+	ds.b	1
+unknown_E040:
+	ds.b	1
+unknown_E041:
+	ds.b	1
+unknown_E042:
+	ds.b	1
+unknown_E043:
+	ds.b	1
+unknown_E044:
+	ds.b	1
+unknown_E045:
+	ds.b	1
+unknown_E046:
+	ds.b	1
+unknown_E047:
+	ds.b	2
+unknown_E049:
+	ds.b	1
+unknown_E04A:
+	ds.b	2
+unknown_E04C:
+	ds.b	1
+unknown_E04D:
+	ds.b	1
+unknown_E04E:
+	ds.b	2
+unknown_E050:
+	ds.b	1
+unknown_E051:
+	ds.b	1
+unknown_E052:
+	ds.b	1
+unknown_E053:
+	ds.b	1
+unknown_E054:
+	ds.b	3
+unknown_E057:
+	ds.b	4
+unknown_E05B:
+	ds.b	4
+unknown_E05F:
+	ds.b	3
+unknown_E062:
+	ds.b	6
+unknown_E068:
+	ds.b	44
+unknown_E094:
+	ds.b	1
+unknown_E095:
+	ds.b	1
+unknown_E096:
+	ds.b	2
+unknown_E098:
+	ds.b	1
+unknown_E099:
+	ds.b	59
+unknown_E0D4:
+	ds.b	2
+unknown_E0D6:
+	ds.b	2
+unknown_E0D8:
+	ds.b	2
+unknown_E0DA:
+	ds.b	2
+unknown_E0DC:
+	ds.b	8
+unknown_E0E4:
+	ds.b	2
+unknown_E0E6:
+	ds.b	2
+unknown_E0E8:
+	ds.b	1
+unknown_E0E9:
+	ds.b	2
+unknown_E0EB:
+	ds.b	2
+unknown_E0ED:
+	ds.b	1
+unknown_E0EE:
+	ds.b	1
+unknown_E0EF:
+	ds.b	2
+unknown_E0F1:
+	ds.b	2
+unknown_E0F3:
+	ds.b	1
+unknown_E0F4:
+	ds.b	2
+unknown_E0F6:
+	ds.b	1
+	.align	2
+unknown_pointer_E0F7:
+	ds.l	1
+unknown_E0F9:
+	ds.b	121
+unknown_E172:
+	ds.b	2
+unknown_E174:
+	ds.b	46
+unknown_E1A2:
+	ds.b	2
+unknown_E1A4:
+	ds.b	2
+unknown_E1A6:
+	ds.b	4
+unknown_E1AA:
+	ds.b	4
+unknown_E1AE:
+	ds.b	21
+unknown_E1C3:
+	ds.b	1
+unknown_E1C4:
+	ds.b	1
+unknown_E1C5:
+	ds.b	1
+unknown_E1C6:
+	ds.b	3
+unknown_E1C9:
+	ds.b	6
+unknown_E1CF:
+	ds.b	1
+unknown_E1D0:
+	ds.b	1
+unknown_E1D1:
+	ds.b	1
+unknown_E1D2:
+	ds.b	1
+unknown_E1D3:
+	ds.b	1
+unknown_E1D4:
+	ds.b	1
+unknown_E1D5:
+	ds.b	1
+unknown_E1D6:
+	ds.b	1
+unknown_E1D7:
+	ds.b	1
+unknown_E1D8:
+	ds.b	1
+unknown_E1D9:
+	ds.b	1
+unknown_E1DA:
+	ds.b	2
+unknown_E1DC:
+	ds.b	1
+unknown_E1DD:
+	ds.b	1
+unknown_E1DE:
+	ds.b	1
+unknown_E1DF:
+	ds.b	1
+unknown_E1E0:
+	ds.b	1
+unknown_E1E1:
+	ds.b	1
+unknown_E1E2:
+	ds.b	46
+unknown_E210:
+	ds.b	47
+unknown_E23F:
+	ds.b	3
+unknown_E242:
+	ds.b	31
+unknown_E261:
+	ds.b	22
+unknown_E277:
+	ds.b	137
+unknown_E300:
+	ds.b	2
+unknown_E302:
+	ds.b	1
+unknown_E303:
+	ds.b	1
+unknown_E304:
+	ds.b	1
+unknown_E305:
+	ds.b	1
+unknown_E306:
+	ds.b	1
+unknown_E307:
+	ds.b	1
+unknown_E308:
+	ds.b	1
+unknown_E309:
+	ds.b	1
+unknown_E30A:
+	ds.b	3
+unknown_E30D:
+	ds.b	1
+unknown_E30E:
+	ds.b	6
+unknown_E314:
+	ds.b	6
+unknown_E31A:
+	ds.b	2
+unknown_E31C:
+	ds.b	4
+unknown_E320:
+	ds.b	2
+unknown_E322:
+	ds.b	1
+unknown_E323:
+	ds.b	4
+unknown_E327:
+	ds.b	3
+unknown_E32A:
+	ds.b	3
+unknown_E32D:
+	ds.b	2
+unknown_E32F:
+	ds.b	1
+unknown_E330:
+	ds.b	64
+unknown_E370:
+	ds.b	2
+unknown_E372:
+	ds.b	62
+unknown_E3B0:
+	ds.b	16
+unknown_E3C0:
+	ds.b	63
+unknown_E3FF:
+	ds.b	1
+unknown_E400:
+	ds.b	240
+unknown_E4F0:
+	ds.b	16
+unknown_E500:
+	ds.b	1
+unknown_E501:
+	ds.b	1
+unknown_E502:
+	ds.b	1
+unknown_E503:
+	ds.b	1
+unknown_E504:
+	ds.b	2
+unknown_E506:
+	ds.b	2
+unknown_E508:
+	ds.b	1
+unknown_E509:
+	ds.b	2
+unknown_E50B:
+	ds.b	2
+unknown_E50D:
+	ds.b	1
+unknown_E50E:
+	ds.b	1
+unknown_E50F:
+	ds.b	3
+unknown_E512:
+	ds.b	1
+unknown_E513:
+	ds.b	1
+unknown_E514:
+	ds.b	2
+unknown_E516:
+	ds.b	2
+unknown_E518:
+	ds.b	11
+unknown_E523:
+	ds.b	11
+unknown_E52E:
+	ds.b	466
+unknown_E700:
+	ds.b	1
+unknown_E701:
+	ds.b	1
+unknown_E702:
+	ds.b	3
+unknown_E705:
+	ds.b	1
+unknown_E706:
+	ds.b	1
+unknown_E707:
+	ds.b	1
+unknown_E708:
+	ds.b	3
+unknown_E70B:
+	ds.b	2
+unknown_E70D:
+	ds.b	1
+unknown_E70E:
+	ds.b	1
+unknown_E70F:
+	ds.b	1
+unknown_E710:
+	ds.b	1
+unknown_E711:
+	ds.b	1
+unknown_E712:
+	ds.b	238
+unknown_E800:
+	ds.b	0

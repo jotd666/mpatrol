@@ -41,8 +41,9 @@
 
 ; E04C: bit 0: cocktail flip
 
+mpatrol_reset:
 0000: F3          di
-0001: 31 00 E8    ld   sp,$E800
+0001: 31 00 E8    ld   sp,unknown_E800
 0004: ED 56       im   1
 0006: 3A 04 D0    ld   a,($D004)
 0009: A7          and  a
@@ -64,10 +65,11 @@
 0030: EB          ex   de,hl
 0031: E9          jp   (hl)
 
+mpatrol_irq_0038:
 0038: 08          ex   af,af'
 0039: D9          exx
 003A: CD 6D 05    call update_sprites_056D
-003D: 21 4E E0    ld   hl,$E04E
+003D: 21 4E E0    ld   hl,unknown_E04E
 0040: 34          inc  (hl)
 0041: 7E          ld   a,(hl)
 0042: 23          inc  hl
@@ -81,10 +83,10 @@
 004C: 3A 04 D0    ld   a,($D004)
 004F: A7          and  a
 0050: FA 93 00    jp   m,$0093
-0053: 21 4E E0    ld   hl,$E04E
+0053: 21 4E E0    ld   hl,unknown_E04E
 0056: 34          inc  (hl)
 0057: 01 03 00    ld   bc,$0003
-005A: 21 4E E0    ld   hl,$E04E
+005A: 21 4E E0    ld   hl,unknown_E04E
 005D: 35          dec  (hl)
 005E: 10 FE       djnz $005E
 0060: 0D          dec  c
@@ -98,15 +100,15 @@
 0068: FB          ei
 0069: CD 8A 0B    call display_status_bar_0b8a
 006C: 3E 01       ld   a,$01
-006E: 32 4D E0    ld   ($E04D),a
-0071: 32 0F E5    ld   ($E50F),a
+006E: 32 4D E0    ld   (unknown_E04D),a
+0071: 32 0F E5    ld   (unknown_E50F),a
 0074: 3C          inc  a
-0075: 32 08 E5    ld   ($E508),a
+0075: 32 08 E5    ld   (unknown_E508),a
 0078: C3 B7 0B    jp   $0BB7
 007B: 06 00       ld   b,$00
 007D: AF          xor  a
-007E: 32 4D E0    ld   ($E04D),a
-0081: 21 46 E0    ld   hl,$E046
+007E: 32 4D E0    ld   (unknown_E04D),a
+0081: 21 46 E0    ld   hl,unknown_E046
 0084: 70          ld   (hl),b
 0085: FB          ei
 0086: CD 45 07    call $0745
@@ -117,13 +119,13 @@
 0093: CD CB 05    call $05CB
 0096: 3A 00 D0    ld   a,($D000)
 0099: 2F          cpl
-009A: 32 53 E0    ld   ($E053),a
+009A: 32 53 E0    ld   (unknown_E053),a
 009D: CB 4F       bit  1,a
 009F: 28 15       jr   z,$00B6
 00A1: 3A 04 D0    ld   a,($D004)
 00A4: CB 67       bit  4,a
 00A6: 20 0E       jr   nz,$00B6
-00A8: 21 46 E0    ld   hl,$E046
+00A8: 21 46 E0    ld   hl,unknown_E046
 00AB: CB 4E       bit  1,(hl)
 00AD: 20 07       jr   nz,$00B6
 00AF: 3A 00 D0    ld   a,($D000)
@@ -132,18 +134,18 @@
 00B6: 3A 04 D0    ld   a,($D004)
 00B9: CB 5F       bit  3,a
 00BB: 20 06       jr   nz,$00C3
-00BD: 21 F3 E0    ld   hl,$E0F3
+00BD: 21 F3 E0    ld   hl,unknown_E0F3
 00C0: 34          inc  (hl)
 00C1: CB 46       bit  0,(hl)
 00C3: FD E5       push iy
 00C5: DD E5       push ix
 00C7: CD 0E 04    call $040E
-00CA: 3A 41 E0    ld   a,($E041)
+00CA: 3A 41 E0    ld   a,(unknown_E041)
 00CD: A7          and  a
 00CE: 20 05       jr   nz,$00D5
 00D0: 3E 02       ld   a,$02
 00D2: 32 48 E0    ld   (nb_credits_e048),a
-00D5: 21 46 E0    ld   hl,$E046
+00D5: 21 46 E0    ld   hl,unknown_E046
 00D8: 46          ld   b,(hl)
 00D9: CB 78       bit  7,b
 00DB: 20 15       jr   nz,$00F2
@@ -154,7 +156,7 @@
 00E5: 20 1D       jr   nz,$0104
 00E7: CB 50       bit  2,b
 00E9: 20 11       jr   nz,$00FC
-00EB: 3A 47 E0    ld   a,($E047)
+00EB: 3A 47 E0    ld   a,(unknown_E047)
 00EE: A7          and  a
 00EF: C2 8F 00    jp   nz,$008F
 00F2: CB 40       bit  0,b
@@ -167,27 +169,28 @@
 0101: 08          ex   af,af'
 0102: FB          ei
 0103: C9          ret
+
 0104: 36 02       ld   (hl),$02
-0106: 31 00 E8    ld   sp,$E800
+0106: 31 00 E8    ld   sp,unknown_E800
 0109: FB          ei
 010A: CD 29 0D    call $0D29
 010D: CD 33 05    call $0533
 0110: 28 FB       jr   z,$010D
 0112: CD 38 0B    call $0B38
 0115: C3 B7 0B    jp   $0BB7
-0118: 31 00 E8    ld   sp,$E800
-011B: 21 46 E0    ld   hl,$E046
+0118: 31 00 E8    ld   sp,unknown_E800
+011B: 21 46 E0    ld   hl,unknown_E046
 011E: 35          dec  (hl)
 011F: FB          ei
 0120: F2 68 00    jp   p,$0068
 0123: CD 96 0B    call $0B96
 0126: AF          xor  a
-0127: 32 A6 E1    ld   ($E1A6),a
+0127: 32 A6 E1    ld   (unknown_E1A6),a
 012A: 21 15 E5    ld   hl,nb_lives_E515
 012D: 35          dec  (hl)
 012E: 28 1B       jr   z,$014B
 0130: CD D5 06    call $06D5
-0133: 21 46 E0    ld   hl,$E046
+0133: 21 46 E0    ld   hl,unknown_E046
 0136: CB 66       bit  4,(hl)
 0138: CA B7 0B    jp   z,$0BB7
 013B: CD 03 06    call $0603
@@ -198,12 +201,12 @@
 0148: C3 B7 0B    jp   $0BB7
 014B: 3E 1B       ld   a,$1B
 014D: CD 75 0D    call $0D75
-0150: 21 46 E0    ld   hl,$E046
+0150: 21 46 E0    ld   hl,unknown_E046
 0153: CB 66       bit  4,(hl)
 0155: 28 1F       jr   z,$0176
 0157: 21 ED 2A    ld   hl,$2AED
 015A: CD 4E 03    call $034E
-015D: 3A 46 E0    ld   a,($E046)
+015D: 3A 46 E0    ld   a,(unknown_E046)
 0160: 1F          rra
 0161: 1F          rra
 0162: 1F          rra
@@ -229,15 +232,15 @@
 0193: 28 3D       jr   z,$01D2
 0195: 3D          dec  a
 0196: 27          daa
-0197: 32 54 E0    ld   ($E054),a
+0197: 32 54 E0    ld   (unknown_E054),a
 019A: 11 33 82    ld   de,$8233
 019D: 0E 02       ld   c,$02
 019F: CD AE 03    call $03AE
 01A2: 3E 40       ld   a,$40
-01A4: 32 50 E0    ld   ($E050),a
-01A7: 3A 50 E0    ld   a,($E050)
+01A4: 32 50 E0    ld   (unknown_E050),a
+01A7: 3A 50 E0    ld   a,(unknown_E050)
 01AA: A7          and  a
-01AB: 3A 54 E0    ld   a,($E054)
+01AB: 3A 54 E0    ld   a,(unknown_E054)
 01AE: 28 E2       jr   z,$0192
 01B0: 3A 48 E0    ld   a,(nb_credits_e048)
 01B3: A7          and  a
@@ -255,27 +258,28 @@
 
 01D2: F3          di
 01D3: AF          xor  a
-01D4: 32 46 E0    ld   ($E046),a
+01D4: 32 46 E0    ld   (unknown_E046),a
 01D7: C3 68 00    jp   $0068
 
-01DA: 3A 40 E0    ld   a,($E040)
+01DA: 3A 40 E0    ld   a,(unknown_E040)
 01DD: 32 15 E5    ld   (nb_lives_E515),a
 01E0: 21 00 00    ld   hl,$0000
-01E3: 22 00 E5    ld   ($E500),hl
-01E6: 22 02 E5    ld   ($E502),hl
+01E3: 22 00 E5    ld   (unknown_E500),hl
+01E6: 22 02 E5    ld   (unknown_E502),hl
 01E9: C3 03 06    jp   $0603
 
-01EC: DD 21 00 E3 ld   ix,$E300
+01EC: DD 21 00 E3 ld   ix,unknown_E300
 01F0: 3E 20       ld   a,$20
-01F2: 32 E8 E0    ld   ($E0E8),a
+01F2: 32 E8 E0    ld   (unknown_E0E8),a
 01F5: DD 7E 00    ld   a,(ix+$00)
 01F8: 3D          dec  a
 01F9: FA 00 02    jp   m,$0200
 01FC: 21 0C 02    ld   hl,jump_table_020C
 01FF: EF          rst  $28			; use jump table
+
 0200: 11 10 00    ld   de,$0010
 0203: DD 19       add  ix,de
-0205: 21 E8 E0    ld   hl,$E0E8
+0205: 21 E8 E0    ld   hl,unknown_E0E8
 0208: 35          dec  (hl)
 0209: 20 EA       jr   nz,$01F5
 020B: C9          ret
@@ -296,8 +300,8 @@ jump_table_020C:
 027A: CD A7 12    call $12A7
 027D: CD E7 12    call $12E7
 0280: CD DC 0D    call $0DDC
-0283: 3A CF E1    ld   a,($E1CF)
-0286: 21 D0 E1    ld   hl,$E1D0
+0283: 3A CF E1    ld   a,(unknown_E1CF)
+0286: 21 D0 E1    ld   hl,unknown_E1D0
 0289: BE          cp   (hl)
 028A: 28 E2       jr   z,$026E
 028C: 5F          ld   e,a
@@ -307,7 +311,7 @@ jump_table_020C:
 0295: DD 4E 00    ld   c,(ix+$00)
 0298: CB 21       sla  c
 029A: 20 11       jr   nz,$02AD
-029C: 21 CF E1    ld   hl,$E1CF
+029C: 21 CF E1    ld   hl,unknown_E1CF
 029F: BE          cp   (hl)
 02A0: 20 03       jr   nz,$02A5
 02A2: C6 04       add  a,$04
@@ -330,7 +334,7 @@ jump_table_020C:
 02C0: 69          ld   l,c
 02C1: E9          jp   (hl)
 
-02C2: 21 D0 E1    ld   hl,$E1D0
+02C2: 21 D0 E1    ld   hl,unknown_E1D0
 02C5: 6E          ld   l,(hl)
 02C6: 26 E6       ld   h,$E6
 02C8: 71          ld   (hl),c
@@ -342,7 +346,7 @@ jump_table_020C:
 02CE: 72          ld   (hl),d
 02CF: 2C          inc  l
 02D0: 7D          ld   a,l
-02D1: 32 D0 E1    ld   ($E1D0),a
+02D1: 32 D0 E1    ld   (unknown_E1D0),a
 02D4: C9          ret
 ; the jump table
 
@@ -361,7 +365,7 @@ jump_table_02D3
 	.word	display_title_1218
 
 
-02ED: 3A 4E E0    ld   a,($E04E)
+02ED: 3A 4E E0    ld   a,(unknown_E04E)
 02F0: DD 86 01    add  a,(ix+$01)
 02F3: DD 77 01    ld   (ix+$01),a
 02F6: DD 36 00 04 ld   (ix+$00),$04
@@ -377,14 +381,14 @@ jump_table_02D3
 030E: 20 0D       jr   nz,$031D
 0310: 23          inc  hl
 0311: 78          ld   a,b
-0312: 32 50 E0    ld   ($E050),a
-0315: 3A 50 E0    ld   a,($E050)
+0312: 32 50 E0    ld   (unknown_E050),a
+0315: 3A 50 E0    ld   a,(unknown_E050)
 0318: A7          and  a
 0319: 20 FA       jr   nz,$0315
 031B: 18 E6       jr   $0303
 031D: CD C9 03    call $03C9
 0320: 18 E1       jr   $0303
-0322: 3A 4E E0    ld   a,($E04E)
+0322: 3A 4E E0    ld   a,(unknown_E04E)
 0325: DD BE 01    cp   (ix+$01)
 0328: 28 05       jr   z,$032F
 032A: DD 36 00 04 ld   (ix+$00),$04
@@ -392,33 +396,33 @@ jump_table_02D3
 032F: DD 6E 02    ld   l,(ix+$02)
 0332: DD 66 03    ld   h,(ix+$03)
 0335: 18 44       jr   $037B
-0337: 3A 50 E0    ld   a,($E050)
+0337: 3A 50 E0    ld   a,(unknown_E050)
 033A: A7          and  a
 033B: 20 0C       jr   nz,$0349
 033D: CD 2F 03    call $032F
 0340: DD 35 01    dec  (ix+$01)
 0343: C8          ret  z
 0344: 3E 04       ld   a,$04
-0346: 32 50 E0    ld   ($E050),a
+0346: 32 50 E0    ld   (unknown_E050),a
 0349: DD 36 00 07 ld   (ix+$00),$07
 034D: C9          ret
 034E: CD DB 03    call $03DB
 0351: CD C9 03    call $03C9
 0354: 3E 03       ld   a,$03
-0356: 32 50 E0    ld   ($E050),a
-0359: 3A 50 E0    ld   a,($E050)
+0356: 32 50 E0    ld   (unknown_E050),a
+0359: 3A 50 E0    ld   a,(unknown_E050)
 035C: A7          and  a
 035D: 20 FA       jr   nz,$0359
 035F: 18 F0       jr   $0351
-0361: 3A 50 E0    ld   a,($E050)
+0361: 3A 50 E0    ld   a,(unknown_E050)
 0364: A7          and  a
 0365: 20 08       jr   nz,$036F
 0367: 3E 04       ld   a,$04
-0369: 32 50 E0    ld   ($E050),a
+0369: 32 50 E0    ld   (unknown_E050),a
 036C: CD FA 02    call $02FA
 036F: DD 36 00 08 ld   (ix+$00),$08
 0373: C9          ret
-0374: 3A 4E E0    ld   a,($E04E)
+0374: 3A 4E E0    ld   a,(unknown_E04E)
 0377: CB 67       bit  4,a
 0379: 20 85       jr   nz,$0300
 037B: CD DB 03    call $03DB
@@ -489,7 +493,7 @@ jump_table_02D3
 03E3: FD 19       add  iy,de
 03E5: 4E          ld   c,(hl)
 03E6: 23          inc  hl
-03E7: 3A F9 E0    ld   a,($E0F9)
+03E7: 3A F9 E0    ld   a,(unknown_E0F9)
 03EA: A7          and  a
 03EB: C8          ret  z
 03EC: 79          ld   a,c
@@ -516,19 +520,19 @@ jump_table_02D3
 0408: CD C1 03    call $03C1
 040B: 10 FB       djnz $0408
 040D: C9          ret
-040E: 21 3E E0    ld   hl,$E03E
-0411: 11 41 E0    ld   de,$E041
+040E: 21 3E E0    ld   hl,unknown_E03E
+0411: 11 41 E0    ld   de,unknown_E041
 0414: 3A 00 D0    ld   a,($D000)
 0417: 01 02 00    ld   bc,$0002
 041A: CD 34 04    call $0434
-041D: 21 3F E0    ld   hl,$E03F
+041D: 21 3F E0    ld   hl,unknown_E03F
 0420: 13          inc  de
 0421: 3A 02 D0    ld   a,($D002)
 0424: 1F          rra
 0425: F6 04       or   $04
 0427: 0E 20       ld   c,$20
 0429: CD 34 04    call $0434
-042C: 3A 4C E0    ld   a,($E04C)
+042C: 3A 4C E0    ld   a,(unknown_E04C)
 042F: B0          or   b
 0430: 32 01 D0    ld   ($D001),a
 0433: C9          ret
@@ -545,7 +549,7 @@ jump_table_02D3
 0443: 7E          ld   a,(hl)
 0444: E6 AA       and  $AA
 0446: C0          ret  nz
-0447: 21 ED E0    ld   hl,$E0ED
+0447: 21 ED E0    ld   hl,unknown_E0ED
 044A: 34          inc  (hl)
 044B: 7E          ld   a,(hl)
 044C: E6 0F       and  $0F
@@ -561,7 +565,7 @@ jump_table_02D3
 045C: 28 11       jr   z,$046F
 045E: FE 08       cp   $08
 0460: 30 0B       jr   nc,$046D
-0462: 21 47 E0    ld   hl,$E047
+0462: 21 47 E0    ld   hl,unknown_E047
 0465: 34          inc  (hl)
 0466: BE          cp   (hl)
 0467: C0          ret  nz
@@ -577,17 +581,17 @@ jump_table_02D3
 0476: 3E 99       ld   a,$99
 0478: 77          ld   (hl),a
 0479: C9          ret
-047A: 3A 46 E0    ld   a,($E046)
+047A: 3A 46 E0    ld   a,(unknown_E046)
 047D: 07          rlca
 047E: 30 5B       jr   nc,$04DB
 0480: 11 01 D0    ld   de,$D001
 0483: CB 67       bit  4,a
 0485: 28 07       jr   z,$048E
-0487: 3A 43 E0    ld   a,($E043)
+0487: 3A 43 E0    ld   a,(unknown_E043)
 048A: 3D          dec  a
 048B: 28 01       jr   z,$048E
 048D: 13          inc  de
-048E: 21 4A E0    ld   hl,$E04A
+048E: 21 4A E0    ld   hl,unknown_E04A
 0491: 7E          ld   a,(hl)
 0492: 23          inc  hl
 0493: 77          ld   (hl),a
@@ -599,8 +603,8 @@ jump_table_02D3
 0499: E6 03       and  $03
 049B: 77          ld   (hl),a
 049C: C9          ret
-049D: 3A 0B E5    ld   a,($E50B)
-04A0: 2A F7 E0    ld   hl,($E0F7)
+049D: 3A 0B E5    ld   a,(unknown_E50B)
+04A0: 2A F7 E0    ld   hl,(unknown_E0F7)
 04A3: BE          cp   (hl)
 04A4: 20 13       jr   nz,$04B9
 04A6: 23          inc  hl
@@ -608,23 +612,23 @@ jump_table_02D3
 04A8: 54          ld   d,h
 04A9: 5D          ld   e,l
 04AA: 23          inc  hl
-04AB: 22 F7 E0    ld   ($E0F7),hl
+04AB: 22 F7 E0    ld   (unknown_E0F7),hl
 04AE: A7          and  a
 04AF: 28 04       jr   z,$04B5
 04B1: FE FF       cp   $FF
 04B3: 20 D9       jr   nz,$048E
-04B5: 32 E0 E1    ld   ($E1E0),a
+04B5: 32 E0 E1    ld   (unknown_E1E0),a
 04B8: C9          ret
-04B9: 21 4A E0    ld   hl,$E04A
-04BC: 3A E0 E1    ld   a,($E1E0)
+04B9: 21 4A E0    ld   hl,unknown_E04A
+04BC: 3A E0 E1    ld   a,(unknown_E1E0)
 04BF: A7          and  a
 04C0: 28 13       jr   z,$04D5
-04C2: 3A 4E E0    ld   a,($E04E)
+04C2: 3A 4E E0    ld   a,(unknown_E04E)
 04C5: 07          rlca
 04C6: 47          ld   b,a
 04C7: E6 01       and  $01
 04C9: 3C          inc  a
-04CA: 32 49 E0    ld   ($E049),a
+04CA: 32 49 E0    ld   (unknown_E049),a
 04CD: 78          ld   a,b
 04CE: E6 1E       and  $1E
 04D0: 20 03       jr   nz,$04D5
@@ -635,8 +639,8 @@ jump_table_02D3
 04D8: 23          inc  hl
 04D9: 77          ld   (hl),a
 04DA: C9          ret
-04DB: 21 4D E0    ld   hl,$E04D
-04DE: 3A 4E E0    ld   a,($E04E)
+04DB: 21 4D E0    ld   hl,unknown_E04D
+04DE: 3A 4E E0    ld   a,(unknown_E04E)
 04E1: 47          ld   b,a
 04E2: 7E          ld   a,(hl)
 04E3: A7          and  a
@@ -649,7 +653,7 @@ jump_table_02D3
 04F0: 38 01       jr   c,$04F3
 04F2: 34          inc  (hl)
 04F3: 0E 02       ld   c,$02
-04F5: 21 49 E0    ld   hl,$E049
+04F5: 21 49 E0    ld   hl,unknown_E049
 04F8: FE 18       cp   $18
 04FA: 38 01       jr   c,$04FD
 04FC: 0D          dec  c
@@ -659,11 +663,11 @@ jump_table_02D3
 0501: FE B0       cp   $B0
 0503: D8          ret  c
 0504: C3 7B 00    jp   $007B
-0507: 21 00 E3    ld   hl,$E300
+0507: 21 00 E3    ld   hl,unknown_E300
 050A: 7E          ld   a,(hl)
 050B: FE 04       cp   $04
 050D: 20 0C       jr   nz,$051B
-050F: 3A 09 E3    ld   a,($E309)
+050F: 3A 09 E3    ld   a,(unknown_E309)
 0512: 17          rla
 0513: D8          ret  c
 0514: 36 08       ld   (hl),$08
@@ -671,7 +675,7 @@ jump_table_02D3
 0518: C3 C2 02    jp   $02C2
 051B: FE 08       cp   $08
 051D: C8          ret  z
-051E: 21 4A E0    ld   hl,$E04A
+051E: 21 4A E0    ld   hl,unknown_E04A
 0521: 36 20       ld   (hl),$20
 0523: 23          inc  hl
 0524: 36 00       ld   (hl),$00
@@ -689,7 +693,7 @@ jump_table_02D3
 0543: 28 03       jr   z,$0548
 0545: 21 97 2A    ld   hl,$2A97
 0548: CD 00 03    call $0300
-054B: 3A 53 E0    ld   a,($E053)
+054B: 3A 53 E0    ld   a,(unknown_E053)
 054E: E6 03       and  $03
 0550: C8          ret  z
 0551: 1F          rra
@@ -705,7 +709,7 @@ jump_table_02D3
 0562: F3          di
 0563: 32 48 E0    ld   (nb_credits_e048),a
 0566: 78          ld   a,b
-0567: 32 46 E0    ld   ($E046),a
+0567: 32 46 E0    ld   (unknown_E046),a
 056A: 3C          inc  a
 056B: FB          ei
 056C: C9          ret
@@ -739,7 +743,7 @@ update_sprites_056D:
 0592: 0C          inc  c
 0593: 10 FB       djnz $0590
 0595: 23          inc  hl
-0596: 3A C3 E1    ld   a,($E1C3)
+0596: 3A C3 E1    ld   a,(unknown_E1C3)
 0599: A7          and  a
 059A: 28 2B       jr   z,$05C7
 059C: 7E          ld   a,(hl)
@@ -770,7 +774,7 @@ update_sprites_056D:
 05C7: 2F          cpl
 05C8: D3 C0       out  ($C0),a
 05CA: C9          ret
-05CB: 2A DD E1    ld   hl,($E1DD)
+05CB: 2A DD E1    ld   hl,(unknown_E1DD)
 05CE: 7D          ld   a,l
 05CF: BC          cp   h
 05D0: C8          ret  z
@@ -782,19 +786,19 @@ update_sprites_056D:
 05DC: 7D          ld   a,l
 05DD: 3C          inc  a
 05DE: E6 07       and  $07
-05E0: 32 DD E1    ld   ($E1DD),a
+05E0: 32 DD E1    ld   (unknown_E1DD),a
 05E3: C9          ret
 05E4: 3E 40       ld   a,$40
 05E6: 18 02       jr   $05EA
 05E8: 3E C0       ld   a,$C0
-05EA: 32 50 E0    ld   ($E050),a
-05ED: 3A 50 E0    ld   a,($E050)
+05EA: 32 50 E0    ld   (unknown_E050),a
+05ED: 3A 50 E0    ld   a,(unknown_E050)
 05F0: A7          and  a
 05F1: 20 FA       jr   nz,$05ED
 05F3: C9          ret
 
 clear_ram_05f4:
-05F4: 21 00 E0    ld   hl,$E000
+05F4: 21 00 E0    ld   hl,unknown_E000
 05F7: 01 00 07    ld   bc,$0700
 ; < HL: start
 ; < BC: length
@@ -807,12 +811,12 @@ clear_area_05fa:
 0600: 20 F8       jr   nz,clear_area_05fa
 0602: C9          ret
 
-0603: 21 46 E0    ld   hl,$E046
+0603: 21 46 E0    ld   hl,unknown_E046
 0606: 7E          ld   a,(hl)
 0607: EE 08       xor  $08
 0609: 77          ld   (hl),a
-060A: 21 00 E5    ld   hl,$E500
-060D: 11 18 E5    ld   de,$E518
+060A: 21 00 E5    ld   hl,unknown_E500
+060D: 11 18 E5    ld   de,unknown_E518
 0610: 06 18       ld   b,$18
 0612: 1A          ld   a,(de)
 0613: 4F          ld   c,a
@@ -823,7 +827,7 @@ clear_area_05fa:
 0618: 13          inc  de
 0619: 10 F7       djnz $0612
 061B: C9          ret
-061C: 3A 46 E0    ld   a,($E046)
+061C: 3A 46 E0    ld   a,(unknown_E046)
 061F: CB 5F       bit  3,a
 0621: C9          ret
 0622: 4F          ld   c,a
@@ -833,10 +837,10 @@ clear_area_05fa:
 0626: 06 00       ld   b,$00
 0628: 21 0C 2A    ld   hl,$2A0C
 062B: 09          add  hl,bc
-062C: 3A 46 E0    ld   a,($E046)
+062C: 3A 46 E0    ld   a,(unknown_E046)
 062F: A7          and  a
 0630: F0          ret  p
-0631: 11 00 E5    ld   de,$E500
+0631: 11 00 E5    ld   de,unknown_E500
 0634: 06 03       ld   b,$03
 0636: A7          and  a
 0637: 1A          ld   a,(de)
@@ -848,8 +852,8 @@ clear_area_05fa:
 063D: 10 F8       djnz $0637
 063F: CD AF 06    call $06AF
 0642: 06 03       ld   b,$03
-0644: 11 00 E5    ld   de,$E500
-0647: 21 08 E0    ld   hl,$E008
+0644: 11 00 E5    ld   de,unknown_E500
+0647: 21 08 E0    ld   hl,unknown_E008
 064A: A7          and  a
 064B: 1A          ld   a,(de)
 064C: 9E          sbc  a,(hl)
@@ -857,18 +861,18 @@ clear_area_05fa:
 064E: 13          inc  de
 064F: 10 FA       djnz $064B
 0651: 38 15       jr   c,$0668
-0653: 2A 00 E5    ld   hl,($E500)
-0656: 22 08 E0    ld   ($E008),hl
-0659: 3A 02 E5    ld   a,($E502)
-065C: 32 0A E0    ld   ($E00A),a
-065F: 3A 0E E5    ld   a,($E50E)
-0662: 32 0B E0    ld   ($E00B),a
+0653: 2A 00 E5    ld   hl,(unknown_E500)
+0656: 22 08 E0    ld   (unknown_E008),hl
+0659: 3A 02 E5    ld   a,(unknown_E502)
+065C: 32 0A E0    ld   (unknown_E00A),a
+065F: 3A 0E E5    ld   a,(unknown_E50E)
+0662: 32 0B E0    ld   (unknown_E00B),a
 0665: CD 85 06    call $0685
 0668: 11 84 80    ld   de,$8084
 066B: CD 1C 06    call $061C
 066E: 28 03       jr   z,$0673
 0670: 11 A4 80    ld   de,$80A4
-0673: 21 02 E5    ld   hl,$E502
+0673: 21 02 E5    ld   hl,unknown_E502
 0676: 0E 01       ld   c,$01
 0678: CD E7 03    call $03E7
 067B: 06 03       ld   b,$03
@@ -877,7 +881,7 @@ clear_area_05fa:
 0681: 2B          dec  hl
 0682: 10 F9       djnz $067D
 0684: C9          ret
-0685: 21 0B E0    ld   hl,$E00B
+0685: 21 0B E0    ld   hl,unknown_E00B
 0688: 7E          ld   a,(hl)
 0689: 0E 09       ld   c,$09
 068B: FE 1B       cp   $1B
@@ -886,7 +890,7 @@ clear_area_05fa:
 0691: 0E 06       ld   c,$06
 0693: C6 40       add  a,$40
 0695: 32 4A 80    ld   ($804A),a
-0698: 3A F9 E0    ld   a,($E0F9)
+0698: 3A F9 E0    ld   a,(unknown_E0F9)
 069B: 1F          rra
 069C: 79          ld   a,c
 069D: 30 02       jr   nc,$06A1
@@ -897,8 +901,8 @@ clear_area_05fa:
 06A9: CD E7 03    call $03E7
 06AC: 2B          dec  hl
 06AD: 18 CC       jr   $067B
-06AF: 2A 01 E5    ld   hl,($E501)
-06B2: 3A 45 E0    ld   a,($E045)
+06AF: 2A 01 E5    ld   hl,(unknown_E501)
+06B2: 3A 45 E0    ld   a,(unknown_E045)
 06B5: 3D          dec  a
 06B6: F8          ret  m
 06B7: 3D          dec  a
@@ -912,7 +916,7 @@ clear_area_05fa:
 06C2: A7          and  a
 06C3: 28 02       jr   z,$06C7
 06C5: 3E FE       ld   a,$FE
-06C7: 21 03 E5    ld   hl,$E503
+06C7: 21 03 E5    ld   hl,unknown_E503
 06CA: BE          cp   (hl)
 06CB: C0          ret  nz
 06CC: 7E          ld   a,(hl)
@@ -939,7 +943,7 @@ clear_area_05fa:
 06F0: 3C          inc  a
 06F1: C9          ret
 
-06F2: 21 40 E0    ld   hl,$E040
+06F2: 21 40 E0    ld   hl,unknown_E040
 06F5: 3A 03 D0    ld   a,($D003)
 06F8: 47          ld   b,a
 06F9: 3C          inc  a
@@ -953,7 +957,7 @@ clear_area_05fa:
 0704: 0F          rrca
 0705: 47          ld   b,a
 0706: E6 03       and  $03
-0708: 32 45 E0    ld   ($E045),a
+0708: 32 45 E0    ld   (unknown_E045),a
 070B: 3A 04 D0    ld   a,($D004)
 070E: CB 57       bit  2,a
 0710: 78          ld   a,b
@@ -1002,9 +1006,9 @@ clear_area_05fa:
 074E: CD 27 05    call $0527
 0751: 21 57 2C    ld   hl,$2C57
 0754: CD 4E 03    call $034E
-0757: 11 54 E0    ld   de,$E054
+0757: 11 54 E0    ld   de,unknown_E054
 075A: 01 20 00    ld   bc,$0020
-075D: 3A 44 E0    ld   a,($E044)
+075D: 3A 44 E0    ld   a,(unknown_E044)
 0760: A7          and  a
 0761: 20 34       jr   nz,$0797
 0763: CD 9F 07    call $079F
@@ -1013,9 +1017,9 @@ clear_area_05fa:
 076A: FE 32       cp   $32
 076C: 20 20       jr   nz,$078E
 076E: 3E 53       ld   a,$53
-0770: 32 5F E0    ld   ($E05F),a
-0773: 32 68 E0    ld   ($E068),a
-0776: 21 62 E0    ld   hl,$E062
+0770: 32 5F E0    ld   (unknown_E05F),a
+0773: 32 68 E0    ld   (unknown_E068),a
+0776: 21 62 E0    ld   hl,unknown_E062
 0779: 7E          ld   a,(hl)
 077A: 87          add  a,a
 077B: D6 30       sub  $30
@@ -1026,9 +1030,9 @@ clear_area_05fa:
 0784: 2B          dec  hl
 0785: 3E 31       ld   a,$31
 0787: 77          ld   (hl),a
-0788: 21 54 E0    ld   hl,$E054
+0788: 21 54 E0    ld   hl,unknown_E054
 078B: CD 4E 03    call $034E
-078E: 3A 47 E0    ld   a,($E047)
+078E: 3A 47 E0    ld   a,(unknown_E047)
 0791: A7          and  a
 0792: 20 FA       jr   nz,$078E
 0794: C3 E8 05    jp   $05E8
@@ -1037,8 +1041,8 @@ clear_area_05fa:
 079D: 18 E9       jr   $0788
 079F: 21 67 2C    ld   hl,$2C67
 07A2: ED B0       ldir
-07A4: 21 57 E0    ld   hl,$E057
-07A7: 3A 41 E0    ld   a,($E041)
+07A4: 21 57 E0    ld   hl,unknown_E057
+07A7: 3A 41 E0    ld   a,(unknown_E041)
 07AA: 11 08 00    ld   de,$0008
 07AD: FE 08       cp   $08
 07AF: 38 12       jr   c,$07C3
@@ -1066,22 +1070,22 @@ clear_area_05fa:
 07D2: C9          ret
 07D3: 21 7D 2C    ld   hl,$2C7D
 07D6: ED B0       ldir
-07D8: 21 5B E0    ld   hl,$E05B
+07D8: 21 5B E0    ld   hl,unknown_E05B
 07DB: 18 CA       jr   $07A7
 07DD: CD E8 07    call $07E8
-07E0: 21 5B E0    ld   hl,$E05B
-07E3: 3A 42 E0    ld   a,($E042)
+07E0: 21 5B E0    ld   hl,unknown_E05B
+07E3: 3A 42 E0    ld   a,(unknown_E042)
 07E6: 18 C2       jr   $07AA
-07E8: 21 54 E0    ld   hl,$E054
+07E8: 21 54 E0    ld   hl,unknown_E054
 07EB: CD 4E 03    call $034E
-07EE: 2A 54 E0    ld   hl,($E054)
+07EE: 2A 54 E0    ld   hl,(unknown_E054)
 07F1: 11 40 00    ld   de,$0040
 07F4: 19          add  hl,de
-07F5: 22 54 E0    ld   ($E054),hl
-07F8: 21 57 E0    ld   hl,$E057
+07F5: 22 54 E0    ld   (unknown_E054),hl
+07F8: 21 57 E0    ld   hl,unknown_E057
 07FB: 34          inc  (hl)
 07FC: C9          ret
-07FD: 21 77 E2    ld   hl,$E277
+07FD: 21 77 E2    ld   hl,unknown_E277
 0800: 06 07       ld   b,$07
 0802: 7E          ld   a,(hl)
 0803: A7          and  a
@@ -1090,7 +1094,7 @@ clear_area_05fa:
 0807: 10 F9       djnz $0802
 0809: C9          ret
 
-080A: 21 61 E2    ld   hl,$E261
+080A: 21 61 E2    ld   hl,unknown_E261
 080D: 06 12       ld   b,$12
 080F: 18 F1       jr   $0802
 0811: 34          inc  (hl)
@@ -1115,10 +1119,10 @@ clear_area_05fa:
 082E: 85          add  a,l
 082F: 6F          ld   l,a
 0830: C9          ret
-0831: 3A 00 E3    ld   a,($E300)
+0831: 3A 00 E3    ld   a,(unknown_E300)
 0834: FE 06       cp   $06
 0836: 30 7A       jr   nc,$08B2
-0838: 3A E2 E1    ld   a,($E1E2)
+0838: 3A E2 E1    ld   a,(unknown_E1E2)
 083B: DD 96 0F    sub  (ix+$0f)
 083E: ED 44       neg
 0840: DD 77 03    ld   (ix+$03),a
@@ -1175,12 +1179,12 @@ clear_area_05fa:
 089C: 72          ld   (hl),d
 089D: C9          ret
 089E: CD 82 08    call $0882
-08A1: 21 74 E1    ld   hl,$E174
+08A1: 21 74 E1    ld   hl,unknown_E174
 08A4: 01 00 18    ld   bc,$1800
 08A7: 71          ld   (hl),c
 08A8: 23          inc  hl
 08A9: 10 FC       djnz $08A7
-08AB: 21 D1 E1    ld   hl,$E1D1
+08AB: 21 D1 E1    ld   hl,unknown_E1D1
 08AE: 70          ld   (hl),b
 08AF: 23          inc  hl
 08B0: 70          ld   (hl),b
@@ -1241,14 +1245,14 @@ jump_table_08F5:
 092F: 38 38       jr   c,$0969
 0931: 1C          inc  e
 0932: 18 35       jr   $0969
-0934: 3A 4E E0    ld   a,($E04E)
+0934: 3A 4E E0    ld   a,(unknown_E04E)
 0937: E6 03       and  $03
 0939: 28 01       jr   z,$093C
 093B: 14          inc  d
 093C: CD 69 09    call $0969
 093F: 16 3B       ld   d,$3B
 0941: 18 1B       jr   $095E
-0943: FD 21 A4 E1 ld   iy,$E1A4
+0943: FD 21 A4 E1 ld   iy,unknown_E1A4
 0947: FD 77 0A    ld   (iy+$0a),a
 094A: FD 77 0E    ld   (iy+$0e),a
 094D: FD 77 12    ld   (iy+$12),a
@@ -1291,7 +1295,7 @@ jump_table_08F5:
 0997: 3E 08       ld   a,$08
 0999: 80          add  a,b
 099A: 47          ld   b,a
-099B: FD 21 74 E1 ld   iy,$E174
+099B: FD 21 74 E1 ld   iy,unknown_E174
 099F: 79          ld   a,c
 09A0: FE F8       cp   $F8
 09A2: D0          ret  nc
@@ -1301,7 +1305,7 @@ jump_table_08F5:
 09A9: 38 CB       jr   c,$0976
 09AB: FD 36 02 00 ld   (iy+$02),$00
 09AF: C9          ret
-09B0: 3A 4E E0    ld   a,($E04E)
+09B0: 3A 4E E0    ld   a,(unknown_E04E)
 09B3: CB 57       bit  2,a
 09B5: 28 BF       jr   z,$0976
 09B7: 14          inc  d
@@ -1379,15 +1383,15 @@ jump_table_08F5:
 0A3C: 18 A6       jr   $09E4
 0A3E: FD 36 02 00 ld   (iy+$02),$00
 0A42: 18 EC       jr   $0A30
-0A44: 32 A6 E1    ld   ($E1A6),a
-0A47: 32 AA E1    ld   ($E1AA),a
-0A4A: 32 AE E1    ld   ($E1AE),a
+0A44: 32 A6 E1    ld   (unknown_E1A6),a
+0A47: 32 AA E1    ld   (unknown_E1AA),a
+0A4A: 32 AE E1    ld   (unknown_E1AE),a
 0A4D: CD 95 0A    call $0A95
 0A50: 18 10       jr   $0A62
 0A52: 3E 18       ld   a,$18
 0A54: 18 02       jr   $0A58
 0A56: 3E 0D       ld   a,$0D
-0A58: FD 21 74 E1 ld   iy,$E174
+0A58: FD 21 74 E1 ld   iy,unknown_E174
 0A5C: 80          add  a,b
 0A5D: 47          ld   b,a
 0A5E: 3E F8       ld   a,$F8
@@ -1418,14 +1422,14 @@ jump_table_08F5:
 0A8F: C9          ret
 0A90: CD 95 0A    call $0A95
 0A93: 18 CD       jr   $0A62
-0A95: 3A F9 E0    ld   a,($E0F9)
+0A95: 3A F9 E0    ld   a,(unknown_E0F9)
 0A98: 1F          rra
 0A99: D0          ret  nc
 0A9A: 7B          ld   a,e
 0A9B: F6 0C       or   $0C
 0A9D: 5F          ld   e,a
 0A9E: C9          ret
-0A9F: FD 21 74 E1 ld   iy,$E174
+0A9F: FD 21 74 E1 ld   iy,unknown_E174
 0AA3: FD 36 0A 00 ld   (iy+$0a),$00
 0AA7: FD 36 0E 00 ld   (iy+$0e),$00
 0AAB: 3E 18       ld   a,$18
@@ -1438,7 +1442,7 @@ jump_table_08F5:
 0AB7: 3E 18       ld   a,$18
 0AB9: 80          add  a,b
 0ABA: 47          ld   b,a
-0ABB: FD 21 74 E1 ld   iy,$E174
+0ABB: FD 21 74 E1 ld   iy,unknown_E174
 0ABF: 3E F8       ld   a,$F8
 0AC1: CD CD 0A    call $0ACD
 0AC4: 21 0C 00    ld   hl,$000C
@@ -1455,15 +1459,15 @@ jump_table_08F5:
 0ADC: C6 03       add  a,$03
 0ADE: FD 77 0A    ld   (iy+$0a),a
 0AE1: C9          ret
-0AE2: FD 21 A4 E1 ld   iy,$E1A4
+0AE2: FD 21 A4 E1 ld   iy,unknown_E1A4
 0AE6: FD 77 06    ld   (iy+$06),a
 0AE9: CD 95 0A    call $0A95
-0AEC: 21 08 F8    ld   hl,$F808
+0AEC: 21 08 F8    ld   hl,-$7f8
 0AEF: 09          add  hl,bc
 0AF0: 44          ld   b,h
 0AF1: 4D          ld   c,l
 0AF2: C3 76 09    jp   $0976
-0AF5: FD 21 A4 E1 ld   iy,$E1A4
+0AF5: FD 21 A4 E1 ld   iy,unknown_E1A4
 0AF9: FD 36 1A 00 ld   (iy+$1a),$00
 0AFD: CD 95 0A    call $0A95
 0B00: 3E F8       ld   a,$F8
@@ -1480,7 +1484,7 @@ jump_table_08F5:
 0B17: C6 02       add  a,$02
 0B19: FD 77 06    ld   (iy+$06),a
 0B1C: C9          ret
-0B1D: 3A 4E E0    ld   a,($E04E)
+0B1D: 3A 4E E0    ld   a,(unknown_E04E)
 0B20: CB 4F       bit  1,a
 0B22: 28 01       jr   z,$0B25
 0B24: 1C          inc  e
@@ -1489,7 +1493,7 @@ jump_table_08F5:
 0B2B: FE 60       cp   $60
 0B2D: D8          ret  c
 0B2E: EB          ex   de,hl
-0B2F: 11 A0 FF    ld   de,$FFA0
+0B2F: 11 A0 FF    ld   de,-$60
 0B32: FD 19       add  iy,de
 0B34: EB          ex   de,hl
 0B35: C3 76 09    jp   $0976
@@ -1501,26 +1505,26 @@ jump_table_08F5:
 0B44: 21 A9 2A    ld   hl,$2AA9
 0B47: CD 00 03    call $0300
 0B4A: 3E FF       ld   a,$FF
-0B4C: 32 51 E0    ld   ($E051),a
-0B4F: 21 53 E0    ld   hl,$E053
+0B4C: 32 51 E0    ld   (unknown_E051),a
+0B4F: 21 53 E0    ld   hl,unknown_E053
 0B52: 7E          ld   a,(hl)
 0B53: 4E          ld   c,(hl)
 0B54: A9          xor  c
 0B55: A1          and  c
 0B56: 1F          rra
 0B57: 38 08       jr   c,$0B61
-0B59: 3A 51 E0    ld   a,($E051)
+0B59: 3A 51 E0    ld   a,(unknown_E051)
 0B5C: 47          ld   b,a
 0B5D: 79          ld   a,c
 0B5E: 10 F3       djnz $0B53
 0B60: C9          ret
-0B61: 21 0E E5    ld   hl,$E50E
+0B61: 21 0E E5    ld   hl,unknown_E50E
 0B64: 7E          ld   a,(hl)
 0B65: 3C          inc  a
 0B66: FE 34       cp   $34
 0B68: 30 E0       jr   nc,$0B4A
 0B6A: 77          ld   (hl),a
-0B6B: 2A 16 E5    ld   hl,($E516)
+0B6B: 2A 16 E5    ld   hl,(unknown_E516)
 0B6E: 46          ld   b,(hl)
 0B6F: 23          inc  hl
 0B70: 7E          ld   a,(hl)
@@ -1529,26 +1533,26 @@ jump_table_08F5:
 0B74: FE 06       cp   $06
 0B76: 20 F6       jr   nz,$0B6E
 0B78: 78          ld   a,b
-0B79: 32 0B E5    ld   ($E50B),a
-0B7C: 22 16 E5    ld   ($E516),hl
-0B7F: 32 23 E5    ld   ($E523),a
-0B82: 22 2E E5    ld   ($E52E),hl
+0B79: 32 0B E5    ld   (unknown_E50B),a
+0B7C: 22 16 E5    ld   (unknown_E516),hl
+0B7F: 32 23 E5    ld   (unknown_E523),a
+0B82: 22 2E E5    ld   (unknown_E52E),hl
 0B85: CD 12 0D    call $0D12
 0B88: 18 C0       jr   $0B4A
 
 display_status_bar_0b8a:
 0B8A: CD B1 0C    call $0CB1
 0B8D: 21 94 26    ld   hl,$2694
-0B90: 22 16 E5    ld   ($E516),hl
+0B90: 22 16 E5    ld   (unknown_E516),hl
 0B93: C3 BF 0C    jp   $0CBF
-0B96: 2A 16 E5    ld   hl,($E516)
+0B96: 2A 16 E5    ld   hl,(unknown_E516)
 0B99: 2B          dec  hl
 0B9A: 7E          ld   a,(hl)
 0B9B: 2B          dec  hl
 0B9C: E6 7F       and  $7F
 0B9E: FE 06       cp   $06
 0BA0: 20 F7       jr   nz,$0B99
-0BA2: 11 DC E1    ld   de,$E1DC
+0BA2: 11 DC E1    ld   de,unknown_E1DC
 0BA5: EB          ex   de,hl
 0BA6: 7E          ld   a,(hl)
 0BA7: 36 00       ld   (hl),$00
@@ -1556,20 +1560,20 @@ display_status_bar_0b8a:
 0BAA: A7          and  a
 0BAB: 20 EC       jr   nz,$0B99
 0BAD: 7E          ld   a,(hl)
-0BAE: 32 0B E5    ld   ($E50B),a
+0BAE: 32 0B E5    ld   (unknown_E50B),a
 0BB1: 23          inc  hl
 0BB2: 23          inc  hl
-0BB3: 22 16 E5    ld   ($E516),hl
+0BB3: 22 16 E5    ld   (unknown_E516),hl
 0BB6: C9          ret
 0BB7: 21 00 E1    ld   hl,sprite_shadow_E100
 0BBA: 01 00 04    ld   bc,$0400
 0BBD: CD FA 05    call clear_area_05fa
-0BC0: DD 21 00 E3 ld   ix,$E300
+0BC0: DD 21 00 E3 ld   ix,unknown_E300
 0BC4: DD 36 00 01 ld   (ix+$00),$01
 0BC8: DD 36 10 09 ld   (ix+$10),$09
 0BCC: DD 36 01 B0 ld   (ix+$01),$B0
 0BD0: DD 36 21 A0 ld   (ix+$21),$A0
-0BD4: DD 21 70 E3 ld   ix,$E370
+0BD4: DD 21 70 E3 ld   ix,unknown_E370
 0BD8: 3E 60       ld   a,$60
 0BDA: 06 09       ld   b,$09
 0BDC: 11 10 00    ld   de,$0010
@@ -1586,12 +1590,12 @@ display_status_bar_0b8a:
 0BF3: F2 FA 0B    jp   p,$0BFA
 0BF6: 3E 07       ld   a,$07
 0BF8: 26 A8       ld   h,$A8
-0BFA: 32 14 E5    ld   ($E514),a
-0BFD: 22 06 E3    ld   ($E306),hl
+0BFA: 32 14 E5    ld   (unknown_E514),a
+0BFD: 22 06 E3    ld   (unknown_E306),hl
 0C00: 3E 02       ld   a,$02
-0C02: 32 08 E5    ld   ($E508),a
+0C02: 32 08 E5    ld   (unknown_E508),a
 0C05: CD 8D 0D    call draw_ground_0d8d
-0C08: 3A 13 E5    ld   a,($E513)
+0C08: 3A 13 E5    ld   a,(unknown_E513)
 0C0B: 3D          dec  a
 0C0C: FE 05       cp   $05
 0C0E: CE 00       adc  a,$00
@@ -1600,11 +1604,11 @@ display_status_bar_0b8a:
 0C13: 38 01       jr   c,$0C16
 0C15: 04          inc  b
 0C16: 78          ld   a,b
-0C17: 32 C5 E1    ld   ($E1C5),a
+0C17: 32 C5 E1    ld   (unknown_E1C5),a
 0C1A: CD 81 29    call $2981
 0C1D: A7          and  a
 0C1E: 20 5F       jr   nz,$0C7F
-0C20: 21 0F E5    ld   hl,$E50F
+0C20: 21 0F E5    ld   hl,unknown_E50F
 0C23: CB 46       bit  0,(hl)
 0C25: 20 58       jr   nz,$0C7F
 0C27: 34          inc  (hl)
@@ -1622,7 +1626,7 @@ display_status_bar_0b8a:
 0C42: 3E 1C       ld   a,$1C
 0C44: CD 6F 0D    call $0D6F
 0C47: 3E 40       ld   a,$40
-0C49: 32 0A E3    ld   ($E30A),a
+0C49: 32 0A E3    ld   (unknown_E30A),a
 0C4C: 0E 68       ld   c,$68
 0C4E: 21 B6 30    ld   hl,$30B6
 0C51: 46          ld   b,(hl)
@@ -1646,7 +1650,7 @@ display_status_bar_0b8a:
 0C68: 18 E7       jr   $0C51
 0C6A: 3E D3       ld   a,$D3
 0C6C: 21 D8 30    ld   hl,$30D8
-0C6F: 11 10 E2    ld   de,$E210
+0C6F: 11 10 E2    ld   de,unknown_E210
 0C72: 46          ld   b,(hl)
 0C73: CB 78       bit  7,b
 0C75: 20 08       jr   nz,$0C7F
@@ -1656,39 +1660,39 @@ display_status_bar_0b8a:
 0C7B: 3C          inc  a
 0C7C: 23          inc  hl
 0C7D: 18 F3       jr   $0C72
-0C7F: 21 46 E0    ld   hl,$E046
+0C7F: 21 46 E0    ld   hl,unknown_E046
 0C82: 34          inc  (hl)
 0C83: C3 6E 02    jp   $026E
 0C86: 21 47 2A    ld   hl,$2A47
 0C89: CD 00 03    call $0300
 0C8C: 18 B4       jr   $0C42
 0C8E: AF          xor  a
-0C8F: 32 4D E0    ld   ($E04D),a
+0C8F: 32 4D E0    ld   (unknown_E04D),a
 0C92: CD 95 0C    call $0C95
 0C95: CD 03 06    call $0603
-0C98: 21 00 E5    ld   hl,$E500
+0C98: 21 00 E5    ld   hl,unknown_E500
 0C9B: 01 16 00    ld   bc,$0016
 0C9E: CD FA 05    call clear_area_05fa
-0CA1: 32 0F E5    ld   ($E50F),a
-0CA4: 3A 40 E0    ld   a,($E040)
+0CA1: 32 0F E5    ld   (unknown_E50F),a
+0CA4: 3A 40 E0    ld   a,(unknown_E040)
 0CA7: 32 15 E5    ld   (nb_lives_E515),a
 0CAA: 21 62 21    ld   hl,$2162
-0CAD: 22 16 E5    ld   ($E516),hl
+0CAD: 22 16 E5    ld   (unknown_E516),hl
 0CB0: C9          ret
 0CB1: 21 DE 26    ld   hl,$26DE
-0CB4: 22 F7 E0    ld   ($E0F7),hl
-0CB7: 21 03 E5    ld   hl,$E503
+0CB4: 22 F7 E0    ld   (unknown_E0F7),hl
+0CB7: 21 03 E5    ld   hl,unknown_E503
 0CBA: 01 11 00    ld   bc,$0011
 0CBD: 18 DF       jr   $0C9E
 0CBF: CD 29 0D    call $0D29
 0CC2: 21 21 84    ld   hl,$8421
 0CC5: 0E 06       ld   c,$06
-0CC7: 3A 0E E5    ld   a,($E50E)
+0CC7: 3A 0E E5    ld   a,(unknown_E50E)
 0CCA: FE 1A       cp   $1A
 0CCC: 3E 00       ld   a,$00
 0CCE: 38 01       jr   c,$0CD1
 0CD0: 3C          inc  a
-0CD1: 32 F9 E0    ld   ($E0F9),a
+0CD1: 32 F9 E0    ld   (unknown_E0F9),a
 0CD4: C5          push bc
 0CD5: 0E 01       ld   c,$01
 0CD7: CD E7 03    call $03E7
@@ -1706,7 +1710,7 @@ display_status_bar_0b8a:
 0CEA: CD 00 03    call $0300
 0CED: CD 68 06    call $0668
 0CF0: CD 85 06    call $0685
-0CF3: 3A 46 E0    ld   a,($E046)
+0CF3: 3A 46 E0    ld   a,(unknown_E046)
 0CF6: CB 67       bit  4,a
 0CF8: 28 0F       jr   z,$0D09
 0CFA: CD 03 06    call $0603
@@ -1717,7 +1721,7 @@ display_status_bar_0b8a:
 0D09: CD D5 06    call $06D5
 0D0C: CD 2C 21    call $212C
 0D0F: CD 8A 29    call $298A
-0D12: 3A 0E E5    ld   a,($E50E)
+0D12: 3A 0E E5    ld   a,(unknown_E50E)
 0D15: 0E 02       ld   c,$02
 0D17: FE 1A       cp   $1A
 0D19: 38 04       jr   c,$0D1F
@@ -1735,15 +1739,15 @@ display_status_bar_0b8a:
 0D32: 21 00 E1    ld   hl,sprite_shadow_E100
 0D35: 01 C6 00    ld   bc,$00C6
 0D38: CD FA 05    call clear_area_05fa	; clear part of RAM
-0D3B: 3A 43 E0    ld   a,($E043)
+0D3B: 3A 43 E0    ld   a,(unknown_E043)
 0D3E: 3D          dec  a
 0D3F: 28 09       jr   z,$0D4A
-0D41: 21 46 E0    ld   hl,$E046
+0D41: 21 46 E0    ld   hl,unknown_E046
 0D44: AF          xor  a
 0D45: CB 5E       bit  3,(hl)
 0D47: 28 01       jr   z,$0D4A
 0D49: 3C          inc  a
-0D4A: 32 4C E0    ld   ($E04C),a
+0D4A: 32 4C E0    ld   (unknown_E04C),a
 0D4D: 21 04 D0    ld   hl,$D004
 0D50: AE          xor  (hl)
 0D51: 21 3C E0    ld   hl,jeep_base_y_e03c
@@ -1771,18 +1775,18 @@ display_status_bar_0b8a:
 0D74: C9          ret
 
 0D75: E5          push hl
-0D76: 21 46 E0    ld   hl,$E046
+0D76: 21 46 E0    ld   hl,unknown_E046
 0D79: CB 7E       bit  7,(hl)
 0D7B: E1          pop  hl
 0D7C: F0          ret  p
 0D7D: E5          push hl
-0D7E: 2A DE E1    ld   hl,($E1DE)
+0D7E: 2A DE E1    ld   hl,(unknown_E1DE)
 0D81: 26 E0       ld   h,$E0
 0D83: 77          ld   (hl),a
 0D84: 7D          ld   a,l
 0D85: 3C          inc  a
 0D86: E6 07       and  $07
-0D88: 32 DE E1    ld   ($E1DE),a
+0D88: 32 DE E1    ld   (unknown_E1DE),a
 0D8B: E1          pop  hl
 0D8C: C9          ret
 
@@ -1792,7 +1796,7 @@ draw_ground_0d8d:
 0D93: 06 20       ld   b,$20
 0D95: C5          push bc
 0D96: CD 06 11    call $1106
-0D99: 21 E2 E1    ld   hl,$E1E2
+0D99: 21 E2 E1    ld   hl,unknown_E1E2
 0D9C: 7E          ld   a,(hl)
 0D9D: C6 08       add  a,$08
 0D9F: 77          ld   (hl),a
@@ -1813,7 +1817,7 @@ draw_ground_0d8d:
 0DB9: 20 03       jr   nz,$0DBE
 0DBB: 19          add  hl,de
 0DBC: 18 F9       jr   $0DB7
-0DBE: 22 54 E0    ld   ($E054),hl
+0DBE: 22 54 E0    ld   (unknown_E054),hl
 0DC1: 0A          ld   a,(bc)
 0DC2: 03          inc  bc
 0DC3: 3D          dec  a
@@ -1823,7 +1827,7 @@ draw_ground_0d8d:
 0DC9: 77          ld   (hl),a
 0DCA: 19          add  hl,de
 0DCB: 18 F4       jr   $0DC1
-0DCD: 3A 54 E0    ld   a,($E054)
+0DCD: 3A 54 E0    ld   a,(unknown_E054)
 0DD0: 3C          inc  a
 0DD1: 6F          ld   l,a
 0DD2: E6 1F       and  $1F
@@ -1833,8 +1837,8 @@ draw_ground_0d8d:
 0DD9: 6F          ld   l,a
 0DDA: 18 E2       jr   $0DBE
 0DDC: CD 5B 12    call $125B
-0DDF: 3A E2 E1    ld   a,($E1E2)
-0DE2: 21 09 E5    ld   hl,$E509
+0DDF: 3A E2 E1    ld   a,(unknown_E1E2)
+0DE2: 21 09 E5    ld   hl,unknown_E509
 0DE5: 47          ld   b,a
 0DE6: AE          xor  (hl)
 0DE7: E6 F8       and  $F8
@@ -1843,10 +1847,10 @@ draw_ground_0d8d:
 0DEB: E6 F8       and  $F8
 0DED: 77          ld   (hl),a
 0DEE: CD 06 11    call $1106
-0DF1: 3A 4D E0    ld   a,($E04D)
+0DF1: 3A 4D E0    ld   a,(unknown_E04D)
 0DF4: A7          and  a
 0DF5: C0          ret  nz
-0DF6: 21 0B E5    ld   hl,$E50B
+0DF6: 21 0B E5    ld   hl,unknown_E50B
 0DF9: 34          inc  (hl)
 0DFA: 7E          ld   a,(hl)
 0DFB: 5F          ld   e,a
@@ -1856,16 +1860,16 @@ draw_ground_0d8d:
 0E01: 20 03       jr   nz,$0E06
 0E03: CD D6 29    call $29D6
 0E06: 7B          ld   a,e
-0E07: 2A 16 E5    ld   hl,($E516)
+0E07: 2A 16 E5    ld   hl,(unknown_E516)
 0E0A: BE          cp   (hl)
 0E0B: 20 0B       jr   nz,$0E18
 0E0D: 23          inc  hl
 0E0E: 7E          ld   a,(hl)
 0E0F: E6 7F       and  $7F
-0E11: 32 D7 E1    ld   ($E1D7),a
+0E11: 32 D7 E1    ld   (unknown_E1D7),a
 0E14: 23          inc  hl
-0E15: 22 16 E5    ld   ($E516),hl
-0E18: 21 D7 E1    ld   hl,$E1D7
+0E15: 22 16 E5    ld   (unknown_E516),hl
+0E18: 21 D7 E1    ld   hl,unknown_E1D7
 0E1B: 7E          ld   a,(hl)
 0E1C: 3D          dec  a
 0E1D: F8          ret  m
@@ -1894,12 +1898,12 @@ draw_ground_0d8d:
 0E4E: C9          ret
 
 0E4F: 3E 19       ld   a,$19
-0E51: 32 70 E3    ld   ($E370),a
+0E51: 32 70 E3    ld   (unknown_E370),a
 0E54: C9          ret
 
 0E55: 3E 01       ld   a,$01
-0E57: 32 DC E1    ld   ($E1DC),a
-0E5A: 2A E4 E0    ld   hl,($E0E4)
+0E57: 32 DC E1    ld   (unknown_E1DC),a
+0E5A: 2A E4 E0    ld   hl,(unknown_E0E4)
 0E5D: 7D          ld   a,l
 0E5E: E6 1F       and  $1F
 0E60: F6 C0       or   $C0
@@ -1917,12 +1921,12 @@ draw_ground_0d8d:
 0E73: CD 81 29    call $2981
 0E76: C6 41       add  a,$41
 0E78: 77          ld   (hl),a
-0E79: 22 DA E1    ld   ($E1DA),hl
+0E79: 22 DA E1    ld   (unknown_E1DA),hl
 0E7C: 09          add  hl,bc
 0E7D: 36 F2       ld   (hl),$F2
 0E7F: 01 E0 03    ld   bc,$03E0
 0E82: 09          add  hl,bc
-0E83: 3A F9 E0    ld   a,($E0F9)
+0E83: 3A F9 E0    ld   a,(unknown_E0F9)
 0E86: C6 05       add  a,$05
 0E88: 77          ld   (hl),a
 0E89: C9          ret
@@ -1930,7 +1934,7 @@ draw_ground_0d8d:
 0E8A: 3C          inc  a
 0E8B: 28 C8       jr   z,$0E55
 0E8D: C6 05       add  a,$05
-0E8F: 32 08 E5    ld   ($E508),a
+0E8F: 32 08 E5    ld   (unknown_E508),a
 0E92: C9          ret
 
 0E93: FD 7E 00    ld   a,(iy+$00)
@@ -1940,7 +1944,7 @@ draw_ground_0d8d:
 0E9C: 38 1C       jr   c,$0EBA
 0E9E: 16 00       ld   d,$00
 0EA0: FD 5E 05    ld   e,(iy+$05)
-0EA3: DD 21 70 E3 ld   ix,$E370
+0EA3: DD 21 70 E3 ld   ix,unknown_E370
 0EA7: FD 46 04    ld   b,(iy+$04)
 0EAA: DD 7E 00    ld   a,(ix+$00)
 0EAD: A7          and  a
@@ -1949,16 +1953,16 @@ draw_ground_0d8d:
 0EB2: 10 F6       djnz $0EAA
 0EB4: C9          ret
 
-0EB5: 21 D7 E1    ld   hl,$E1D7
+0EB5: 21 D7 E1    ld   hl,unknown_E1D7
 0EB8: 36 11       ld   (hl),$11
-0EBA: 11 F0 FF    ld   de,$FFF0
-0EBD: DD 21 F0 E4 ld   ix,$E4F0
+0EBA: 11 F0 FF    ld   de,-$10
+0EBD: DD 21 F0 E4 ld   ix,unknown_E4F0
 0EC1: 18 E4       jr   $0EA7
 0EC3: FD 7E 00    ld   a,(iy+$00)
 0EC6: DD 77 0C    ld   (ix+$0c),a
 0EC9: FD 7E 01    ld   a,(iy+$01)
 0ECC: DD 77 0D    ld   (ix+$0d),a
-0ECF: 3A 09 E5    ld   a,($E509)
+0ECF: 3A 09 E5    ld   a,(unknown_E509)
 0ED2: D6 02       sub  $02
 0ED4: DD 77 0F    ld   (ix+$0f),a
 0ED7: CD 3D 15    call $153D
@@ -1984,7 +1988,7 @@ draw_ground_0d8d:
 0F09: C6 80       add  a,$80
 0F0B: 6F          ld   l,a
 0F0C: 6E          ld   l,(hl)
-0F0D: FD 2A E4 E0 ld   iy,($E0E4)
+0F0D: FD 2A E4 E0 ld   iy,(unknown_E0E4)
 0F11: 11 20 00    ld   de,$0020
 0F14: 7E          ld   a,(hl)
 0F15: 23          inc  hl
@@ -1995,7 +1999,7 @@ draw_ground_0d8d:
 0F1E: FD 19       add  iy,de
 0F20: 18 F2       jr   $0F14
 0F22: C8          ret  z
-0F23: 22 E6 E0    ld   ($E0E6),hl
+0F23: 22 E6 E0    ld   (unknown_E0E6),hl
 0F26: 3D          dec  a
 0F27: 28 11       jr   z,$0F3A
 0F29: FD 21 55 10 ld   iy,$1055
@@ -2004,14 +2008,14 @@ draw_ground_0d8d:
 0F34: DD 34 0E    inc  (ix+$0e)
 0F37: DD 71 00    ld   (ix+$00),c
 0F3A: 3E 0D       ld   a,$0D
-0F3C: 32 D7 E1    ld   ($E1D7),a
+0F3C: 32 D7 E1    ld   (unknown_E1D7),a
 0F3F: C9          ret
 
-0F40: 2A E6 E0    ld   hl,($E0E6)
+0F40: 2A E6 E0    ld   hl,(unknown_E0E6)
 0F43: 18 C8       jr   $0F0D
 0F45: D6 1F       sub  $1F
 0F47: FA B7 0F    jp   m,$0FB7
-0F4A: 21 C5 E1    ld   hl,$E1C5
+0F4A: 21 C5 E1    ld   hl,unknown_E1C5
 0F4D: 0E FF       ld   c,$FF
 0F4F: 23          inc  hl
 0F50: 0C          inc  c
@@ -2030,11 +2034,11 @@ draw_ground_0d8d:
 0F62: 77          ld   (hl),a
 0F63: 0D          dec  c
 0F64: F8          ret  m
-0F65: 21 D6 E1    ld   hl,$E1D6
+0F65: 21 D6 E1    ld   hl,unknown_E1D6
 0F68: 34          inc  (hl)
 0F69: C9          ret
 0F6A: 77          ld   (hl),a
-0F6B: FD 21 70 E3 ld   iy,$E370
+0F6B: FD 21 70 E3 ld   iy,unknown_E370
 0F6F: 11 10 00    ld   de,$0010
 0F72: 06 19       ld   b,$19
 0F74: 0D          dec  c
@@ -2072,20 +2076,20 @@ draw_ground_0d8d:
 0FB7: C6 08       add  a,$08
 0FB9: FE 04       cp   $04
 0FBB: 30 08       jr   nc,$0FC5
-0FBD: 21 0B E5    ld   hl,$E50B
+0FBD: 21 0B E5    ld   hl,unknown_E50B
 0FC0: 46          ld   b,(hl)
 0FC1: 23          inc  hl
 0FC2: 70          ld   (hl),b
 0FC3: 23          inc  hl
 0FC4: 77          ld   (hl),a
-0FC5: 3A D5 E1    ld   a,($E1D5)
+0FC5: 3A D5 E1    ld   a,(unknown_E1D5)
 0FC8: A7          and  a
 0FC9: C8          ret  z
 0FCA: 5F          ld   e,a
 0FCB: 16 00       ld   d,$00
-0FCD: FD 21 FF E3 ld   iy,$E3FF
+0FCD: FD 21 FF E3 ld   iy,unknown_E3FF
 0FD1: FD 19       add  iy,de
-0FD3: 21 70 E3    ld   hl,$E370
+0FD3: 21 70 E3    ld   hl,unknown_E370
 0FD6: 1E 10       ld   e,$10
 0FD8: 01 3A 05    ld   bc,$053A
 0FDB: 7E          ld   a,(hl)
@@ -2131,7 +2135,7 @@ draw_ground_0d8d:
 1090: ED 5F       ld   a,r
 1092: E6 7F       and  $7F
 1094: 47          ld   b,a
-1095: 3A 03 E3    ld   a,($E303)
+1095: 3A 03 E3    ld   a,(unknown_E303)
 1098: 80          add  a,b
 1099: D6 2F       sub  $2F
 109B: 4F          ld   c,a
@@ -2161,7 +2165,7 @@ draw_ground_0d8d:
 10C6: CB 3A       srl  d
 10C8: CB 3A       srl  d
 10CA: CB 3A       srl  d
-10CC: 3A 14 E5    ld   a,($E514)
+10CC: 3A 14 E5    ld   a,(unknown_E514)
 10CF: EE 1F       xor  $1F
 10D1: 92          sub  d
 10D2: 21 00 31    ld   hl,$3100
@@ -2193,17 +2197,17 @@ draw_ground_0d8d:
 10FF: DD 77 04    ld   (ix+$04),a
 1102: DD 71 00    ld   (ix+$00),c
 1105: C9          ret
-1106: 21 D9 E1    ld   hl,$E1D9
+1106: 21 D9 E1    ld   hl,unknown_E1D9
 1109: 7E          ld   a,(hl)
 110A: A7          and  a
 110B: C2 9A 11    jp   nz,$119A
-110E: 3A 08 E5    ld   a,($E508)
+110E: 3A 08 E5    ld   a,(unknown_E508)
 1111: FE 03       cp   $03
 1113: 30 79       jr   nc,$118E
 1115: 47          ld   b,a
 1116: 05          dec  b
 1117: 21 B4 2C    ld   hl,$2CB4
-111A: 3A E2 E1    ld   a,($E1E2)
+111A: 3A E2 E1    ld   a,(unknown_E1E2)
 111D: 1F          rra
 111E: 1F          rra
 111F: 1F          rra
@@ -2213,7 +2217,7 @@ draw_ground_0d8d:
 1125: C6 20       add  a,$20
 1127: 6F          ld   l,a
 1128: 4E          ld   c,(hl)
-1129: 3A E2 E1    ld   a,($E1E2)
+1129: 3A E2 E1    ld   a,(unknown_E1E2)
 112C: 1F          rra
 112D: 1F          rra
 112E: 1F          rra
@@ -2225,14 +2229,14 @@ draw_ground_0d8d:
 113A: EB          ex   de,hl
 113B: 11 20 00    ld   de,$0020
 113E: 06 07       ld   b,$07
-1140: 3A 14 E5    ld   a,($E514)
+1140: 3A 14 E5    ld   a,(unknown_E514)
 1143: B8          cp   b
 1144: 28 07       jr   z,$114D
 1146: 36 00       ld   (hl),$00
 1148: 19          add  hl,de
 1149: FD 19       add  iy,de
 114B: 10 F6       djnz $1143
-114D: 22 E4 E0    ld   ($E0E4),hl
+114D: 22 E4 E0    ld   (unknown_E0E4),hl
 1150: 71          ld   (hl),c
 1151: FD 36 00 04 ld   (iy+$00),$04
 1155: 19          add  hl,de
@@ -2240,14 +2244,14 @@ draw_ground_0d8d:
 1158: 36 F3       ld   (hl),$F3
 115A: FD 36 00 04 ld   (iy+$00),$04
 115E: 10 F5       djnz $1155
-1160: 3A E2 E1    ld   a,($E1E2)
+1160: 3A E2 E1    ld   a,(unknown_E1E2)
 1163: 1F          rra
 1164: 1F          rra
 1165: E6 3E       and  $3E
 1167: C6 00       add  a,$00
 1169: 6F          ld   l,a
 116A: 26 E2       ld   h,$E2
-116C: 3A 14 E5    ld   a,($E514)
+116C: 3A 14 E5    ld   a,(unknown_E514)
 116F: EE 1F       xor  $1F
 1171: 57          ld   d,a
 1172: FD 21 24 2C ld   iy,$2C24
@@ -2275,23 +2279,23 @@ draw_ground_0d8d:
 1192: 87          add  a,a
 1193: 28 02       jr   z,$1197
 1195: 3E 0A       ld   a,$0A
-1197: 32 D8 E1    ld   ($E1D8),a
+1197: 32 D8 E1    ld   (unknown_E1D8),a
 119A: 4E          ld   c,(hl)
 119B: CB 19       rr   c
 119D: D8          ret  c
 119E: CB 19       rr   c
-11A0: 21 D8 E1    ld   hl,$E1D8
+11A0: 21 D8 E1    ld   hl,unknown_E1D8
 11A3: 35          dec  (hl)
 11A4: F2 B6 11    jp   p,$11B6
 11A7: 36 0B       ld   (hl),$0B
-11A9: 3A 14 E5    ld   a,($E514)
+11A9: 3A 14 E5    ld   a,(unknown_E514)
 11AC: 38 3C       jr   c,$11EA
 11AE: FE 07       cp   $07
 11B0: 28 3E       jr   z,$11F0
 11B2: 3E 0B       ld   a,$0B
 11B4: 18 27       jr   $11DD
 11B6: 7E          ld   a,(hl)
-11B7: 21 14 E5    ld   hl,$E514
+11B7: 21 14 E5    ld   hl,unknown_E514
 11BA: 30 1C       jr   nc,$11D8
 11BC: A7          and  a
 11BD: 20 01       jr   nz,$11C0
@@ -2321,35 +2325,35 @@ draw_ground_0d8d:
 11EA: FE 04       cp   $04
 11EC: 3E 0B       ld   a,$0B
 11EE: 20 D0       jr   nz,$11C0
-11F0: 21 D9 E1    ld   hl,$E1D9
+11F0: 21 D9 E1    ld   hl,unknown_E1D9
 11F3: 34          inc  (hl)
-11F4: 2A E1 E1    ld   hl,($E1E1)
-11F7: 22 F1 E0    ld   ($E0F1),hl
+11F4: 2A E1 E1    ld   hl,(unknown_E1E1)
+11F7: 22 F1 E0    ld   (unknown_E0F1),hl
 11FA: 21 00 00    ld   hl,$0000
-11FD: 22 EF E0    ld   ($E0EF),hl
+11FD: 22 EF E0    ld   (unknown_E0EF),hl
 1200: C9          ret
 
 1201: 21 44 2D    ld   hl,$2D44
-1204: ED 53 EB E0 ld   ($E0EB),de
-1208: 22 E9 E0    ld   ($E0E9),hl
-120B: 3A 4E E0    ld   a,($E04E)
+1204: ED 53 EB E0 ld   (unknown_E0EB),de
+1208: 22 E9 E0    ld   (unknown_E0E9),hl
+120B: 3A 4E E0    ld   a,(unknown_E04E)
 120E: C6 03       add  a,$03
 1210: DD 77 01    ld   (ix+$01),a
 1213: DD 36 00 0B ld   (ix+$00),$0B
 1217: C9          ret
 
 display_title_1218:
-1218: 3A 4E E0    ld   a,($E04E)
+1218: 3A 4E E0    ld   a,(unknown_E04E)
 121B: DD BE 01    cp   (ix+$01)
 121E: 20 F3       jr   nz,$1213
-1220: 2A EB E0    ld   hl,($E0EB)
+1220: 2A EB E0    ld   hl,(unknown_E0EB)
 1223: 23          inc  hl
-1224: 22 EB E0    ld   ($E0EB),hl
+1224: 22 EB E0    ld   (unknown_E0EB),hl
 1227: 2B          dec  hl
 1228: EB          ex   de,hl
 1229: FD 21 00 04 ld   iy,$0400
 122D: FD 19       add  iy,de
-122F: 2A E9 E0    ld   hl,($E0E9)
+122F: 2A E9 E0    ld   hl,(unknown_E0E9)
 1232: 01 20 00    ld   bc,$0020
 1235: 7E          ld   a,(hl)
 1236: 23          inc  hl
@@ -2376,11 +2380,11 @@ display_title_1218:
 1255: 21 97 2C    ld   hl,$2C97
 1258: C3 00 03    jp   $0300
 
-125B: 3A 0D E5    ld   a,($E50D)
+125B: 3A 0D E5    ld   a,(unknown_E50D)
 125E: 3D          dec  a
 125F: F8          ret  m
 1260: 21 AB 2C    ld   hl,$2CAB
-1263: 3A 4E E0    ld   a,($E04E)
+1263: 3A 4E E0    ld   a,(unknown_E04E)
 1266: E6 3F       and  $3F
 1268: 28 1B       jr   z,$1285
 126A: E6 1F       and  $1F
@@ -2390,7 +2394,7 @@ display_title_1218:
 1273: 36 02       ld   (hl),$02
 1275: EB          ex   de,hl
 1276: 36 12       ld   (hl),$12
-1278: 21 0B E5    ld   hl,$E50B
+1278: 21 0B E5    ld   hl,unknown_E50B
 127B: 7E          ld   a,(hl)
 127C: 23          inc  hl
 127D: 96          sub  (hl)
@@ -2400,7 +2404,7 @@ display_title_1218:
 1282: 36 00       ld   (hl),$00
 1284: C9          ret
 1285: CD 00 03    call $0300
-1288: 3A 0D E5    ld   a,($E50D)
+1288: 3A 0D E5    ld   a,(unknown_E50D)
 128B: 21 55 80    ld   hl,$8055
 128E: 01 02 13    ld   bc,$1302
 1291: 11 20 00    ld   de,$0020
@@ -2419,7 +2423,7 @@ display_title_1218:
 12A4: 19          add  hl,de
 12A5: 71          ld   (hl),c
 12A6: C9          ret
-12A7: 21 70 E3    ld   hl,$E370
+12A7: 21 70 E3    ld   hl,unknown_E370
 12AA: 11 10 00    ld   de,$0010
 12AD: 01 02 19    ld   bc,$1902
 12B0: 7E          ld   a,(hl)
@@ -2433,30 +2437,30 @@ display_title_1218:
 12BF: 38 13       jr   c,$12D4
 12C1: FE 2A       cp   $2A
 12C3: 30 0F       jr   nc,$12D4
-12C5: 3A DF E1    ld   a,($E1DF)
+12C5: 3A DF E1    ld   a,(unknown_E1DF)
 12C8: 1F          rra
 12C9: 1F          rra
 12CA: D8          ret  c
 12CB: 79          ld   a,c
-12CC: 32 DF E1    ld   ($E1DF),a
+12CC: 32 DF E1    ld   (unknown_E1DF),a
 12CF: C6 15       add  a,$15
 12D1: C3 6F 0D    jp   $0D6F
 12D4: 19          add  hl,de
 12D5: 10 D9       djnz $12B0
-12D7: 3A DF E1    ld   a,($E1DF)
+12D7: 3A DF E1    ld   a,(unknown_E1DF)
 12DA: A7          and  a
 12DB: C8          ret  z
 12DC: AF          xor  a
 12DD: 18 ED       jr   $12CC
-12DF: 3A DF E1    ld   a,($E1DF)
+12DF: 3A DF E1    ld   a,(unknown_E1DF)
 12E2: 1F          rra
 12E3: 0D          dec  c
 12E4: 30 E5       jr   nc,$12CB
 12E6: C9          ret
-12E7: 3A DC E1    ld   a,($E1DC)
+12E7: 3A DC E1    ld   a,(unknown_E1DC)
 12EA: A7          and  a
 12EB: C8          ret  z
-12EC: 3A 4E E0    ld   a,($E04E)
+12EC: 3A 4E E0    ld   a,(unknown_E04E)
 12EF: E6 0F       and  $0F
 12F1: 28 04       jr   z,$12F7
 12F3: E6 07       and  $07
@@ -2464,7 +2468,7 @@ display_title_1218:
 12F6: 3C          inc  a
 12F7: 3C          inc  a
 12F8: 4F          ld   c,a
-12F9: 2A DA E1    ld   hl,($E1DA)
+12F9: 2A DA E1    ld   hl,(unknown_E1DA)
 12FC: 7E          ld   a,(hl)
 12FD: D6 5A       sub  $5A
 12FF: 28 0A       jr   z,$130B
@@ -2479,8 +2483,8 @@ display_title_1218:
 130F: 71          ld   (hl),c
 1310: C9          ret
 1311: 21 00 40    ld   hl,$4000
-1314: 22 02 E3    ld   ($E302),hl
-1317: 3A 4E E0    ld   a,($E04E)
+1314: 22 02 E3    ld   (unknown_E302),hl
+1317: 3A 4E E0    ld   a,(unknown_E04E)
 131A: E6 03       and  $03
 131C: 20 48       jr   nz,$1366
 131E: DD 35 0A    dec  (ix+$0a)
@@ -2494,8 +2498,8 @@ display_title_1218:
 1334: 07          rlca
 1335: 07          rlca
 1336: 30 2B       jr   nc,$1363
-1338: 2A 1A E3    ld   hl,($E31A)
-133B: 11 79 FF    ld   de,$FF79
+1338: 2A 1A E3    ld   hl,(unknown_E31A)
+133B: 11 79 FF    ld   de,-$87
 133E: 19          add  hl,de
 133F: 7C          ld   a,h
 1340: A7          and  a
@@ -2514,40 +2518,40 @@ display_title_1218:
 1354: 67          ld   h,a
 1355: 2B          dec  hl
 1356: 67          ld   h,a
-1357: 22 08 E3    ld   ($E308),hl
+1357: 22 08 E3    ld   (unknown_E308),hl
 135A: DD 34 00    inc  (ix+$00)
 135D: CD 76 15    call $1576
 1360: C3 B8 08    jp   $08B8
 1363: CD 8A 14    call $148A
 1366: CD 33 15    call $1533
 1369: D6 1C       sub  $1C
-136B: 32 07 E3    ld   ($E307),a
+136B: 32 07 E3    ld   (unknown_E307),a
 136E: 18 ED       jr   $135D
 1370: DD 34 00    inc  (ix+$00)
 1373: 3E 14       ld   a,$14
 1375: CD 75 0D    call $0D75
 1378: CD 48 15    call $1548
-137B: 2A 0E E3    ld   hl,($E30E)
+137B: 2A 0E E3    ld   hl,(unknown_E30E)
 137E: CD A4 14    call $14A4
 1381: CD 33 15    call $1533
 1384: D6 1E       sub  $1E
 1386: 18 E3       jr   $136B
 1388: CD 48 15    call $1548
-138B: 2A 0E E3    ld   hl,($E30E)
+138B: 2A 0E E3    ld   hl,(unknown_E30E)
 138E: CD A4 14    call $14A4
-1391: 2A 06 E3    ld   hl,($E306)
-1394: ED 5B 08 E3 ld   de,($E308)
+1391: 2A 06 E3    ld   hl,(unknown_E306)
+1394: ED 5B 08 E3 ld   de,(unknown_E308)
 1398: 19          add  hl,de
-1399: 22 06 E3    ld   ($E306),hl
+1399: 22 06 E3    ld   (unknown_E306),hl
 139C: 21 0C 00    ld   hl,$000C
 139F: 19          add  hl,de
-13A0: 22 08 E3    ld   ($E308),hl
+13A0: 22 08 E3    ld   (unknown_E308),hl
 13A3: CB 14       rl   h
 13A5: 38 0F       jr   c,$13B6
 13A7: CD 33 15    call $1533
 13AA: D6 1D       sub  $1D
 13AC: 47          ld   b,a
-13AD: 3A 07 E3    ld   a,($E307)
+13AD: 3A 07 E3    ld   a,(unknown_E307)
 13B0: B8          cp   b
 13B1: 38 03       jr   c,$13B6
 13B3: DD 34 00    inc  (ix+$00)
@@ -2555,14 +2559,14 @@ display_title_1218:
 13B9: C3 B8 08    jp   $08B8
 13BC: DD 36 00 02 ld   (ix+$00),$02
 13C0: 18 B6       jr   $1378
-13C2: 2A 02 E3    ld   hl,($E302)
-13C5: ED 5B 04 E3 ld   de,($E304)
+13C2: 2A 02 E3    ld   hl,(unknown_E302)
+13C5: ED 5B 04 E3 ld   de,(unknown_E304)
 13C9: 19          add  hl,de
-13CA: 22 02 E3    ld   ($E302),hl
-13CD: 2A 06 E3    ld   hl,($E306)
-13D0: ED 5B 08 E3 ld   de,($E308)
+13CA: 22 02 E3    ld   (unknown_E302),hl
+13CD: 2A 06 E3    ld   hl,(unknown_E306)
+13D0: ED 5B 08 E3 ld   de,(unknown_E308)
 13D4: 19          add  hl,de
-13D5: 22 06 E3    ld   ($E306),hl
+13D5: 22 06 E3    ld   (unknown_E306),hl
 13D8: CD B8 08    call $08B8
 13DB: DD 35 0A    dec  (ix+$0a)
 13DE: C0          ret  nz
@@ -2571,7 +2575,7 @@ display_title_1218:
 13E6: 3E 1F       ld   a,$1F
 13E8: C3 75 0D    jp   $0D75
 13EB: AF          xor  a
-13EC: 32 A2 E1    ld   ($E1A2),a
+13EC: 32 A2 E1    ld   (unknown_E1A2),a
 13EF: DD 35 0A    dec  (ix+$0a)
 13F2: F0          ret  p
 13F3: DD 7E 0D    ld   a,(ix+$0d)
@@ -2597,31 +2601,31 @@ display_title_1218:
 1424: DD 7E 0A    ld   a,(ix+$0a)
 1427: FE 50       cp   $50
 1429: D0          ret  nc
-142A: 21 4D E0    ld   hl,$E04D
+142A: 21 4D E0    ld   hl,unknown_E04D
 142D: 34          inc  (hl)
 142E: DD 36 00 04 ld   (ix+$00),$04
 1432: C9          ret
 1433: CD DB 20    call $20DB
-1436: 22 D6 E0    ld   ($E0D6),hl
+1436: 22 D6 E0    ld   (unknown_E0D6),hl
 1439: 7C          ld   a,h
 143A: D6 08       sub  $08
 143C: FE F0       cp   $F0
 143E: D2 52 08    jp   nc,$0852
-1441: 2A D8 E0    ld   hl,($E0D8)
+1441: 2A D8 E0    ld   hl,(unknown_E0D8)
 1444: 23          inc  hl
 1445: CB 7C       bit  7,h
 1447: 20 02       jr   nz,$144B
 1449: 2B          dec  hl
 144A: 2B          dec  hl
-144B: 22 D8 E0    ld   ($E0D8),hl
-144E: 2A DA E0    ld   hl,($E0DA)
-1451: ED 5B DC E0 ld   de,($E0DC)
+144B: 22 D8 E0    ld   (unknown_E0D8),hl
+144E: 2A DA E0    ld   hl,(unknown_E0DA)
+1451: ED 5B DC E0 ld   de,(unknown_E0DC)
 1455: 19          add  hl,de
 1456: 4C          ld   c,h
-1457: 22 DA E0    ld   ($E0DA),hl
+1457: 22 DA E0    ld   (unknown_E0DA),hl
 145A: 21 24 00    ld   hl,$0024
 145D: 19          add  hl,de
-145E: 22 DC E0    ld   ($E0DC),hl
+145E: 22 DC E0    ld   (unknown_E0DC),hl
 1461: CB 14       rl   h
 1463: 38 1F       jr   c,$1484
 1465: C6 0B       add  a,$0B
@@ -2629,7 +2633,7 @@ display_title_1218:
 146A: D6 08       sub  $08
 146C: B9          cp   c
 146D: 30 15       jr   nc,$1484
-146F: ED 5B DC E0 ld   de,($E0DC)
+146F: ED 5B DC E0 ld   de,(unknown_E0DC)
 1473: 21 00 00    ld   hl,$0000
 1476: ED 52       sbc  hl,de
 1478: CB 3A       srl  d
@@ -2637,10 +2641,10 @@ display_title_1218:
 147C: CB 3A       srl  d
 147E: CB 1B       rr   e
 1480: 19          add  hl,de
-1481: 22 DC E0    ld   ($E0DC),hl
+1481: 22 DC E0    ld   (unknown_E0DC),hl
 1484: CD B8 08    call $08B8
 1487: C3 EF 20    jp   $20EF
-148A: 3A 49 E0    ld   a,($E049)
+148A: 3A 49 E0    ld   a,(unknown_E049)
 148D: 87          add  a,a
 148E: 21 28 30    ld   hl,$3028
 1491: 85          add  a,l
@@ -2649,13 +2653,13 @@ display_title_1218:
 1494: 23          inc  hl
 1495: 66          ld   h,(hl)
 1496: 2E 00       ld   l,$00
-1498: 22 0E E3    ld   ($E30E),hl
+1498: 22 0E E3    ld   (unknown_E30E),hl
 149B: AF          xor  a
 149C: CB 13       rl   e
 149E: 17          rla
 149F: 57          ld   d,a
-14A0: ED 53 1C E3 ld   ($E31C),de
-14A4: ED 5B 02 E3 ld   de,($E302)
+14A0: ED 53 1C E3 ld   (unknown_E31C),de
+14A4: ED 5B 02 E3 ld   de,(unknown_E302)
 14A8: AF          xor  a
 14A9: ED 52       sbc  hl,de
 14AB: 4F          ld   c,a
@@ -2671,7 +2675,7 @@ display_title_1218:
 14BC: 6F          ld   l,a
 14BD: 5E          ld   e,(hl)
 14BE: 16 00       ld   d,$00
-14C0: 2A 04 E3    ld   hl,($E304)
+14C0: 2A 04 E3    ld   hl,(unknown_E304)
 14C3: 7C          ld   a,h
 14C4: A7          and  a
 14C5: F2 D4 14    jp   p,$14D4
@@ -2691,20 +2695,20 @@ display_title_1218:
 14D8: ED 52       sbc  hl,de
 14DA: 30 52       jr   nc,$152E
 14DC: 11 02 00    ld   de,$0002
-14DF: 3A 4E E0    ld   a,($E04E)
+14DF: 3A 4E E0    ld   a,(unknown_E04E)
 14E2: 1F          rra
-14E3: 2A 04 E3    ld   hl,($E304)
+14E3: 2A 04 E3    ld   hl,(unknown_E304)
 14E6: ED 5A       adc  hl,de
-14E8: 22 04 E3    ld   ($E304),hl
-14EB: ED 5B 02 E3 ld   de,($E302)
+14E8: 22 04 E3    ld   (unknown_E304),hl
+14EB: ED 5B 02 E3 ld   de,(unknown_E302)
 14EF: 19          add  hl,de
-14F0: 22 02 E3    ld   ($E302),hl
+14F0: 22 02 E3    ld   (unknown_E302),hl
 14F3: 54          ld   d,h
-14F4: 21 DC E1    ld   hl,$E1DC
+14F4: 21 DC E1    ld   hl,unknown_E1DC
 14F7: 7E          ld   a,(hl)
 14F8: 3D          dec  a
 14F9: C0          ret  nz
-14FA: 3A 0B E5    ld   a,($E50B)
+14FA: 3A 0B E5    ld   a,(unknown_E50B)
 14FD: 87          add  a,a
 14FE: 87          add  a,a
 14FF: 87          add  a,a
@@ -2712,7 +2716,7 @@ display_title_1218:
 1502: 82          add  a,d
 1503: D0          ret  nc
 1504: 36 00       ld   (hl),$00
-1506: 21 0E E5    ld   hl,$E50E
+1506: 21 0E E5    ld   hl,unknown_E50E
 1509: 34          inc  (hl)
 150A: 7E          ld   a,(hl)
 150B: 06 09       ld   b,$09
@@ -2731,12 +2735,12 @@ display_title_1218:
 1526: 0E 01       ld   c,$01
 1528: CD C2 02    call $02C2
 152B: C3 12 0D    jp   $0D12
-152E: 11 FD FF    ld   de,$FFFD
+152E: 11 FD FF    ld   de,-3
 1531: 18 AC       jr   $14DF
-1533: 3A 03 E3    ld   a,($E303)
+1533: 3A 03 E3    ld   a,(unknown_E303)
 1536: C6 20       add  a,$20
 1538: 47          ld   b,a
-1539: 3A E2 E1    ld   a,($E1E2)
+1539: 3A E2 E1    ld   a,(unknown_E1E2)
 153C: 80          add  a,b
 153D: C6 06       add  a,$06
 153F: CB 3F       srl  a
@@ -2745,19 +2749,19 @@ display_title_1218:
 1544: 26 E2       ld   h,$E2
 1546: 7E          ld   a,(hl)
 1547: C9          ret
-1548: 2A 4A E0    ld   hl,($E04A)
+1548: 2A 4A E0    ld   hl,(unknown_E04A)
 154B: 7C          ld   a,h
 154C: AD          xor  l
 154D: A5          and  l
 154E: 07          rlca
 154F: D0          ret  nc
 1550: 4F          ld   c,a
-1551: 3A 20 E3    ld   a,($E320)
+1551: 3A 20 E3    ld   a,(unknown_E320)
 1554: A7          and  a
 1555: 20 05       jr   nz,$155C
 1557: 3E 0A       ld   a,$0A
-1559: 32 20 E3    ld   ($E320),a
-155C: 21 30 E3    ld   hl,$E330
+1559: 32 20 E3    ld   (unknown_E320),a
+155C: 21 30 E3    ld   hl,unknown_E330
 155F: 06 04       ld   b,$04
 1561: 11 10 00    ld   de,$0010
 1564: 7E          ld   a,(hl)
@@ -2772,7 +2776,7 @@ display_title_1218:
 1571: CD 75 0D    call $0D75
 1574: 79          ld   a,c
 1575: C9          ret
-1576: 3A 03 E3    ld   a,($E303)
+1576: 3A 03 E3    ld   a,(unknown_E303)
 1579: 4F          ld   c,a
 157A: C6 04       add  a,$04
 157C: CD 38 15    call $1538
@@ -2803,9 +2807,9 @@ display_title_1218:
 15A5: FD 23       inc  iy
 15A7: FD 23       inc  iy
 15A9: C3 76 09    jp   $0976
-15AC: 3A 03 E3    ld   a,($E303)
+15AC: 3A 03 E3    ld   a,(unknown_E303)
 15AF: 4F          ld   c,a
-15B0: 3A 07 E3    ld   a,($E307)
+15B0: 3A 07 E3    ld   a,(unknown_E307)
 15B3: C6 11       add  a,$11
 15B5: CD C9 15    call $15C9
 15B8: 7A          ld   a,d
@@ -2823,28 +2827,28 @@ display_title_1218:
 15CA: CD ED 08    call $08ED
 15CD: 47          ld   b,a
 15CE: 11 00 05    ld   de,$0500
-15D1: 3A E2 E1    ld   a,($E1E2)
+15D1: 3A E2 E1    ld   a,(unknown_E1E2)
 15D4: CB 67       bit  4,a
 15D6: 20 01       jr   nz,$15D9
 15D8: 14          inc  d
-15D9: FD 21 A4 E1 ld   iy,$E1A4
+15D9: FD 21 A4 E1 ld   iy,unknown_E1A4
 15DD: C3 76 09    jp   $0976
 15E0: DD 36 0A 0C ld   (ix+$0a),$0C
-15E4: 3A 07 E3    ld   a,($E307)
+15E4: 3A 07 E3    ld   a,(unknown_E307)
 15E7: C6 0A       add  a,$0A
-15E9: 32 27 E3    ld   ($E327),a
-15EC: 2A 02 E3    ld   hl,($E302)
+15E9: 32 27 E3    ld   (unknown_E327),a
+15EC: 2A 02 E3    ld   hl,(unknown_E302)
 15EF: 11 00 1C    ld   de,$1C00
 15F2: 19          add  hl,de
-15F3: 22 22 E3    ld   ($E322),hl
+15F3: 22 22 E3    ld   (unknown_E322),hl
 15F6: DD 34 00    inc  (ix+$00)
 15F9: C9          ret
 15FA: DD 35 0A    dec  (ix+$0a)
 15FD: 28 19       jr   z,$1618
-15FF: 2A 22 E3    ld   hl,($E322)
+15FF: 2A 22 E3    ld   hl,(unknown_E322)
 1602: 11 5D 04    ld   de,$045D
 1605: 19          add  hl,de
-1606: 22 22 E3    ld   ($E322),hl
+1606: 22 22 E3    ld   (unknown_E322),hl
 1609: DD 7E 0A    ld   a,(ix+$0a)
 160C: 1F          rra
 160D: 3E 09       ld   a,$09
@@ -2855,7 +2859,7 @@ display_title_1218:
 1618: DD 34 00    inc  (ix+$00)
 161B: DD 36 0A 03 ld   (ix+$0a),$03
 161F: DD 36 0D 0B ld   (ix+$0d),$0B
-1623: 3A E2 E1    ld   a,($E1E2)
+1623: 3A E2 E1    ld   a,(unknown_E1E2)
 1626: DD 86 03    add  a,(ix+$03)
 1629: DD 77 0F    ld   (ix+$0f),a
 162C: C9          ret
@@ -2870,15 +2874,15 @@ display_title_1218:
 1641: DD 34 0D    inc  (ix+$0d)
 1644: DD 36 0A 03 ld   (ix+$0a),$03
 1648: C9          ret
-1649: 3A 03 E3    ld   a,($E303)
+1649: 3A 03 E3    ld   a,(unknown_E303)
 164C: C6 0A       add  a,$0A
 164E: DD 77 03    ld   (ix+$03),a
-1651: 3A 07 E3    ld   a,($E307)
+1651: 3A 07 E3    ld   a,(unknown_E307)
 1654: C6 02       add  a,$02
 1656: DD 77 07    ld   (ix+$07),a
 1659: DD 34 00    inc  (ix+$00)
 165C: C9          ret
-165D: 3A 00 E3    ld   a,($E300)
+165D: 3A 00 E3    ld   a,(unknown_E300)
 1660: FE 06       cp   $06
 1662: 30 2B       jr   nc,$168F
 1664: DD 7E 07    ld   a,(ix+$07)
@@ -2901,7 +2905,7 @@ display_title_1218:
 1684: 36 00       ld   (hl),$00
 1686: 1F          rra
 1687: D0          ret  nc
-1688: 11 20 FC    ld   de,$FC20
+1688: 11 20 FC    ld   de,-$3e0
 168B: 19          add  hl,de
 168C: 36 00       ld   (hl),$00
 168E: C9          ret
@@ -2917,19 +2921,19 @@ display_title_1218:
 16A2: 21 1C 31    ld   hl,$311C
 16A5: 85          add  a,l
 16A6: 6F          ld   l,a
-16A7: 3A 20 E3    ld   a,($E320)
-16AA: 11 04 F8    ld   de,$F804
+16A7: 3A 20 E3    ld   a,(unknown_E320)
+16AA: 11 04 F8    ld   de,-$7fc
 16AD: D6 0B       sub  $0B
 16AF: 28 06       jr   z,$16B7
 16B1: 3D          dec  a
 16B2: 20 17       jr   nz,$16CB
-16B4: 11 0A F0    ld   de,$F00A
-16B7: 3A 23 E3    ld   a,($E323)
+16B4: 11 0A F0    ld   de,-$ff6
+16B7: 3A 23 E3    ld   a,(unknown_E323)
 16BA: 82          add  a,d
 16BB: 91          sub  c
 16BC: FE E8       cp   $E8
 16BE: 38 0B       jr   c,$16CB
-16C0: 3A 27 E3    ld   a,($E327)
+16C0: 3A 27 E3    ld   a,(unknown_E327)
 16C3: DD 96 07    sub  (ix+$07)
 16C6: 86          add  a,(hl)
 16C7: 83          add  a,e
@@ -2938,7 +2942,7 @@ display_title_1218:
 16CE: A7          and  a
 16CF: F8          ret  m
 16D0: 23          inc  hl
-16D1: 3A 03 E3    ld   a,($E303)
+16D1: 3A 03 E3    ld   a,(unknown_E303)
 16D4: 91          sub  c
 16D5: 86          add  a,(hl)
 16D6: 23          inc  hl
@@ -2959,7 +2963,7 @@ display_title_1218:
 16E9: 86          add  a,(hl)
 16EA: 6F          ld   l,a
 16EB: 24          inc  h
-16EC: 3A 07 E3    ld   a,($E307)
+16EC: 3A 07 E3    ld   a,(unknown_E307)
 16EF: 86          add  a,(hl)
 16F0: DD 96 07    sub  (ix+$07)
 16F3: 3D          dec  a
@@ -2970,22 +2974,22 @@ display_title_1218:
 16FB: C8          ret  z
 16FC: E1          pop  hl
 16FD: 3E 07       ld   a,$07
-16FF: 32 00 E3    ld   ($E300),a
+16FF: 32 00 E3    ld   (unknown_E300),a
 1702: 3E 03       ld   a,$03
-1704: 32 0D E3    ld   ($E30D),a
+1704: 32 0D E3    ld   (unknown_E30D),a
 1707: AF          xor  a
-1708: 32 0A E3    ld   ($E30A),a
-170B: 32 B0 E3    ld   ($E3B0),a
-170E: 32 72 E1    ld   ($E172),a
+1708: 32 0A E3    ld   (unknown_E30A),a
+170B: 32 B0 E3    ld   (unknown_E3B0),a
+170E: 32 72 E1    ld   (unknown_E172),a
 1711: CD 52 08    call $0852
 1714: 06 03       ld   b,$03
-1716: 3A 07 E3    ld   a,($E307)
+1716: 3A 07 E3    ld   a,(unknown_E307)
 1719: C6 14       add  a,$14
 171B: 4F          ld   c,a
-171C: 3A 03 E3    ld   a,($E303)
-171F: 21 D3 E1    ld   hl,$E1D3
+171C: 3A 03 E3    ld   a,(unknown_E303)
+171F: 21 D3 E1    ld   hl,unknown_E1D3
 1722: 34          inc  (hl)
-1723: 21 C0 E3    ld   hl,$E3C0
+1723: 21 C0 E3    ld   hl,unknown_E3C0
 1726: FD 21 DF 30 ld   iy,$30DF
 172A: 36 1C       ld   (hl),$1C
 172C: 23          inc  hl
@@ -3008,15 +3012,15 @@ display_title_1218:
 1746: CD A1 08    call $08A1
 1749: 3E 1F       ld   a,$1F
 174B: C3 75 0D    jp   $0D75
-174E: 3A E2 E1    ld   a,($E1E2)
+174E: 3A E2 E1    ld   a,(unknown_E1E2)
 1751: DD 86 03    add  a,(ix+$03)
-1754: 32 2F E3    ld   ($E32F),a
+1754: 32 2F E3    ld   (unknown_E32F),a
 1757: 3E 0D       ld   a,$0D
-1759: 32 20 E3    ld   ($E320),a
+1759: 32 20 E3    ld   (unknown_E320),a
 175C: 3E 26       ld   a,$26
-175E: 32 2D E3    ld   ($E32D),a
+175E: 32 2D E3    ld   (unknown_E32D),a
 1761: 3E 03       ld   a,$03
-1763: 32 2A E3    ld   ($E32A),a
+1763: 32 2A E3    ld   (unknown_E32A),a
 1766: 3E 01       ld   a,$01
 1768: CD 75 0D    call $0D75
 176B: 11 07 00    ld   de,$0007
@@ -3039,7 +3043,7 @@ display_title_1218:
 1793: C9          ret
 1794: CD 56 08    call $0856
 1797: CD F0 17    call $17F0
-179A: 21 10 FB    ld   hl,$FB10
+179A: 21 10 FB    ld   hl,-$4f0
 179D: C6 06       add  a,$06
 179F: DD 77 08    ld   (ix+$08),a
 17A2: E5          push hl
@@ -3099,39 +3103,39 @@ display_title_1218:
 1804: FD 23       inc  iy
 1806: FD 23       inc  iy
 1808: C9          ret
-1809: 3A 00 E3    ld   a,($E300)
+1809: 3A 00 E3    ld   a,(unknown_E300)
 180C: FE 06       cp   $06
 180E: D0          ret  nc
 180F: FE 01       cp   $01
 1811: 26 00       ld   h,$00
 1813: 28 76       jr   z,$188B
-1815: 2A 1C E3    ld   hl,($E31C)
-1818: ED 5B 1A E3 ld   de,($E31A)
+1815: 2A 1C E3    ld   hl,(unknown_E31C)
+1818: ED 5B 1A E3 ld   de,(unknown_E31A)
 181C: 7A          ld   a,d
 181D: A7          and  a
 181E: FA 23 18    jp   m,$1823
 1821: ED 52       sbc  hl,de
 1823: 21 03 00    ld   hl,$0003
 1826: 30 03       jr   nc,$182B
-1828: 21 FE FF    ld   hl,$FFFE
-182B: 3A 4E E0    ld   a,($E04E)
+1828: 21 FE FF    ld   hl,-2
+182B: 3A 4E E0    ld   a,(unknown_E04E)
 182E: 1F          rra
 182F: 38 01       jr   c,$1832
 1831: 1D          dec  e
 1832: 19          add  hl,de
-1833: 22 1A E3    ld   ($E31A),hl
-1836: ED 5B 04 E3 ld   de,($E304)
+1833: 22 1A E3    ld   (unknown_E31A),hl
+1836: ED 5B 04 E3 ld   de,(unknown_E304)
 183A: A7          and  a
 183B: ED 52       sbc  hl,de
-183D: 22 14 E3    ld   ($E314),hl
+183D: 22 14 E3    ld   (unknown_E314),hl
 1840: EB          ex   de,hl
-1841: 2A E1 E1    ld   hl,($E1E1)
+1841: 2A E1 E1    ld   hl,(unknown_E1E1)
 1844: 19          add  hl,de
-1845: 22 E1 E1    ld   ($E1E1),hl
-1848: 3A D9 E1    ld   a,($E1D9)
+1845: 22 E1 E1    ld   (unknown_E1E1),hl
+1848: 3A D9 E1    ld   a,(unknown_E1D9)
 184B: 1F          rra
 184C: 30 3D       jr   nc,$188B
-184E: 2A EF E0    ld   hl,($E0EF)
+184E: 2A EF E0    ld   hl,(unknown_E0EF)
 1851: 19          add  hl,de
 1852: 7C          ld   a,h
 1853: C6 06       add  a,$06
@@ -3140,32 +3144,32 @@ display_title_1218:
 1859: D6 12       sub  $12
 185B: 67          ld   h,a
 185C: E5          push hl
-185D: 21 3F E2    ld   hl,$E23F
-1860: 11 42 E2    ld   de,$E242
+185D: 21 3F E2    ld   hl,unknown_E23F
+1860: 11 42 E2    ld   de,unknown_E242
 1863: 01 40 00    ld   bc,$0040
 1866: ED B8       lddr
-1868: 21 42 E2    ld   hl,$E242
+1868: 21 42 E2    ld   hl,unknown_E242
 186B: 0E 03       ld   c,$03
 186D: ED B8       lddr
 186F: E1          pop  hl
-1870: 22 EF E0    ld   ($E0EF),hl
-1873: ED 5B F1 E0 ld   de,($E0F1)
+1870: 22 EF E0    ld   (unknown_E0EF),hl
+1873: ED 5B F1 E0 ld   de,(unknown_E0F1)
 1877: 19          add  hl,de
-1878: 3A 08 E5    ld   a,($E508)
+1878: 3A 08 E5    ld   a,(unknown_E508)
 187B: FE 03       cp   $03
 187D: 30 0C       jr   nc,$188B
-187F: 3A E2 E1    ld   a,($E1E2)
+187F: 3A E2 E1    ld   a,(unknown_E1E2)
 1882: 94          sub  h
 1883: FE F4       cp   $F4
 1885: 38 04       jr   c,$188B
 1887: AF          xor  a
-1888: 32 D9 E1    ld   ($E1D9),a
+1888: 32 D9 E1    ld   (unknown_E1D9),a
 188B: 7C          ld   a,h
 188C: 2F          cpl
 188D: 21 3D E0    ld   hl,x_scroll_horizon_e03d
 1890: 86          add  a,(hl)
 1891: 32 C0 E1    ld   (scroll_x_value_ground_layer_E1C0),a
-1894: 2A 14 E3    ld   hl,($E314)
+1894: 2A 14 E3    ld   hl,(unknown_E314)
 1897: 54          ld   d,h
 1898: 5D          ld   e,l
 1899: CB 3C       srl  h
@@ -3176,17 +3180,17 @@ display_title_1218:
 18A2: CB 3C       srl  h
 18A4: CB 1D       rr   l
 18A6: EB          ex   de,hl
-18A7: 2A 04 E5    ld   hl,($E504)
+18A7: 2A 04 E5    ld   hl,(unknown_E504)
 18AA: 19          add  hl,de
-18AB: 22 04 E5    ld   ($E504),hl
+18AB: 22 04 E5    ld   (unknown_E504),hl
 18AE: 7C          ld   a,h
 18AF: 2F          cpl
 18B0: 32 C1 E1    ld   (scroll_x_value_green_layer_E1C1),a
 18B3: CB 3A       srl  d
 18B5: CB 1B       rr   e
-18B7: 2A 06 E5    ld   hl,($E506)
+18B7: 2A 06 E5    ld   hl,(unknown_E506)
 18BA: 19          add  hl,de
-18BB: 22 06 E5    ld   ($E506),hl
+18BB: 22 06 E5    ld   (unknown_E506),hl
 18BE: 7C          ld   a,h
 18BF: 2F          cpl
 18C0: 32 C2 E1    ld   (scroll_x_value_blue_layer_E1C2),a
@@ -3199,11 +3203,11 @@ display_title_1218:
 18D0: AF          xor  a
 18D1: 47          ld   b,a
 18D2: C6 94       add  a,$94
-18D4: 32 C3 E1    ld   ($E1C3),a
+18D4: 32 C3 E1    ld   (unknown_E1C3),a
 18D7: CB 28       sra  b
 18D9: 78          ld   a,b
 18DA: C6 72       add  a,$72
-18DC: 32 C4 E1    ld   ($E1C4),a
+18DC: 32 C4 E1    ld   (unknown_E1C4),a
 18DF: C9          ret
 18E0: CD 31 08    call $0831
 18E3: CD 99 16    call $1699
@@ -3216,10 +3220,10 @@ display_title_1218:
 18F3: DD 7E 0C    ld   a,(ix+$0c)
 18F6: 17          rla
 18F7: D8          ret  c
-18F8: 3A C0 E3    ld   a,($E3C0)
+18F8: 3A C0 E3    ld   a,(unknown_E3C0)
 18FB: A7          and  a
 18FC: C0          ret  nz
-18FD: FD 21 70 E3 ld   iy,$E370
+18FD: FD 21 70 E3 ld   iy,unknown_E370
 1901: 11 10 00    ld   de,$0010
 1904: 06 05       ld   b,$05
 1906: FD 7E 00    ld   a,(iy+$00)
@@ -3243,7 +3247,7 @@ display_title_1218:
 1934: FD 36 0C 0C ld   (iy+$0c),$0C
 1938: DD 36 0A 43 ld   (ix+$0a),$43
 193C: C9          ret
-193D: 3A 00 E3    ld   a,($E300)
+193D: 3A 00 E3    ld   a,(unknown_E300)
 1940: FE 06       cp   $06
 1942: D0          ret  nc
 1943: DD 7E 04    ld   a,(ix+$04)
@@ -3268,14 +3272,14 @@ display_title_1218:
 196D: 21 00 2E    ld   hl,$2E00
 1970: 85          add  a,l
 1971: 6F          ld   l,a
-1972: 3A 03 E3    ld   a,($E303)
+1972: 3A 03 E3    ld   a,(unknown_E303)
 1975: DD 96 03    sub  (ix+$03)
 1978: 86          add  a,(hl)
 1979: 23          inc  hl
 197A: BE          cp   (hl)
 197B: 30 45       jr   nc,$19C2
 197D: 47          ld   b,a
-197E: 3A 00 E3    ld   a,($E300)
+197E: 3A 00 E3    ld   a,(unknown_E300)
 1981: FE 04       cp   $04
 1983: C8          ret  z
 1984: 3A 04 D0    ld   a,($D004)
@@ -3296,21 +3300,21 @@ display_title_1218:
 199A: DD 7E 03    ld   a,(ix+$03)
 199D: 80          add  a,b
 199E: D6 1C       sub  $1C
-19A0: 32 03 E3    ld   ($E303),a
+19A0: 32 03 E3    ld   (unknown_E303),a
 19A3: 79          ld   a,c
-19A4: 32 0D E3    ld   ($E30D),a
+19A4: 32 0D E3    ld   (unknown_E30D),a
 19A7: 3D          dec  a
 19A8: 3D          dec  a
-19A9: 32 05 E3    ld   ($E305),a
+19A9: 32 05 E3    ld   (unknown_E305),a
 19AC: 3E 80       ld   a,$80
-19AE: 32 04 E3    ld   ($E304),a
+19AE: 32 04 E3    ld   (unknown_E304),a
 19B1: 23          inc  hl
 19B2: 7E          ld   a,(hl)
-19B3: 32 0A E3    ld   ($E30A),a
+19B3: 32 0A E3    ld   (unknown_E30A),a
 19B6: 21 00 02    ld   hl,$0200
-19B9: 22 08 E3    ld   ($E308),hl
+19B9: 22 08 E3    ld   (unknown_E308),hl
 19BC: 3E 06       ld   a,$06
-19BE: 32 00 E3    ld   ($E300),a
+19BE: 32 00 E3    ld   (unknown_E300),a
 19C1: C9          ret
 19C2: 96          sub  (hl)
 19C3: FE 04       cp   $04
@@ -3329,7 +3333,7 @@ display_title_1218:
 19DC: 0E 07       ld   c,$07
 19DE: FE 06       cp   $06
 19E0: 38 0B       jr   c,$19ED
-19E2: 3A 4E E0    ld   a,($E04E)
+19E2: 3A 4E E0    ld   a,(unknown_E04E)
 19E5: E6 30       and  $30
 19E7: 20 02       jr   nz,$19EB
 19E9: 3E 30       ld   a,$30
@@ -3350,11 +3354,11 @@ display_title_1218:
 1A05: DD 77 0C    ld   (ix+$0c),a
 1A08: C6 45       add  a,$45
 1A0A: DD 77 0D    ld   (ix+$0d),a
-1A0D: 3A 20 E3    ld   a,($E320)
+1A0D: 3A 20 E3    ld   a,(unknown_E320)
 1A10: FE 0F       cp   $0F
 1A12: 38 0E       jr   c,$1A22
 1A14: C0          ret  nz
-1A15: 3A 03 E3    ld   a,($E303)
+1A15: 3A 03 E3    ld   a,(unknown_E303)
 1A18: DD 96 03    sub  (ix+$03)
 1A1B: C6 10       add  a,$10
 1A1D: FE 30       cp   $30
@@ -3374,7 +3378,7 @@ display_title_1218:
 1A3C: DD 35 0D    dec  (ix+$0d)
 1A3F: DD 36 0A 07 ld   (ix+$0a),$07
 1A43: C9          ret
-1A44: 3A 00 E3    ld   a,($E300)
+1A44: 3A 00 E3    ld   a,(unknown_E300)
 1A47: FE 06       cp   $06
 1A49: D0          ret  nc
 1A4A: DD 35 0E    dec  (ix+$0e)
@@ -3412,25 +3416,25 @@ display_title_1218:
 1A98: E3          ex   (sp),hl
 1A99: FE 06       cp   $06
 1A9B: D0          ret  nc
-1A9C: 2A 72 E3    ld   hl,($E372)
+1A9C: 2A 72 E3    ld   hl,(unknown_E372)
 1A9F: 7C          ld   a,h
 1AA0: FE 08       cp   $08
 1AA2: 28 09       jr   z,$1AAD
 1AA4: 11 70 00    ld   de,$0070
 1AA7: 19          add  hl,de
-1AA8: 22 72 E3    ld   ($E372),hl
+1AA8: 22 72 E3    ld   (unknown_E372),hl
 1AAB: 18 2C       jr   $1AD9
 1AAD: DD 36 0A 00 ld   (ix+$0a),$00
 1AB1: DD 34 00    inc  (ix+$00)
 1AB4: DD 36 0E 80 ld   (ix+$0e),$80
 1AB8: C9          ret
-1AB9: 3A 4E E0    ld   a,($E04E)
+1AB9: 3A 4E E0    ld   a,(unknown_E04E)
 1ABC: 1F          rra
 1ABD: D8          ret  c
-1ABE: 3A 00 E3    ld   a,($E300)
+1ABE: 3A 00 E3    ld   a,(unknown_E300)
 1AC1: FE 06       cp   $06
 1AC3: D0          ret  nc
-1AC4: 3A 4E E0    ld   a,($E04E)
+1AC4: 3A 4E E0    ld   a,(unknown_E04E)
 1AC7: 47          ld   b,a
 1AC8: E6 03       and  $03
 1ACA: 20 0D       jr   nz,$1AD9
@@ -3439,7 +3443,7 @@ display_title_1218:
 1AD1: 28 06       jr   z,$1AD9
 1AD3: DD 35 03    dec  (ix+$03)
 1AD6: DD 35 03    dec  (ix+$03)
-1AD9: 3A 4E E0    ld   a,($E04E)
+1AD9: 3A 4E E0    ld   a,(unknown_E04E)
 1ADC: E6 07       and  $07
 1ADE: 20 0D       jr   nz,$1AED
 1AE0: DD 7E 03    ld   a,(ix+$03)
@@ -3456,10 +3460,10 @@ display_title_1218:
 1B00: C9          ret
 1B01: DD 35 0A    dec  (ix+$0a)
 1B04: 28 15       jr   z,$1B1B
-1B06: 2A 72 E3    ld   hl,($E372)
+1B06: 2A 72 E3    ld   hl,(unknown_E372)
 1B09: 11 80 01    ld   de,$0180
 1B0C: 19          add  hl,de
-1B0D: 22 72 E3    ld   ($E372),hl
+1B0D: 22 72 E3    ld   (unknown_E372),hl
 1B10: 7C          ld   a,h
 1B11: FE F0       cp   $F0
 1B13: D2 52 08    jp   nc,$0852
@@ -3476,8 +3480,8 @@ display_title_1218:
 1B32: DD 35 0B    dec  (ix+$0b)
 1B35: DD 36 0D 52 ld   (ix+$0d),$52
 1B39: C9          ret
-1B3A: 21 EE E0    ld   hl,$E0EE
-1B3D: 3A 4E E0    ld   a,($E04E)
+1B3A: 21 EE E0    ld   hl,unknown_E0EE
+1B3D: 3A 4E E0    ld   a,(unknown_E04E)
 1B40: 96          sub  (hl)
 1B41: F8          ret  m
 1B42: 01 00 10    ld   bc,$1000
@@ -3500,7 +3504,7 @@ display_title_1218:
 1B5F: 7D          ld   a,l
 1B60: C6 10       add  a,$10
 1B62: 10 E9       djnz $1B4D
-1B64: ED 53 D4 E1 ld   ($E1D4),de
+1B64: ED 53 D4 E1 ld   (unknown_E1D4),de
 1B68: 0D          dec  c
 1B69: F8          ret  m
 1B6A: 3A 10 E5    ld   a,(time_bcd_e510)
@@ -3515,7 +3519,7 @@ display_title_1218:
 1B7D: 09          add  hl,bc
 1B7E: 4E          ld   c,(hl)
 1B7F: 06 05       ld   b,$05
-1B81: 21 70 E3    ld   hl,$E370
+1B81: 21 70 E3    ld   hl,unknown_E370
 1B84: 11 00 00    ld   de,$0000
 1B87: 7E          ld   a,(hl)
 1B88: A7          and  a
@@ -3536,15 +3540,15 @@ display_title_1218:
 1B9C: ED 5F       ld   a,r
 1B9E: E6 0F       and  $0F
 1BA0: C6 19       add  a,$19
-1BA2: 21 4E E0    ld   hl,$E04E
+1BA2: 21 4E E0    ld   hl,unknown_E04E
 1BA5: 86          add  a,(hl)
-1BA6: 32 EE E0    ld   ($E0EE),a
+1BA6: 32 EE E0    ld   (unknown_E0EE),a
 1BA9: 16 00       ld   d,$00
-1BAB: DD 21 00 E3 ld   ix,$E300
+1BAB: DD 21 00 E3 ld   ix,unknown_E300
 1BAF: DD 19       add  ix,de
-1BB1: 21 D4 E1    ld   hl,$E1D4
+1BB1: 21 D4 E1    ld   hl,unknown_E1D4
 1BB4: 5E          ld   e,(hl)
-1BB5: FD 21 00 E4 ld   iy,$E400
+1BB5: FD 21 00 E4 ld   iy,unknown_E400
 1BB9: FD 19       add  iy,de
 1BBB: 0E 3B       ld   c,$3B
 1BBD: C3 64 10    jp   $1064
@@ -3553,14 +3557,14 @@ display_title_1218:
 1BC2: 18 9B       jr   $1B5F
 1BC4: 5D          ld   e,l
 1BC5: 18 C9       jr   $1B90
-1BC7: 3A 4E E0    ld   a,($E04E)
-1BCA: 21 52 E0    ld   hl,$E052
+1BC7: 3A 4E E0    ld   a,(unknown_E04E)
+1BCA: 21 52 E0    ld   hl,unknown_E052
 1BCD: AE          xor  (hl)
 1BCE: E6 1F       and  $1F
 1BD0: C0          ret  nz
 1BD1: ED 5F       ld   a,r
 1BD3: 77          ld   (hl),a
-1BD4: 21 C6 E1    ld   hl,$E1C6
+1BD4: 21 C6 E1    ld   hl,unknown_E1C6
 1BD7: 06 03       ld   b,$03
 1BD9: 7E          ld   a,(hl)
 1BDA: A7          and  a
@@ -3568,19 +3572,19 @@ display_title_1218:
 1BDD: 23          inc  hl
 1BDE: 10 F9       djnz $1BD9
 1BE0: C9          ret
-1BE1: DD 21 00 E4 ld   ix,$E400
+1BE1: DD 21 00 E4 ld   ix,unknown_E400
 1BE5: 04          inc  b
 1BE6: 78          ld   a,b
 1BE7: 48          ld   c,b
 1BE8: 06 10       ld   b,$10
 1BEA: FE 04       cp   $04
 1BEC: 28 0F       jr   z,$1BFD
-1BEE: 3A D6 E1    ld   a,($E1D6)
+1BEE: 3A D6 E1    ld   a,(unknown_E1D6)
 1BF1: 3D          dec  a
 1BF2: FA FD 1B    jp   m,$1BFD
 1BF5: 0D          dec  c
 1BF6: 0D          dec  c
-1BF7: DD 21 70 E3 ld   ix,$E370
+1BF7: DD 21 70 E3 ld   ix,unknown_E370
 1BFB: 06 05       ld   b,$05
 1BFD: 11 10 00    ld   de,$0010
 1C00: DD 7E 00    ld   a,(ix+$00)
@@ -3597,7 +3601,7 @@ display_title_1218:
 1C13: E6 1F       and  $1F
 1C15: C6 20       add  a,$20
 1C17: DD 77 0F    ld   (ix+$0f),a
-1C1A: 21 D6 E1    ld   hl,$E1D6
+1C1A: 21 D6 E1    ld   hl,unknown_E1D6
 1C1D: 35          dec  (hl)
 1C1E: ED 5F       ld   a,r
 1C20: E6 1E       and  $1E
@@ -3629,13 +3633,8 @@ display_title_1218:
 1C53: C9          ret
 1C54: CD 0A 08    call $080A
 1C57: 18 C5       jr   $1C1E
-1C59: 2B          dec  hl
-1C5A: 26 2A       ld   h,$2A
-1C5C: 26 2B       ld   h,$2B
-1C5E: 22 2A 22    ld   ($222A),hl
-1C61: 31 1E DD    ld   sp,$DD1E
-1C64: 7E          ld   a,(hl)
-1C65: 0D          dec  c
+
+1C63: DD 7E 0D    ld   a,(ix+$0d)                                     
 1C66: FE 2B       cp   $2B
 1C68: D8          ret  c
 1C69: DD CB 0E 7E bit  7,(ix+$0e)
@@ -3692,14 +3691,14 @@ display_title_1218:
 1CDE: FE 06       cp   $06
 1CE0: DA 52 08    jp   c,$0852
 1CE3: 01 05 00    ld   bc,$0005
-1CE6: 22 D6 E0    ld   ($E0D6),hl
+1CE6: 22 D6 E0    ld   (unknown_E0D6),hl
 1CE9: 7C          ld   a,h
-1CEA: 2A DC E0    ld   hl,($E0DC)
+1CEA: 2A DC E0    ld   hl,(unknown_E0DC)
 1CED: 09          add  hl,bc
-1CEE: 22 DC E0    ld   ($E0DC),hl
-1CF1: ED 5B DA E0 ld   de,($E0DA)
+1CEE: 22 DC E0    ld   (unknown_E0DC),hl
+1CF1: ED 5B DA E0 ld   de,(unknown_E0DA)
 1CF5: 19          add  hl,de
-1CF6: 22 DA E0    ld   ($E0DA),hl
+1CF6: 22 DA E0    ld   (unknown_E0DA),hl
 1CF9: 54          ld   d,h
 1CFA: CD 38 15    call $1538
 1CFD: D6 08       sub  $08
@@ -3718,7 +3717,7 @@ display_title_1218:
 1D1D: CD 75 0D    call $0D75
 1D20: C3 56 08    jp   $0856
 1D23: CD DB 20    call $20DB
-1D26: ED 5B 14 E3 ld   de,($E314)
+1D26: ED 5B 14 E3 ld   de,(unknown_E314)
 1D2A: CB 2A       sra  d
 1D2C: CB 1B       rr   e
 1D2E: ED 52       sbc  hl,de
@@ -3726,7 +3725,7 @@ display_title_1218:
 1D33: ED 52       sbc  hl,de
 1D35: 01 10 00    ld   bc,$0010
 1D38: 18 AC       jr   $1CE6
-1D3A: 3A 00 E3    ld   a,($E300)
+1D3A: 3A 00 E3    ld   a,(unknown_E300)
 1D3D: FE 06       cp   $06
 1D3F: D2 B8 08    jp   nc,$08B8
 1D42: 21 05 06    ld   hl,$0605
@@ -3734,7 +3733,7 @@ display_title_1218:
 1D48: FE 2A       cp   $2A
 1D4A: 30 03       jr   nc,$1D4F
 1D4C: 21 0B 02    ld   hl,$020B
-1D4F: FD 21 30 E3 ld   iy,$E330
+1D4F: FD 21 30 E3 ld   iy,unknown_E330
 1D53: 11 10 00    ld   de,$0010
 1D56: 06 04       ld   b,$04
 1D58: FD 7E 00    ld   a,(iy+$00)
@@ -3751,12 +3750,12 @@ display_title_1218:
 1D71: 38 2B       jr   c,$1D9E
 1D73: FD 19       add  iy,de
 1D75: 10 E1       djnz $1D58
-1D77: 3A 07 E3    ld   a,($E307)
+1D77: 3A 07 E3    ld   a,(unknown_E307)
 1D7A: DD 96 07    sub  (ix+$07)
 1D7D: FE F0       cp   $F0
 1D7F: DA B8 08    jp   c,$08B8
 1D82: 57          ld   d,a
-1D83: 3A 03 E3    ld   a,($E303)
+1D83: 3A 03 E3    ld   a,(unknown_E303)
 1D86: DD 96 03    sub  (ix+$03)
 1D89: D6 04       sub  $04
 1D8B: FE EA       cp   $EA
@@ -3775,7 +3774,7 @@ display_title_1218:
 1DB0: DD 36 0A 0A ld   (ix+$0a),$0A
 1DB4: DD 36 0D 4F ld   (ix+$0d),$4F
 1DB8: C9          ret
-1DB9: 21 C9 E1    ld   hl,$E1C9
+1DB9: 21 C9 E1    ld   hl,unknown_E1C9
 1DBC: 01 01 05    ld   bc,$0501
 1DBF: FE 31       cp   $31
 1DC1: 30 07       jr   nc,$1DCA
@@ -3800,7 +3799,7 @@ display_title_1218:
 1DE6: 78          ld   a,b
 1DE7: CD C2 02    call $02C2
 1DEA: C9          ret
-1DEB: 21 00 FC    ld   hl,$FC00
+1DEB: 21 00 FC    ld   hl,-$400
 1DEE: D6 02       sub  $02
 1DF0: C3 9D 17    jp   $179D
 1DF3: DD 36 0D 3E ld   (ix+$0d),$3E
@@ -3809,7 +3808,7 @@ display_title_1218:
 1DFC: E6 F8       and  $F8
 1DFE: C6 06       add  a,$06
 1E00: DD 77 0F    ld   (ix+$0f),a
-1E03: 21 D1 E1    ld   hl,$E1D1
+1E03: 21 D1 E1    ld   hl,unknown_E1D1
 1E06: 7E          ld   a,(hl)
 1E07: A7          and  a
 1E08: 28 13       jr   z,$1E1D
@@ -3828,7 +3827,7 @@ display_title_1218:
 1E21: DD 36 0A 04 ld   (ix+$0a),$04
 1E25: CD 31 08    call $0831
 1E28: C9          ret
-1E29: 21 D2 E1    ld   hl,$E1D2
+1E29: 21 D2 E1    ld   hl,unknown_E1D2
 1E2C: 7E          ld   a,(hl)
 1E2D: 23          inc  hl
 1E2E: B6          or   (hl)
@@ -3845,7 +3844,7 @@ display_title_1218:
 1E48: DD 34 0D    inc  (ix+$0d)
 1E4B: DD 36 0A 05 ld   (ix+$0a),$05
 1E4F: 18 D4       jr   $1E25
-1E51: 3A D3 E1    ld   a,($E1D3)
+1E51: 3A D3 E1    ld   a,(unknown_E1D3)
 1E54: A7          and  a
 1E55: C2 52 08    jp   nz,$0852
 1E58: DD 35 0A    dec  (ix+$0a)
@@ -3947,13 +3946,13 @@ display_title_1218:
 1F33: 20 52       jr   nz,$1F87
 1F35: DD 35 0A    dec  (ix+$0a)
 1F38: 28 49       jr   z,$1F83
-1F3A: 2A D6 E0    ld   hl,($E0D6)
-1F3D: ED 5B D8 E0 ld   de,($E0D8)
+1F3A: 2A D6 E0    ld   hl,(unknown_E0D6)
+1F3D: ED 5B D8 E0 ld   de,(unknown_E0D8)
 1F41: 19          add  hl,de
 1F42: 7A          ld   a,d
-1F43: ED 5B 04 E3 ld   de,($E304)
+1F43: ED 5B 04 E3 ld   de,(unknown_E304)
 1F47: ED 52       sbc  hl,de
-1F49: 22 D6 E0    ld   ($E0D6),hl
+1F49: 22 D6 E0    ld   (unknown_E0D6),hl
 1F4C: 17          rla
 1F4D: 38 2F       jr   c,$1F7E
 1F4F: DD 7E 0D    ld   a,(ix+$0d)
@@ -3967,10 +3966,10 @@ display_title_1218:
 1F60: 7C          ld   a,h
 1F61: B8          cp   b
 1F62: 30 1F       jr   nc,$1F83
-1F64: 2A DA E0    ld   hl,($E0DA)
-1F67: ED 5B DC E0 ld   de,($E0DC)
+1F64: 2A DA E0    ld   hl,(unknown_E0DA)
+1F67: ED 5B DC E0 ld   de,(unknown_E0DC)
 1F6B: 19          add  hl,de
-1F6C: 22 DA E0    ld   ($E0DA),hl
+1F6C: 22 DA E0    ld   (unknown_E0DA),hl
 1F6F: 7C          ld   a,h
 1F70: FE 38       cp   $38
 1F72: 38 0F       jr   c,$1F83
@@ -3983,12 +3982,12 @@ display_title_1218:
 1F81: 30 E1       jr   nc,$1F64
 1F83: DD 35 00    dec  (ix+$00)
 1F86: C9          ret
-1F87: 2A D8 E0    ld   hl,($E0D8)
+1F87: 2A D8 E0    ld   hl,(unknown_E0D8)
 1F8A: DD 5E 0B    ld   e,(ix+$0b)
 1F8D: 16 00       ld   d,$00
 1F8F: A7          and  a
 1F90: ED 52       sbc  hl,de
-1F92: 22 D8 E0    ld   ($E0D8),hl
+1F92: 22 D8 E0    ld   (unknown_E0D8),hl
 1F95: 30 16       jr   nc,$1FAD
 1F97: DD 7E 03    ld   a,(ix+$03)
 1F9A: D6 30       sub  $30
@@ -4001,17 +4000,17 @@ display_title_1218:
 1FA9: 3C          inc  a
 1FAA: DD 77 0C    ld   (ix+$0c),a
 1FAD: EB          ex   de,hl
-1FAE: 2A D6 E0    ld   hl,($E0D6)
+1FAE: 2A D6 E0    ld   hl,(unknown_E0D6)
 1FB1: ED 52       sbc  hl,de
 1FB3: DD 7E 0C    ld   a,(ix+$0c)
 1FB6: 07          rlca
 1FB7: 38 02       jr   c,$1FBB
 1FB9: 19          add  hl,de
 1FBA: 19          add  hl,de
-1FBB: ED 5B 04 E3 ld   de,($E304)
+1FBB: ED 5B 04 E3 ld   de,(unknown_E304)
 1FBF: ED 52       sbc  hl,de
-1FC1: 22 D6 E0    ld   ($E0D6),hl
-1FC4: 2A DC E0    ld   hl,($E0DC)
+1FC1: 22 D6 E0    ld   (unknown_E0D6),hl
+1FC4: 2A DC E0    ld   hl,(unknown_E0DC)
 1FC7: DD 5E 0B    ld   e,(ix+$0b)
 1FCA: 16 00       ld   d,$00
 1FCC: 0F          rrca
@@ -4021,16 +4020,16 @@ display_title_1218:
 1FD1: A7          and  a
 1FD2: ED 52       sbc  hl,de
 1FD4: 38 AD       jr   c,$1F83
-1FD6: 22 DC E0    ld   ($E0DC),hl
+1FD6: 22 DC E0    ld   (unknown_E0DC),hl
 1FD9: EB          ex   de,hl
-1FDA: 2A DA E0    ld   hl,($E0DA)
+1FDA: 2A DA E0    ld   hl,(unknown_E0DA)
 1FDD: A7          and  a
 1FDE: ED 52       sbc  hl,de
 1FE0: 0F          rrca
 1FE1: 38 02       jr   c,$1FE5
 1FE3: 19          add  hl,de
 1FE4: 19          add  hl,de
-1FE5: 22 DA E0    ld   ($E0DA),hl
+1FE5: 22 DA E0    ld   (unknown_E0DA),hl
 1FE8: C3 78 1F    jp   $1F78
 1FEB: 19          add  hl,de
 1FEC: 18 E8       jr   $1FD6
@@ -4048,15 +4047,15 @@ display_title_1218:
 2019: C9          ret
 201A: CD 63 1C    call $1C63
 201D: CD DB 20    call $20DB
-2020: 22 D6 E0    ld   ($E0D6),hl
+2020: 22 D6 E0    ld   (unknown_E0D6),hl
 2023: 7C          ld   a,h
 2024: D6 08       sub  $08
 2026: FE F0       cp   $F0
 2028: D2 52 08    jp   nc,$0852
-202B: ED 5B DC E0 ld   de,($E0DC)
-202F: 2A DA E0    ld   hl,($E0DA)
+202B: ED 5B DC E0 ld   de,(unknown_E0DC)
+202F: 2A DA E0    ld   hl,(unknown_E0DA)
 2032: 19          add  hl,de
-2033: 22 DA E0    ld   ($E0DA),hl
+2033: 22 DA E0    ld   (unknown_E0DA),hl
 2036: 7C          ld   a,h
 2037: FE 30       cp   $30
 2039: DA 52 08    jp   c,$0852
@@ -4066,9 +4065,9 @@ display_title_1218:
 2041: 21 00 00    ld   hl,$0000
 2044: A7          and  a
 2045: ED 52       sbc  hl,de
-2047: 22 DC E0    ld   ($E0DC),hl
+2047: 22 DC E0    ld   (unknown_E0DC),hl
 204A: C3 78 1F    jp   $1F78
-204D: 3A 03 E3    ld   a,($E303)
+204D: 3A 03 E3    ld   a,(unknown_E303)
 2050: 16 00       ld   d,$00
 2052: C6 10       add  a,$10
 2054: DD 96 03    sub  (ix+$03)
@@ -4107,15 +4106,15 @@ display_title_1218:
 2088: DD 72 09    ld   (ix+$09),d
 208B: DD 73 08    ld   (ix+$08),e
 208E: DD 36 00 29 ld   (ix+$00),$29
-2092: 2A 1A E3    ld   hl,($E31A)
+2092: 2A 1A E3    ld   hl,(unknown_E31A)
 2095: DD 75 0B    ld   (ix+$0b),l
 2098: DD 74 0F    ld   (ix+$0f),h
 209B: C9          ret
 209C: CD 63 1C    call $1C63
 209F: CD FB 20    call $20FB
-20A2: 22 D6 E0    ld   ($E0D6),hl
+20A2: 22 D6 E0    ld   (unknown_E0D6),hl
 20A5: 7C          ld   a,h
-20A6: 2A DC E0    ld   hl,($E0DC)
+20A6: 2A DC E0    ld   hl,(unknown_E0DC)
 20A9: C3 F1 1C    jp   $1CF1
 20AC: DD 35 0A    dec  (ix+$0a)
 20AF: C2 B8 08    jp   nz,$08B8
@@ -4135,16 +4134,16 @@ display_title_1218:
 20D8: C3 69 08    jp   $0869
 20DB: DD E5       push ix
 20DD: E1          pop  hl
-20DE: 11 D4 E0    ld   de,$E0D4
+20DE: 11 D4 E0    ld   de,unknown_E0D4
 20E1: 01 0A 00    ld   bc,$000A
 20E4: ED B0       ldir
-20E6: ED 5B D6 E0 ld   de,($E0D6)
-20EA: 2A D8 E0    ld   hl,($E0D8)
+20E6: ED 5B D6 E0 ld   de,(unknown_E0D6)
+20EA: 2A D8 E0    ld   hl,(unknown_E0D8)
 20ED: 19          add  hl,de
 20EE: C9          ret
 20EF: DD E5       push ix
 20F1: D1          pop  de
-20F2: 21 D4 E0    ld   hl,$E0D4
+20F2: 21 D4 E0    ld   hl,unknown_E0D4
 20F5: 01 0A 00    ld   bc,$000A
 20F8: ED B0       ldir
 20FA: C9          ret
@@ -4152,12 +4151,12 @@ display_title_1218:
 20FE: EB          ex   de,hl
 20FF: DD 6E 0B    ld   l,(ix+$0b)
 2102: DD 66 0F    ld   h,(ix+$0f)
-2105: ED 4B 1A E3 ld   bc,($E31A)
+2105: ED 4B 1A E3 ld   bc,(unknown_E31A)
 2109: ED 42       sbc  hl,bc
 210B: 19          add  hl,de
 210C: C9          ret
-210D: 21 51 E0    ld   hl,$E051
-2110: 3A 00 E3    ld   a,($E300)
+210D: 21 51 E0    ld   hl,unknown_E051
+2110: 3A 00 E3    ld   a,(unknown_E300)
 2113: 3D          dec  a
 2114: 28 11       jr   z,$2127
 2116: 7E          ld   a,(hl)
@@ -4174,21 +4173,21 @@ display_title_1218:
 2125: 27          daa
 2126: 77          ld   (hl),a
 2127: 3E 37       ld   a,$37
-2129: 32 51 E0    ld   ($E051),a
+2129: 32 51 E0    ld   (unknown_E051),a
 212C: 11 90 80    ld   de,$8090
 212F: FD 21 90 84 ld   iy,$8490
 2133: 0E 02       ld   c,$02
 2135: CD E7 03    call $03E7
-2138: 3A 12 E5    ld   a,($E512)
+2138: 3A 12 E5    ld   a,(unknown_E512)
 213B: CD BD 03    call $03BD
 213E: 3A 11 E5    ld   a,(time_bcd_e511)
 2141: C3 AE 03    jp   $03AE
 
-27C0: 21 46 E0    ld   hl,$E046
+27C0: 21 46 E0    ld   hl,unknown_E046
 27C3: 35          dec  (hl)
 27C4: FB          ei
 27C5: 78          ld   a,b
-27C6: 32 13 E5    ld   ($E513),a
+27C6: 32 13 E5    ld   (unknown_E513),a
 27C9: FE 05       cp   $05
 27CB: CA D2 27    jp   z,$27D2
 27CE: A7          and  a
@@ -4196,7 +4195,7 @@ display_title_1218:
 27D2: CD FA 29    call $29FA
 27D5: 3E 1E       ld   a,$1E
 27D7: CD 75 0D    call $0D75
-27DA: 21 0F E5    ld   hl,$E50F
+27DA: 21 0F E5    ld   hl,unknown_E50F
 27DD: 36 00       ld   (hl),$00
 27DF: 23          inc  hl
 27E0: 34          inc  (hl)
@@ -4207,7 +4206,7 @@ display_title_1218:
 27ED: CD BA 28    call $28BA
 27F0: 21 0C 2C    ld   hl,$2C0C
 27F3: CD 00 03    call $0300
-27F6: 3A 13 E5    ld   a,($E513)
+27F6: 3A 13 E5    ld   a,(unknown_E513)
 27F9: 17          rla
 27FA: 17          rla
 27FB: 17          rla
@@ -4217,9 +4216,9 @@ display_title_1218:
 2801: 6F          ld   l,a
 2802: 20 01       jr   nz,$2805
 2804: 24          inc  h
-2805: 22 98 E0    ld   ($E098),hl
+2805: 22 98 E0    ld   (unknown_E098),hl
 2808: CD 71 29    call $2971
-280B: 2A 96 E0    ld   hl,($E096)
+280B: 2A 96 E0    ld   hl,(unknown_E096)
 280E: 56          ld   d,(hl)
 280F: 2B          dec  hl
 2810: 5E          ld   e,(hl)
@@ -4229,13 +4228,13 @@ display_title_1218:
 2817: 30 0E       jr   nc,$2827
 2819: 19          add  hl,de
 281A: EB          ex   de,hl
-281B: 2A 96 E0    ld   hl,($E096)
+281B: 2A 96 E0    ld   hl,(unknown_E096)
 281E: 72          ld   (hl),d
 281F: 2B          dec  hl
 2820: 73          ld   (hl),e
 2821: 21 39 2C    ld   hl,$2C39
 2824: CD 4E 03    call $034E
-2827: 2A 94 E0    ld   hl,($E094)
+2827: 2A 94 E0    ld   hl,(unknown_E094)
 282A: ED 5B 11 E5 ld   de,(time_bcd_e511)
 282E: 7D          ld   a,l
 282F: D6 01       sub  $01
@@ -4243,19 +4242,19 @@ display_title_1218:
 2832: 6F          ld   l,a
 2833: 30 01       jr   nc,$2836
 2835: 25          dec  h
-2836: 22 94 E0    ld   ($E094),hl
+2836: 22 94 E0    ld   (unknown_E094),hl
 2839: A7          and  a
 283A: ED 52       sbc  hl,de
 283C: 38 50       jr   c,$288E
 283E: CD 68 29    call $2968
-2841: 2A 98 E0    ld   hl,($E098)
+2841: 2A 98 E0    ld   hl,(unknown_E098)
 2844: 7D          ld   a,l
 2845: C6 01       add  a,$01
 2847: 27          daa
 2848: 6F          ld   l,a
 2849: 30 01       jr   nc,$284C
 284B: 24          inc  h
-284C: 22 98 E0    ld   ($E098),hl
+284C: 22 98 E0    ld   (unknown_E098),hl
 284F: CD 71 29    call $2971
 2852: 3E 10       ld   a,$10
 2854: CD 75 0D    call $0D75
@@ -4273,7 +4272,7 @@ display_title_1218:
 2874: 38 0D       jr   c,$2883
 2876: 21 E4 2B    ld   hl,$2BE4
 2879: CD 4E 03    call $034E
-287C: 3A F9 E0    ld   a,($E0F9)
+287C: 3A F9 E0    ld   a,(unknown_E0F9)
 287F: 3C          inc  a
 2880: C3 F9 27    jp   $27F9
 2883: 21 F9 2B    ld   hl,$2BF9
@@ -4281,21 +4280,21 @@ display_title_1218:
 2889: CD E8 05    call $05E8
 288C: 18 0E       jr   $289C
 288E: CD E8 05    call $05E8
-2891: 11 01 E5    ld   de,$E501
-2894: 21 98 E0    ld   hl,$E098
+2891: 11 01 E5    ld   de,unknown_E501
+2894: 21 98 E0    ld   hl,unknown_E098
 2897: 06 02       ld   b,$02
 2899: CD 36 06    call $0636
 289C: 21 00 00    ld   hl,$0000
 289F: 22 11 E5    ld   (time_bcd_e511),hl
-28A2: 21 13 E5    ld   hl,$E513
+28A2: 21 13 E5    ld   hl,unknown_E513
 28A5: 7E          ld   a,(hl)
 28A6: A7          and  a
 28A7: C2 B7 0B    jp   nz,$0BB7
 28AA: 36 05       ld   (hl),$05
 28AC: 21 A2 23    ld   hl,$23A2
-28AF: 22 16 E5    ld   ($E516),hl
+28AF: 22 16 E5    ld   (unknown_E516),hl
 28B2: 3E 1A       ld   a,$1A
-28B4: 32 0E E5    ld   ($E50E),a
+28B4: 32 0E E5    ld   (unknown_E50E),a
 28B7: C3 B7 0B    jp   $0BB7
 28BA: CD E8 05    call $05E8
 28BD: CD 5A 29    call $295A
@@ -4306,7 +4305,7 @@ display_title_1218:
 28C9: FA CE 28    jp   m,$28CE
 28CC: 3E 05       ld   a,$05
 28CE: 5F          ld   e,a
-28CF: 3A 13 E5    ld   a,($E513)
+28CF: 3A 13 E5    ld   a,(unknown_E513)
 28D2: 01 80 00    ld   bc,$0080
 28D5: FE 08       cp   $08
 28D7: 30 09       jr   nc,$28E2
@@ -4314,7 +4313,7 @@ display_title_1218:
 28DC: FE 03       cp   $03
 28DE: 30 02       jr   nc,$28E2
 28E0: 0E 20       ld   c,$20
-28E2: ED 43 94 E0 ld   ($E094),bc
+28E2: ED 43 94 E0 ld   (unknown_E094),bc
 28E6: 83          add  a,e
 28E7: 87          add  a,a
 28E8: 5F          ld   e,a
@@ -4325,11 +4324,11 @@ display_title_1218:
 28F2: 28 02       jr   z,$28F6
 28F4: 1E 14       ld   e,$14
 28F6: 16 00       ld   d,$00
-28F8: 21 0C E0    ld   hl,$E00C
+28F8: 21 0C E0    ld   hl,unknown_E00C
 28FB: 19          add  hl,de
 28FC: 7E          ld   a,(hl)
 28FD: 23          inc  hl
-28FE: 22 96 E0    ld   ($E096),hl
+28FE: 22 96 E0    ld   (unknown_E096),hl
 2901: B6          or   (hl)
 2902: 20 03       jr   nz,$2907
 2904: 70          ld   (hl),b
@@ -4347,7 +4346,7 @@ display_title_1218:
 2919: 12          ld   (de),a
 291A: 21 94 2B    ld   hl,$2B94
 291D: CD 4E 03    call $034E
-2920: 21 12 E5    ld   hl,$E512
+2920: 21 12 E5    ld   hl,unknown_E512
 2923: 13          inc  de
 2924: CD 9A 03    call $039A
 2927: 21 B0 2B    ld   hl,$2BB0
@@ -4355,10 +4354,10 @@ display_title_1218:
 292D: CD 68 29    call $2968
 2930: 21 CC 2B    ld   hl,$2BCC
 2933: CD 4E 03    call $034E
-2936: 2A 96 E0    ld   hl,($E096)
+2936: 2A 96 E0    ld   hl,(unknown_E096)
 2939: 13          inc  de
 293A: CD 9A 03    call $039A
-293D: 2A 94 E0    ld   hl,($E094)
+293D: 2A 94 E0    ld   hl,(unknown_E094)
 2940: ED 5B 11 E5 ld   de,(time_bcd_e511)
 2944: A7          and  a
 2945: ED 52       sbc  hl,de
@@ -4375,9 +4374,9 @@ display_title_1218:
 2963: 01 20 03    ld   bc,$0320
 2966: 18 EC       jr   $2954
 2968: 11 D9 81    ld   de,$81D9
-296B: 21 95 E0    ld   hl,$E095
+296B: 21 95 E0    ld   hl,unknown_E095
 296E: C3 9A 03    jp   $039A
-2971: 21 99 E0    ld   hl,$E099
+2971: 21 99 E0    ld   hl,unknown_E099
 2974: 11 97 82    ld   de,$8297
 2977: CD 93 03    call $0393
 297A: EB          ex   de,hl
@@ -4385,7 +4384,7 @@ display_title_1218:
 297D: 23          inc  hl
 297E: 36 30       ld   (hl),$30
 2980: C9          ret
-2981: 3A 0E E5    ld   a,($E50E)
+2981: 3A 0E E5    ld   a,(unknown_E50E)
 2984: FE 1A       cp   $1A
 2986: D8          ret  c
 2987: D6 1A       sub  $1A
@@ -4433,8 +4432,8 @@ display_title_1218:
 29D1: 23          inc  hl
 29D2: D6 08       sub  $08
 29D4: 18 F2       jr   $29C8
-29D6: 2A F4 E0    ld   hl,($E0F4)
-29D9: 3A F6 E0    ld   a,($E0F6)
+29D6: 2A F4 E0    ld   hl,(unknown_E0F4)
+29D9: 3A F6 E0    ld   a,(unknown_E0F6)
 29DC: 3C          inc  a
 29DD: 57          ld   d,a
 29DE: C6 21       add  a,$21
@@ -4450,8 +4449,8 @@ display_title_1218:
 29EF: 38 02       jr   c,$29F3
 29F1: AF          xor  a
 29F2: 2C          inc  l
-29F3: 32 F6 E0    ld   ($E0F6),a
-29F6: 22 F4 E0    ld   ($E0F4),hl
+29F3: 32 F6 E0    ld   (unknown_E0F6),a
+29F6: 22 F4 E0    ld   (unknown_E0F4),hl
 29F9: C9          ret
 29FA: 21 CC 80    ld   hl,$80CC
 29FD: 06 0F       ld   b,$0F
@@ -4467,7 +4466,7 @@ display_title_1218:
 service_mode_3300:
 3300: 3E FF       ld   a,$FF
 3302: D3 C0       out  ($C0),a
-3304: 32 C5 E1    ld   ($E1C5),a
+3304: 32 C5 E1    ld   (unknown_E1C5),a
 3307: 21 00 E1    ld   hl,sprite_shadow_E100
 330A: 36 00       ld   (hl),$00
 330C: 54          ld   d,h
@@ -4478,7 +4477,7 @@ service_mode_3300:
 3314: 3E 01       ld   a,$01
 3316: 57          ld   d,a
 3317: 01 00 08    ld   bc,$0800
-331A: 21 00 E0    ld   hl,$E000
+331A: 21 00 E0    ld   hl,unknown_E000
 331D: 7A          ld   a,d
 331E: 77          ld   (hl),a
 331F: 5E          ld   e,(hl)
@@ -4495,7 +4494,7 @@ service_mode_3300:
 332E: 16 55       ld   d,$55
 3330: 7A          ld   a,d
 3331: 01 00 08    ld   bc,$0800
-3334: 21 00 E0    ld   hl,$E000
+3334: 21 00 E0    ld   hl,unknown_E000
 3337: 77          ld   (hl),a
 3338: 23          inc  hl
 3339: 3C          inc  a
@@ -4511,7 +4510,7 @@ service_mode_3300:
 3347: 18 EE       jr   $3337
 3349: 7A          ld   a,d
 334A: 01 00 08    ld   bc,$0800
-334D: 21 00 E0    ld   hl,$E000
+334D: 21 00 E0    ld   hl,unknown_E000
 3350: BE          cp   (hl)
 3351: 20 19       jr   nz,$336C
 3353: 23          inc  hl
@@ -4537,7 +4536,7 @@ service_mode_3300:
 336F: C3 BB 34    jp   $34BB
 3372: 7A          ld   a,d
 3373: 18 DE       jr   $3353
-3375: 31 00 E8    ld   sp,$E800
+3375: 31 00 E8    ld   sp,unknown_E800
 3378: 3E 01       ld   a,$01
 337A: 57          ld   d,a
 337B: 01 00 08    ld   bc,$0800
@@ -4618,7 +4617,7 @@ service_mode_3300:
 3400: ED B0       ldir
 3402: 21 00 00    ld   hl,$0000
 3405: AF          xor  a
-3406: 32 00 E7    ld   ($E700),a
+3406: 32 00 E7    ld   (unknown_E700),a
 3409: 06 00       ld   b,$00
 340B: 0E 10       ld   c,$10
 340D: AF          xor  a
@@ -4630,7 +4629,7 @@ service_mode_3300:
 3415: E5          push hl
 3416: CD 35 34    call $3435
 3419: E1          pop  hl
-341A: 3A 00 E7    ld   a,($E700)
+341A: 3A 00 E7    ld   a,(unknown_E700)
 341D: 3C          inc  a
 341E: FE 04       cp   $04
 3420: 20 E4       jr   nz,$3406
@@ -4641,7 +4640,7 @@ service_mode_3300:
 3429: CB 4F       bit  1,a
 342B: 20 F9       jr   nz,$3426
 342D: 3E 03       ld   a,$03
-342F: 32 01 E7    ld   ($E701),a
+342F: 32 01 E7    ld   (unknown_E701),a
 3432: C3 CD 35    jp   $35CD
 3435: F5          push af
 3436: FE FF       cp   $FF
@@ -4650,7 +4649,7 @@ service_mode_3300:
 343C: 21 86 3A    ld   hl,$3A86
 343F: 09          add  hl,bc
 3440: EB          ex   de,hl
-3441: 3A 00 E7    ld   a,($E700)
+3441: 3A 00 E7    ld   a,(unknown_E700)
 3444: 0F          rrca
 3445: 0F          rrca
 3446: 4F          ld   c,a
@@ -4667,7 +4666,7 @@ service_mode_3300:
 3456: DD E1       pop  ix
 3458: F1          pop  af
 3459: CD 9A 34    call $349A
-345C: 3A 00 E7    ld   a,($E700)
+345C: 3A 00 E7    ld   a,(unknown_E700)
 345F: C6 30       add  a,$30
 3461: DD 77 03    ld   (ix+$03),a
 3464: C9          ret
@@ -4777,7 +4776,7 @@ service_mode_3300:
 353D: DD 21 44 35 ld   ix,$3544
 3541: C3 B1 35    jp   $35B1
 3544: 21 00 80    ld   hl,$8000
-3547: 11 00 E0    ld   de,$E000
+3547: 11 00 E0    ld   de,unknown_E000
 354A: 01 A0 04    ld   bc,$04A0
 354D: ED B0       ldir
 354F: 21 00 80    ld   hl,$8000
@@ -4812,7 +4811,7 @@ service_mode_3300:
 3591: 28 10       jr   z,$35A3
 3593: 18 F3       jr   $3588
 3595: D9          exx
-3596: 21 00 E0    ld   hl,$E000
+3596: 21 00 E0    ld   hl,unknown_E000
 3599: 11 00 80    ld   de,$8000
 359C: 01 A0 04    ld   bc,$04A0
 359F: ED B0       ldir
@@ -4844,13 +4843,13 @@ service_mode_3300:
 35CD: CD AD 38    call $38AD
 35D0: 21 BF 3E    ld   hl,$3EBF
 35D3: CD 08 39    call $3908
-35D6: 3A 01 E7    ld   a,($E701)
+35D6: 3A 01 E7    ld   a,(unknown_E701)
 35D9: 06 02       ld   b,$02
 35DB: CD 1C 39    call $391C
 35DE: 3A 00 D0    ld   a,($D000)
 35E1: CB 47       bit  0,a
 35E3: 20 14       jr   nz,$35F9
-35E5: 3A 01 E7    ld   a,($E701)
+35E5: 3A 01 E7    ld   a,(unknown_E701)
 35E8: 07          rlca
 35E9: 4F          ld   c,a
 35EA: 06 00       ld   b,$00
@@ -4860,7 +4859,7 @@ service_mode_3300:
 35F5: DD 66 01    ld   h,(ix+$01)
 35F8: E9          jp   (hl)
 
-35F9: DD 21 02 E7 ld   ix,$E702
+35F9: DD 21 02 E7 ld   ix,unknown_E702
 35FD: CD DD 38    call $38DD
 3600: 47          ld   b,a
 3601: E6 55       and  $55
@@ -4893,13 +4892,13 @@ service_mode_3300:
 3649: C9          ret
 364A: CD 4E 36    call $364E
 364D: C9          ret
-364E: 3A 01 E7    ld   a,($E701)
+364E: 3A 01 E7    ld   a,(unknown_E701)
 3651: DD BE 01    cp   (ix+$01)
 3654: C8          ret  z
 3655: 06 00       ld   b,$00
 3657: CD 1C 39    call $391C
 365A: DD 86 02    add  a,(ix+$02)
-365D: 32 01 E7    ld   ($E701),a
+365D: 32 01 E7    ld   (unknown_E701),a
 3660: 06 02       ld   b,$02
 3662: CD 1C 39    call $391C
 3665: C9          ret
@@ -4985,10 +4984,10 @@ service_mode_3300:
 3720: C9          ret
 
 3721: AF          xor  a
-3722: 32 0F E7    ld   ($E70F),a
+3722: 32 0F E7    ld   (unknown_E70F),a
 3725: 67          ld   h,a
 3726: 6F          ld   l,a
-3727: 22 0D E7    ld   ($E70D),hl
+3727: 22 0D E7    ld   (unknown_E70D),hl
 372A: CD AD 38    call $38AD
 372D: 21 22 3D    ld   hl,$3D22
 3730: CD 08 39    call $3908
@@ -5002,11 +5001,11 @@ service_mode_3300:
 3748: 21 4B 81    ld   hl,$814B
 374B: CD B2 36    call $36B2
 374E: CD 8C 37    call $378C
-3751: 3A 0D E7    ld   a,($E70D)
+3751: 3A 0D E7    ld   a,(unknown_E70D)
 3754: 21 8C 81    ld   hl,$818C
 3757: CD 7A 37    call $377A
 375A: 23          inc  hl
-375B: 3A 0E E7    ld   a,($E70E)
+375B: 3A 0E E7    ld   a,(unknown_E70E)
 375E: CD 7A 37    call $377A
 3761: 3A 00 D0    ld   a,($D000)
 3764: CB 4F       bit  1,a
@@ -5032,37 +5031,37 @@ service_mode_3300:
 3788: C6 30       add  a,$30
 378A: 77          ld   (hl),a
 378B: C9          ret
-378C: 21 0F E7    ld   hl,$E70F
-378F: 3A 4E E0    ld   a,($E04E)
+378C: 21 0F E7    ld   hl,unknown_E70F
+378F: 3A 4E E0    ld   a,(unknown_E04E)
 3792: E6 C0       and  $C0
 3794: BE          cp   (hl)
 3795: C8          ret  z
-3796: 32 0F E7    ld   ($E70F),a
-3799: 3A 0E E7    ld   a,($E70E)
+3796: 32 0F E7    ld   (unknown_E70F),a
+3799: 3A 0E E7    ld   a,(unknown_E70E)
 379C: C6 01       add  a,$01
 379E: 27          daa
-379F: 32 0E E7    ld   ($E70E),a
+379F: 32 0E E7    ld   (unknown_E70E),a
 37A2: D0          ret  nc
-37A3: 3A 0D E7    ld   a,($E70D)
+37A3: 3A 0D E7    ld   a,(unknown_E70D)
 37A6: C6 01       add  a,$01
 37A8: 27          daa
-37A9: 32 0D E7    ld   ($E70D),a
+37A9: 32 0D E7    ld   (unknown_E70D),a
 37AC: C9          ret
 
 37AD: 2A 53 3D    ld   hl,($3D53)
-37B0: 22 06 E7    ld   ($E706),hl
+37B0: 22 06 E7    ld   (unknown_E706),hl
 37B3: 21 68 3D    ld   hl,$3D68
 37B6: FD 21 57 3D ld   iy,$3D57
 37BA: CD C0 37    call $37C0
 37BD: C3 CD 35    jp   $35CD
-37C0: FD 22 0B E7 ld   ($E70B),iy
+37C0: FD 22 0B E7 ld   (unknown_E70B),iy
 37C4: E5          push hl
 37C5: CD AD 38    call $38AD
 37C8: E1          pop  hl
 37C9: CD 08 39    call $3908
-37CC: DD 21 08 E7 ld   ix,$E708
+37CC: DD 21 08 E7 ld   ix,unknown_E708
 37D0: 3E 01       ld   a,$01
-37D2: 32 05 E7    ld   ($E705),a
+37D2: 32 05 E7    ld   (unknown_E705),a
 37D5: 06 02       ld   b,$02
 37D7: CD 23 39    call $3923
 37DA: 3E 01       ld   a,$01
@@ -5071,7 +5070,7 @@ service_mode_3300:
 37E1: CD 72 38    call $3872
 37E4: CD 7D 38    call $387D
 37E7: 3E FF       ld   a,$FF
-37E9: 32 11 E7    ld   ($E711),a
+37E9: 32 11 E7    ld   (unknown_E711),a
 37EC: 3A 00 D0    ld   a,($D000)
 37EF: CB 4F       bit  1,a
 37F1: 28 4A       jr   z,$383D
@@ -5093,13 +5092,13 @@ service_mode_3300:
 3812: CD 7D 38    call $387D
 3815: 18 D5       jr   $37EC
 3817: DD 36 00 55 ld   (ix+$00),$55
-381B: 3A 06 E7    ld   a,($E706)
+381B: 3A 06 E7    ld   a,(unknown_E706)
 381E: DD 77 01    ld   (ix+$01),a
 3821: DD 36 02 01 ld   (ix+$02),$01
 3825: CD 4F 38    call $384F
 3828: 18 C2       jr   $37EC
 382A: DD 36 00 AA ld   (ix+$00),$AA
-382E: 3A 07 E7    ld   a,($E707)
+382E: 3A 07 E7    ld   a,(unknown_E707)
 3831: DD 77 01    ld   (ix+$01),a
 3834: DD 36 02 FF ld   (ix+$02),$FF
 3838: CD 4F 38    call $384F
@@ -5131,23 +5130,23 @@ service_mode_3300:
 3877: CB FF       set  7,a
 3879: 32 00 D0    ld   ($D000),a
 387C: C9          ret
-387D: 3A 05 E7    ld   a,($E705)
+387D: 3A 05 E7    ld   a,(unknown_E705)
 3880: 4F          ld   c,a
 3881: 06 00       ld   b,$00
-3883: FD 2A 0B E7 ld   iy,($E70B)
+3883: FD 2A 0B E7 ld   iy,(unknown_E70B)
 3887: FD 09       add  iy,bc
 3889: FD 7E 00    ld   a,(iy+$00)
 388C: 32 00 D0    ld   ($D000),a
 388F: CB FF       set  7,a
 3891: 32 00 D0    ld   ($D000),a
 3894: C9          ret
-3895: 3A 05 E7    ld   a,($E705)
+3895: 3A 05 E7    ld   a,(unknown_E705)
 3898: DD BE 01    cp   (ix+$01)
 389B: C8          ret  z
 389C: 06 00       ld   b,$00
 389E: CD 23 39    call $3923
 38A1: DD 86 02    add  a,(ix+$02)
-38A4: 32 05 E7    ld   ($E705),a
+38A4: 32 05 E7    ld   (unknown_E705),a
 38A7: 06 02       ld   b,$02
 38A9: CD 23 39    call $3923
 38AC: C9          ret
@@ -5181,7 +5180,7 @@ service_mode_3300:
 38DC: C9          ret
 38DD: CD E2 38    call $38E2
 38E0: 18 1F       jr   $3901
-38E2: 21 10 E7    ld   hl,$E710
+38E2: 21 10 E7    ld   hl,unknown_E710
 38E5: 3A 01 D0    ld   a,($D001)
 38E8: 1F          rra
 38E9: CB 16       rl   (hl)
@@ -5190,7 +5189,7 @@ service_mode_3300:
 38EE: 7E          ld   a,(hl)
 38EF: EE FF       xor  $FF
 38F1: C9          ret
-38F2: 21 11 E7    ld   hl,$E711
+38F2: 21 11 E7    ld   hl,unknown_E711
 38F5: 3A 00 D0    ld   a,($D000)
 38F8: 1F          rra
 38F9: CB 16       rl   (hl)
@@ -5277,7 +5276,7 @@ service_mode_3300:
 396C: 21 6D 3E    ld   hl,$3E6D
 396F: 01 10 00    ld   bc,$0010
 3972: ED B0       ldir
-3974: 11 60 E1    ld   de,$E160
+3974: 11 60 E1    ld   de,sprite_shadow_E100+$60
 3977: 21 7D 3E    ld   hl,$3E7D
 397A: 01 10 00    ld   bc,$0010
 397D: ED B0       ldir
@@ -5293,9 +5292,9 @@ service_mode_3300:
 3991: ED B0       ldir
 3993: C3 CD 35    jp   $35CD
 3996: 3E 01       ld   a,$01
-3998: 32 12 E7    ld   ($E712),a
+3998: 32 12 E7    ld   (unknown_E712),a
 399B: AF          xor  a
-399C: 32 11 E7    ld   ($E711),a
+399C: 32 11 E7    ld   (unknown_E711),a
 399F: 18 2A       jr   $39CB
 39A1: 3A 00 D0    ld   a,($D000)
 39A4: CB 4F       bit  1,a
@@ -5304,9 +5303,9 @@ service_mode_3300:
 39AC: E6 AA       and  $AA
 39AE: FE 2A       cp   $2A
 39B0: 20 EF       jr   nz,$39A1
-39B2: 3A 12 E7    ld   a,($E712)
+39B2: 3A 12 E7    ld   a,(unknown_E712)
 39B5: 3C          inc  a
-39B6: 32 12 E7    ld   ($E712),a
+39B6: 32 12 E7    ld   (unknown_E712),a
 39B9: FE 01       cp   $01
 39BB: 28 0E       jr   z,$39CB
 39BD: FE 02       cp   $02
