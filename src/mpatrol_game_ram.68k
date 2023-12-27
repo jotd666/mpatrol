@@ -22,7 +22,7 @@
 	.global	unknown_E051
 	.global	unknown_E052
 	.global	unknown_E053
-	.global	unknown_E054
+	.global	unknown_16bit_E054
 	.global	unknown_E057
 	.global	unknown_E05B
 	.global	unknown_E05F
@@ -34,8 +34,8 @@
 	.global	unknown_E098
 	.global	unknown_E099
 	.global	unknown_E0D4
-	.global	unknown_E0D6
-	.global	unknown_E0D8
+	.global	unknown_16bit_E0D6
+	.global	unknown_16bit_E0D8
 	.global	unknown_E0DA
 	.global	unknown_E0DC
 	.global	unknown_E0E4
@@ -45,7 +45,7 @@
 	.global	unknown_E0EB
 	.global	unknown_E0ED
 	.global	unknown_E0EE
-	.global	unknown_E0EF
+	.global	unknown_16bit_E0EF
 	.global	unknown_E0F1
 	.global	unknown_E0F3
 	.global	unknown_E0F4
@@ -80,7 +80,7 @@
 	.global	unknown_E1DE
 	.global	unknown_E1DF
 	.global	unknown_E1E0
-	.global	unknown_E1E1
+	.global	unknown_16bit_E1E1
 	.global	unknown_E1E2
 	.global	unknown_E210
 	.global	unknown_E23F
@@ -92,15 +92,15 @@
 	.global	unknown_E303
 	.global	unknown_E304
 	.global	unknown_E305
-	.global	unknown_E306
+	.global	unknown_16bit_E306
 	.global	unknown_E307
-	.global	unknown_E308
+	.global	unknown_16bit_E308
 	.global	unknown_E309
 	.global	unknown_E30A
 	.global	unknown_E30D
 	.global	unknown_E30E
-	.global	unknown_E314
-	.global	unknown_E31A
+	.global	unknown_16bit_E314
+	.global	unknown_16bit_E31A
 	.global	unknown_E31C
 	.global	unknown_E320
 	.global	unknown_E322
@@ -111,7 +111,7 @@
 	.global	unknown_E32F
 	.global	unknown_E330
 	.global	unknown_E370
-	.global	unknown_E372
+	.global	unknown_16bit_E372
 	.global	unknown_E3B0
 	.global	unknown_E3C0
 	.global	unknown_E3FF
@@ -121,8 +121,8 @@
 	.global	unknown_E501
 	.global	unknown_E502
 	.global	unknown_E503
-	.global	unknown_E504
-	.global	unknown_E506
+	.global	unknown_16bit_E504
+	.global	unknown_16bit_E506
 	.global	unknown_E508
 	.global	unknown_E509
 	.global	unknown_E50B
@@ -201,7 +201,7 @@ unknown_E052:
 	ds.b	1
 unknown_E053:
 	ds.b	1
-unknown_E054:
+unknown_16bit_E054:
 	ds.b	3
 unknown_E057:
 	ds.b	4
@@ -225,9 +225,9 @@ unknown_E099:
 	ds.b	59
 unknown_E0D4:
 	ds.b	2
-unknown_E0D6:
+unknown_16bit_E0D6:
 	ds.b	2
-unknown_E0D8:
+unknown_16bit_E0D8:
 	ds.b	2
 unknown_E0DA:
 	ds.b	2
@@ -247,7 +247,7 @@ unknown_E0ED:
 	ds.b	1
 unknown_E0EE:
 	ds.b	1
-unknown_E0EF:
+unknown_16bit_E0EF:
 	ds.b	2
 unknown_E0F1:
 	ds.b	2
@@ -320,7 +320,7 @@ unknown_E1DF:
 	ds.b	1
 unknown_E1E0:
 	ds.b	1
-unknown_E1E1:
+unknown_16bit_E1E1:
 	ds.b	1
 unknown_E1E2:
 	ds.b	46
@@ -344,11 +344,11 @@ unknown_E304:
 	ds.b	1
 unknown_E305:
 	ds.b	1
-unknown_E306:
+unknown_16bit_E306:
 	ds.b	1
 unknown_E307:
 	ds.b	1
-unknown_E308:
+unknown_16bit_E308:
 	ds.b	1
 unknown_E309:
 	ds.b	1
@@ -358,9 +358,9 @@ unknown_E30D:
 	ds.b	1
 unknown_E30E:
 	ds.b	6
-unknown_E314:
+unknown_16bit_E314:
 	ds.b	6
-unknown_E31A:
+unknown_16bit_E31A:
 	ds.b	2
 unknown_E31C:
 	ds.b	4
@@ -382,7 +382,7 @@ unknown_E330:
 	ds.b	64
 unknown_E370:
 	ds.b	2
-unknown_E372:
+unknown_16bit_E372:
 	ds.b	62
 unknown_E3B0:
 	ds.b	16
@@ -402,9 +402,9 @@ unknown_E502:
 	ds.b	1
 unknown_E503:
 	ds.b	1
-unknown_E504:
+unknown_16bit_E504:
 	ds.b	2
-unknown_E506:
+unknown_16bit_E506:
 	ds.b	2
 unknown_E508:
 	ds.b	1

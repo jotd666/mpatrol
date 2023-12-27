@@ -4,7 +4,7 @@ from PIL import Image,ImageOps
 import os,glob,collections,itertools
 
 this_dir = os.path.abspath(os.path.dirname(__file__))
-game_name = "mamerip"
+game_name = "mpatrol"
 indir = os.path.join(this_dir,game_name)
 palette_name = "palette0 *_0000.txt"
 groups = {0:{"name":"tile"},1:{"name":"sprite"}}
@@ -122,7 +122,8 @@ if True:
         f.write(f"""#ifndef {inc_protect}
 #define {inc_protect}
 
-#define NUM_COLOURS {len(tiles_palette)}
+#define NUM_TILES_COLOURS {len(tiles_palette)}
+#define NUM_SPRITES_COLOURS {len(sprites_palette)}
 
 #define NUM_TILES {len(groups[0]["data"])*2}
 #define NUM_SPRITES {len(groups[1]["data"])}
@@ -171,12 +172,28 @@ if True:
 
         f.write("""};\n   // palette
 
-    uint8_t sprite_palette[NUM_COLOURS][3] =
+    uint8_t sprite_palette[NUM_SPRITES_COLOURS][3] =
     {
       """)
 
         nb_items=0
         for p in sprites_palette:
+            f.write("{{ {:3d},{:3d},{:3d} }},".format(*p))
+            nb_items+=1
+            if nb_items==4:
+                nb_items=0
+                f.write("\n  ")
+            else:
+                f.write("  ")
+        f.write("\n};\n")
+        f.write("""};\n   // palette
+
+    uint8_t sprite_palette[NUM_TILES_COLOURS][3] =
+    {
+      """)
+
+        nb_items=0
+        for p in tiles_palette:
             f.write("{{ {:3d},{:3d},{:3d} }},".format(*p))
             nb_items+=1
             if nb_items==4:
