@@ -117,7 +117,7 @@
 	.global	unknown_E3FF
 	.global	unknown_E400
 	.global	unknown_E4F0
-	.global	unknown_E500
+	.global	player_score_E500
 	.global	unknown_E501
 	.global	unknown_E502
 	.global	unknown_E503
@@ -394,7 +394,7 @@ unknown_E400:
 	ds.b	240
 unknown_E4F0:
 	ds.b	16
-unknown_E500:
+player_score_E500:
 	ds.b	1
 unknown_E501:
 	ds.b	1
@@ -432,6 +432,8 @@ unknown_E523:
 	ds.b	11
 unknown_E52E:
 	ds.b	466
+unknown_E600:
+	ds.b	0x100
 unknown_E700:
 	ds.b	1
 unknown_E701:

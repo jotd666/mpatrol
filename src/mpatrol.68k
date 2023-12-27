@@ -2,9 +2,19 @@
 	moveq	#0,d7
 	roxl.b	#1,d7
 	.endm
+	
 	.macro SET_XC_FLAGS
 	st	d7
 	roxl.b	#1,d7
+	.endm
+	
+	.macro	INVERT_XC_FLAGS
+	jcc		0f
+	SET_XC_FLAGS
+	bra.b	1f
+0:
+	CLEAR_XC_FLAGS
+1:
 	.endm
 *
 * Moon Patrol disassembly by JOTD
@@ -52,7 +62,7 @@
 mpatrol_reset:
 l_0000:
     jbsr  osd_disable_interrupts  | [di]
-*ld   sp,unknown_E800
+	lea	stack_top_E800,sp   | [ld   sp,unknown_E800]
 *im   1
 	jbsr	osd_read_dsw_2                       	| [$0006: ld   a,($D004)]
 	tst.b	d0                              	| [$0009: and  a]
@@ -130,7 +140,7 @@ l_008f:
 	move.b	#0x04,d1                        	| [$008f: ld   b,$04]
 	jra	l_007d                             	| [$0091: jr   $007D]
 l_0093:
-	jbsr	l_05cb                            	| [$0093: call $05CB]
+	jbsr	sound_stuff_05cb                            	| [$0093: call $05CB]
 	jbsr	osd_read_in_0                       	| [$0096: ld   a,($D000)]
 	not.b	d0                               	| [$0099: cpl]
 	move.b	d0,unknown_E053                 	| [$009a: ld   (unknown_E053),a]
@@ -257,12 +267,12 @@ l_0184:
 l_0192:
 	                               	| [$0192: and  a]
 	jeq	l_01d2                             	| [$0193: jr   z,$01D2]
-	subq.b	#1,d0                           	| [$0195: dec  a]
-daa
+	moveq	#0,d7
+	sbcd	d7,d0                           	| [$0195: dec  a + daa]
 	move.b	d0,unknown_E054                 	| [$0197: ld   (unknown_E054),a]
 	lea	l_8233,a1                      	| [$019a: ld   de,$8233]
 	move.b	#0x02,d2                        	| [$019d: ld   c,$02]
-	jbsr	l_03ae                            	| [$019f: call $03AE]
+	jbsr	set_character_at_address_03ae                            	| [$019f: call $03AE]
 	move.b	#0x40,d0                        	| [$01a2: ld   a,$40]
 	move.b	d0,unknown_E050                 	| [$01a4: ld   (unknown_E050),a]
 l_01a7:
@@ -295,7 +305,7 @@ l_01da:
 	move.b	unknown_E040,d0                 	| [$01da: ld   a,(unknown_E040)]
 	move.b	d0,nb_lives_E515                	| [$01dd: ld   (nb_lives_E515),a]
 	                      	| [$01e0: ld   hl,$0000] 0
-	clr.w	unknown_E500                 	| [$01e3: ld   (unknown_E500),hl]
+	clr.w	player_score_E500                 	| [$01e3: ld   (player_score_E500),hl]
 	clr.w	unknown_E502                 	| [$01e6: ld   (unknown_E502),hl]
 	jra	l_0603                             	| [$01e9: jp   $0603]
 
@@ -339,12 +349,11 @@ l_0286:
 	lea	unknown_E1D0,a0                	| [$0286: ld   hl,unknown_E1D0]
 	cmp.b	(a0),d0                          	| [$0289: cp   (hl)]
 	jeq	l_026e                             	| [$028a: jr   z,$026E]
+	moveq	#0,d4
 	move.b	d0,d4                           	| [$028c: ld   e,a]
-	move.b	#0xE6,d3                        	| [$028d: ld   d,$E6]
-	move.w	#0x0000,a2                      	| [$028f: ld   ix,$0000] 0
-                  ^^^^^^ TODO: review move.w into address register
-	add.w	d3,a2                            	| [$0293: add  ix,de]
-  ^^^^ TODO: review d3 computation above
+	* set IX at $E600+offset                   	| [$028d: ld   d,$E6]
+	lea		unknown_E600,a2                      	| [$028f: ld   ix,$0000] 0
+	add.w	d4,a2                            	| [$0293: add  ix,de]
 	move.b	(a2),d2                    	| [$0295: ld   c,(ix+$00)]
 	asl.b	#1,d2                            	| [$0298: sla  c]
 	jne	l_02ad                             	| [$029a: jr   nz,$02AD]
@@ -354,50 +363,54 @@ l_0286:
 	addq.b	#0x04,d0                        	| [$02a2: add  a,$04]
 	move.b	d0,(a0)                         	| [$02a4: ld   (hl),a]
 l_02a5:
-
-	move.l	a2,-(sp)                        	| [$02a5: push ix]
-TODO craignos!!
-	movem.w	(sp)+,d1/d2                    	| [$02a7: pop  bc]
-	move.b	d2,d0                           	| [$02a8: ld   a,c]
+	* convert address to offset back again
+	sub.l	#unknown_E600,a2               	| [$02a5: push ix]
+	move.w	a2,d0                    	| [$02a7: pop  bc]
+	* next item									| [$02a8: ld   a,c]
 	addq.b	#0x04,d0                        	| [$02a9: add  a,$04]
 	jra	l_0286                             	| [$02ab: jr   $0286]
 l_02ad:
-* problem d1=0 jump table starts at 1
-	clr.b	d1                               	| [$02ad: ld   b,$00]
-	move.b	d1,(a2)                    	| [$02af: ld   (ix+$00),b]
+	clr.w	d1                               	| [$02ad: ld   b,$00]
+	clr.b	(a2)                    	| [$02af: ld   (ix+$00),b]
+	move.b	d2,d1
+	add.w	d1,d1				| one more shift for 32 bit jump
 	move.b	(0x01,a2),d0                    	| [$02b2: ld   a,(ix+$01)]
-	lea	l_02A5,a0                      	| [$02b5: ld   hl,$02A5]
+	* push return address
+	pea		l_02a5                      	| [$02b5: ld   hl,$02A5]
 
-	move.l	a0,-(sp)                        	| [$02b8: push hl]
+	                        	| [$02b8: push hl]
 	lea	jump_table_02D3,a0             	| [$02b9: ld   hl,jump_table_02D3]
-	add.w	d1,a0                            	| [$02bc: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
-	move.l	(a0),a0
+										| [$02bc: add  hl,bc]
+	move.l	(a0,d1.w),a0
 											| [$02bd: ld   c,(hl)]
 											| [$02be: inc  hl]
 											| [$02bf: ld   h,(hl)]
 											| [$02c0: ld   l,c]
+	* will return to l_02a5
 	jra	(a0)                               	| [$02c1: jp   (hl)]
 
+* stores values of d2,d0,d4,d3 in a revolving buffer in E600
 l_02c2:
-	TODO fix this mess
+	moveq	#0,d6
 	lea	unknown_E1D0,a0                	| [$02c2: ld   hl,unknown_E1D0]
 	move.b	(a0),d6                         	| [$02c5: ld   l,(hl)]
-	move.b	#0xE6,d5                        	| [$02c6: ld   h,$E6]
-	move.b	d2,(a0)                         	| [$02c8: ld   (hl),c]
-	addq.w	#1,a0                           	| [$02c9: inc  hl]
-	move.b	d0,(a0)                         	| [$02ca: ld   (hl),a]
-	addq.w	#1,a0                           	| [$02cb: inc  hl]
-	move.b	d4,(a0)                         	| [$02cc: ld   (hl),e]
-	addq.w	#1,a0                           	| [$02cd: inc  hl]
+	lea	unknown_E600,a0                        	| [$02c6: ld   h,$E6]
+	add.w	d6,a0
+	move.b	d2,(a0)+                         	| [$02c8: ld   (hl),c]
+	                           	| [$02c9: inc  hl]
+	move.b	d0,(a0)+                         	| [$02ca: ld   (hl),a]
+	                           	| [$02cb: inc  hl]
+	move.b	d4,(a0)+                         	| [$02cc: ld   (hl),e]
+	                           	| [$02cd: inc  hl]
 	move.b	d3,(a0)                         	| [$02ce: ld   (hl),d]
-	addq.b	#1,d6                           	| [$02cf: inc  l]
+	                           	| [$02cf: inc  l]
+	addq	#4,d6
 	move.b	d6,d0                           	| [$02d0: ld   a,l]
 	move.b	d0,unknown_E1D0                 	| [$02d1: ld   (unknown_E1D0),a]
 	rts                                    	| [$02d4: ret]
 * the jump table
 
-jump_table_02D3
+jump_table_02D3:
 	.long	l_0000                           	|  overlaps ret instruction, probably never used
 	.long	l_0622
 	.long	l_02fa
@@ -533,10 +546,13 @@ l_03a7:
 	move.b	d0,(a1)                         	| [$03ab: ld   (de),a]
 	addq.w	#1,a1                           	| [$03ac: inc  de]
 	rts                                    	| [$03ad: ret]
-l_03ae:
-	lea	l_0400,a3                      	| [$03ae: ld   iy,$0400]
-	add.w	d3,a3                            	| [$03b2: add  iy,de]
-  ^^^^ TODO: review d3 computation above
+	
+* < A1: video address
+* < D0: character code
+* < D2: character attribute
+set_character_at_address_03ae:
+												| [$03ae: ld   iy,$0400]
+	lea		(0x400,a1),a3                            	| [$03b2: add  iy,de]
 	move.w	d0,-(sp)                        	| [$03b4: push af]
 	ror.b	#4,d0                           	| [$03b5: rra] * 4
 	jbsr	l_03bd                            	| [$03b9: call $03BD]
@@ -545,14 +561,15 @@ l_03bd:
 	and.b	#0x0F,d0                         	| [$03bd: and  $0F]
 	add.b	#0x30,d0                         	| [$03bf: add  a,$30]
 l_03c1:
+	jbsr	write_to_screen
 	move.b	d0,(a1)                         	| [$03c1: ld   (de),a]
-	move.b	d2,(0x00,a3)                    	| [$03c2: ld   (iy+$00),c]
+	move.b	d2,(a3)                    	| [$03c2: ld   (iy+$00),c]
 	addq.w	#1,a1                           	| [$03c5: inc  de]
 	addq.w	#1,a3                           	| [$03c6: inc  iy]
 	rts                                    	| [$03c8: ret]
 l_03c9:
-	move.b	(a0),d0                         	| [$03c9: ld   a,(hl)]
-	addq.w	#1,a0                           	| [$03ca: inc  hl]
+	move.b	(a0)+,d0                         	| [$03c9: ld   a,(hl)]
+	                           	| [$03ca: inc  hl]
 	cmp.b	#0x21,d0                         	| [$03cb: cp   $21]
 	jeq	l_0402                             	| [$03cd: jr   z,$0402]
 	cmp.b	#0x23,d0                         	| [$03cf: cp   $23]
@@ -562,16 +579,16 @@ l_03c9:
 	cmp.b	#0x22,d0                         	| [$03d7: cp   $22]
 	jne	l_03c1                             	| [$03d9: jr   nz,$03C1]
 l_03db:
-	move.b	(a0),d4                         	| [$03db: ld   e,(hl)]
-	addq.w	#1,a0                           	| [$03dc: inc  hl]
-	move.b	(a0),d3                         	| [$03dd: ld   d,(hl)]
-	addq.w	#1,a0                           	| [$03de: inc  hl]
+	move.b	(a0)+,d4                         	| [$03db: ld   e,(hl)]
+	                           	| [$03dc: inc  hl]
+	move.b	(a0)+,d3                         	| [$03dd: ld   d,(hl)]
+	                           	| [$03de: inc  hl]
 	lea	l_0400,a3                      	| [$03df: ld   iy,$0400]
 	add.w	d3,a3                            	| [$03e3: add  iy,de]
   ^^^^ TODO: review d3 computation above
 l_03e5:
-	move.b	(a0),d2                         	| [$03e5: ld   c,(hl)]
-	addq.w	#1,a0                           	| [$03e6: inc  hl]
+	move.b	(a0)+,d2                         	| [$03e5: ld   c,(hl)]
+	                           	| [$03e6: inc  hl]
 l_03e7:
 	move.b	unknown_E0F9,d0                 	| [$03e7: ld   a,(unknown_E0F9)]
 	                               	| [$03ea: and  a]
@@ -603,10 +620,10 @@ l_0402:
 	move.l	(sp)+,a0                        	| [$0402: pop  hl]
 	rts                                    	| [$0403: ret]
 l_0404:
-	move.b	(a0),d1                         	| [$0404: ld   b,(hl)]
-	addq.w	#1,a0                           	| [$0405: inc  hl]
-	move.b	(a0),d0                         	| [$0406: ld   a,(hl)]
-	addq.w	#1,a0                           	| [$0407: inc  hl]
+	move.b	(a0)+,d1                         	| [$0404: ld   b,(hl)]
+	                           	| [$0405: inc  hl]
+	move.b	(a0)+,d0                         	| [$0406: ld   a,(hl)]
+	                           	| [$0407: inc  hl]
 l_0408:
 	jbsr	l_03c1                            	| [$0408: call $03C1]
 	subq.b	#1,d1                           	| [...]
@@ -616,32 +633,30 @@ l_040e:
 	lea	unknown_E03E,a0                	| [$040e: ld   hl,unknown_E03E]
 	lea	unknown_E041,a1                	| [$0411: ld   de,unknown_E041]
 	jbsr	osd_read_in_0                       	| [$0414: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	move.b	#0x00,d1                        	| [$0417: ld   bc,$0002] 2
 	move.b	#0x02,d2                        	| [$0417: ld   bc,$0002] 2
 	jbsr	l_0434                            	| [$041a: call $0434]
 	lea	unknown_E03F,a0                	| [$041d: ld   hl,unknown_E03F]
 	addq.w	#1,a1                           	| [$0420: inc  de]
-	move.b	0xD002,d0                       	| [$0421: ld   a,($D002)]
-       ^^^^^^ TODO: review absolute 16-bit address read
-	roxr.b	#1,d0                           	| [$0424: rra]
-      ^^^^^^ TODO: review cpu X flag
+	jbsr	osd_read_in_1                       	| [$0421: ld   a,($D002)]
+	ror.b	#1,d0                           	| [$0424: rra]
 	or.b	#0x04,d0                          	| [$0425: or   $04]
 	move.b	#0x20,d2                        	| [$0427: ld   c,$20]
 	jbsr	l_0434                            	| [$0429: call $0434]
 	move.b	unknown_E04C,d0                 	| [$042c: ld   a,(unknown_E04C)]
 	or.b	d1,d0                             	| [$042f: or   b]
-	move.b	d0,0xD001                       	| [$0430: ld   ($D001),a]
-          ^^^^^^ TODO: review absolute 16-bit address write
+	* flip screen
+	*move.b	d0,0xD001                       	| [$0430: ld   ($D001),a]
 	rts                                    	| [$0433: ret]
 l_0434:
-	roxr.b	#1,d0                           	| [$0434: rra]
-      ^^^^^^ TODO: review cpu X flag
+	ror.b	#1,d0                           	| [$0434: rra]
 	roxr.b	#2,d0                           	| [$0435: rra] * 2
-	roxl.b	#1,(a0)                         	| [$0437: rl   (hl)]
+	move.b	(a0),d7
+	roxl.b	#1,d7                         	| [$0437: rl   (hl)]
 	roxr.b	#1,d0                           	| [$0439: rra]
-	roxl.b	#1,(a0)                         	| [$043a: rl   (hl)]
-	move.b	(a0),d0                         	| [$043c: ld   a,(hl)]
+	roxl.b	#1,d7                         	| [$043a: rl   (hl)]
+	move.b	d7,d0                         	| [$043c: ld   a,(hl)]
+	move.b	d7,(a0)
 	and.b	#0x55,d0                         	| [$043d: and  $55]
 	cmp.b	#0x54,d0                         	| [$043f: cp   $54]
 	jeq	l_0451                             	| [$0441: jr   z,$0451]
@@ -684,8 +699,8 @@ l_046d:
 	sub.b	#0x08,d0                         	| [$046d: sub  $08]
 l_046f:
 	lea	nb_credits_e048,a0             	| [$046f: ld   hl,nb_credits_e048]
-	add.b	(a0),d0                          	| [$0472: add  a,(hl)]
-daa
+	move.b	(a0),d7                          	| [$0472: add  a,(hl)]
+	abcd	d7,d0						| [daa]
 	jcc	l_0478                             	| [$0474: jr   nc,$0478]
 	move.b	#0x99,d0                        	| [$0476: ld   a,$99]
 l_0478:
@@ -695,20 +710,21 @@ l_047a:
 	move.b	unknown_E046,d0                 	| [$047a: ld   a,(unknown_E046)]
 	rol.b	#1,d0                            	| [$047d: rlca]
 	jcc	l_04db                             	| [$047e: jr   nc,$04DB]
-	lea	l_D001,a1                      	| [$0480: ld   de,$D001]
+	lea	osd_read_in_0,a1                      	| [$0480: ld   de,$D001]
 	btst.b	#4,d0                           	| [$0483: bit  4,a]
 	jeq	l_048e                             	| [$0485: jr   z,$048E]
 	move.b	unknown_E043,d0                 	| [$0487: ld   a,(unknown_E043)]
 	subq.b	#1,d0                           	| [$048a: dec  a]
 	jeq	l_048e                             	| [$048b: jr   z,$048E]
-	addq.w	#1,a1                           	| [$048d: inc  de]
+	lea	osd_read_in_1,a1                           	| [$048d: inc  de]
 l_048e:
 	lea	unknown_E04A,a0                	| [$048e: ld   hl,unknown_E04A]
 	move.b	(a0),d0                         	| [$0491: ld   a,(hl)]
 	addq.w	#1,a0                           	| [$0492: inc  hl]
 	move.b	d0,(a0)                         	| [$0493: ld   (hl),a]
 	subq.w	#1,a0                           	| [$0494: dec  hl]
-	move.b	(a1),d0                         	| [$0495: ld   a,(de)]
+	* read port
+	jsr		(a1)                         	| [$0495: ld   a,(de)]
 	not.b	d0                               	| [$0496: cpl]
 	move.b	d0,(a0)                         	| [$0497: ld   (hl),a]
 	subq.w	#1,a0                           	| [$0498: dec  hl]
@@ -752,8 +768,8 @@ l_04b9:
 	rts                                    	| [$04d4: ret]
 l_04d5:
 	move.b	(a0),d0                         	| [$04d5: ld   a,(hl)]
-	move.b	#0xFF,(a0)                      	| [$04d6: ld   (hl),$FF]
-	addq.w	#1,a0                           	| [$04d8: inc  hl]
+	st.b	(a0)+                      	| [$04d6: ld   (hl),$FF]
+	                           	| [$04d8: inc  hl]
 	move.b	d0,(a0)                         	| [$04d9: ld   (hl),a]
 	rts                                    	| [$04da: ret]
 l_04db:
@@ -766,6 +782,7 @@ l_04db:
 	cmp.b	#0x50,d0                         	| [$04e6: cp   $50]
 	jeq	l_0507                             	| [$04e8: jr   z,$0507]
 	jcc	1f
+	* jotd: handle C flag manually
 	roxr.b	#1,d1                           	| [$04ea: rr   b]
 	bset	#7,d1
 	bra.b	2f
@@ -783,8 +800,8 @@ l_04f3:
 	jcs	l_04fd                             	| [$04fa: jr   c,$04FD]
 	subq.b	#1,d2                           	| [$04fc: dec  c]
 l_04fd:
-	move.b	d2,(a0)                         	| [$04fd: ld   (hl),c]
-	addq.w	#1,a0                           	| [$04fe: inc  hl]
+	move.b	d2,(a0)+                         	| [$04fd: ld   (hl),c]
+	                           	| [$04fe: inc  hl]
 	clr.b	(a0)                             	| [$04ff: ld   (hl),$00]
 	cmp.b	#0xB0,d0                         	| [$0501: cp   $B0]
 	bcc.b	0f                               	| [...]
@@ -796,7 +813,7 @@ l_0507:
 	move.b	(a0),d0                         	| [$050a: ld   a,(hl)]
 	cmp.b	#0x04,d0                         	| [$050b: cp   $04]
 	jne	l_051b                             	| [$050d: jr   nz,$051B]
-	jcc.b	1f
+	jcc	1f
 	move.b	unknown_E309,d0                 	| [$050f: ld   a,(unknown_E309)]
 	roxl.b	#1,d0                           	| [$0512: rla]
 	bset	#1,d0			| propagate carry from CMP
@@ -825,7 +842,7 @@ l_0527:
 	lea	l_2AE2,a0                      	| [$0527: ld   hl,$2AE2]
 	jbsr	l_0300                            	| [$052a: call $0300]
 	move.b	nb_credits_e048,d0              	| [$052d: ld   a,(nb_credits_e048)]
-	jra	l_03ae                             	| [$0530: jp   $03AE]
+	jra	set_character_at_address_03ae                             	| [$0530: jp   $03AE]
 l_0533:
 	lea	l_2AD1,a0                      	| [$0533: ld   hl,$2AD1]
 	jbsr	l_0374                            	| [$0536: call $0374]
@@ -846,7 +863,8 @@ l_0548:
 	jcs	l_055f                             	| [$0557: jr   c,$055F]
 	move.b	nb_credits_e048,d0              	| [$0552: ld   a,(nb_credits_e048)]
 	move.b	#0x80,d1                        	| [$0555: ld   b,$80]
-	sbcd	#0x01,d0                        	| [$0559: sub  $01 + daa]
+	moveq	#1,d7
+	sbcd	d7,d0                        	| [$0559: sub  $01 + daa]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$055c: ret  z] [...]
 0:
@@ -854,7 +872,8 @@ l_0548:
 l_055f:
 	move.b	nb_credits_e048,d0              	| [$0552: ld   a,(nb_credits_e048)]
 	move.b	#0x80,d1                        	| [$0555: ld   b,$80]
-	sbcd	#0x01,d0                        	| [$055f: sub  $01 + daa]
+	moveq	#1,d7
+	sbcd	d7,d0                        	| [$055f: sub  $01 + daa]
     jbsr  osd_disable_interrupts  | [di]
 	move.b	d0,nb_credits_e048              	| [$0563: ld   (nb_credits_e048),a]
 	move.b	d1,d0                           	| [$0566: ld   a,b]
@@ -935,26 +954,26 @@ l_05c7:
 *	not.b	d0                               	| [$05c7: cpl]
 *out  ($C0),a
 	rts                                    	| [$05ca: ret]
-l_05cb:
-	move.w	unknown_E1DD,a0             	| [$05cb: ld   hl,(unknown_E1DD)]
-                  ^^^^^^ TODO: review move.w into address register
-	move.b	d6,d0                           	| [$05ce: ld   a,l]
-	cmp.b	d5,d0                            	| [$05cf: cp   h]
-	bne.b	0f                               	| [...]
-	rts                                    	| [$05d0: ret  z] [...]
-0:
-	move.b	#0xE0,d5                        	| [$05d1: ld   h,$E0]
-	move.b	(a0),d0                         	| [$05d3: ld   a,(hl)]
-	move.b	d0,0xD000                       	| [$05d4: ld   ($D000),a]
-          ^^^^^^ TODO: review absolute 16-bit address write
-	bset.b	#7,d0                           	| [$05d7: set  7,a]
-	move.b	d0,0xD000                       	| [$05d9: ld   ($D000),a]
-          ^^^^^^ TODO: review absolute 16-bit address write
-	move.b	d6,d0                           	| [$05dc: ld   a,l]
-	addq.b	#1,d0                           	| [$05dd: inc  a]
-	and.b	#0x07,d0                         	| [$05de: and  $07]
-	move.b	d0,unknown_E1DD                 	| [$05e0: ld   (unknown_E1DD),a]
-	rts                                    	| [$05e3: ret]
+sound_stuff_05cb:
+*	move.w	unknown_E1DD,a0             	| [$05cb: ld   hl,(unknown_E1DD)]
+*                  ^^^^^^ TODO: review move.w into address register
+*	move.b	d6,d0                           	| [$05ce: ld   a,l]
+*	cmp.b	d5,d0                            	| [$05cf: cp   h]
+*	bne.b	0f                               	| [...]
+*	rts                                    	| [$05d0: ret  z] [...]
+*0:
+*	move.b	#0xE0,d5                        	| [$05d1: ld   h,$E0]
+*	move.b	(a0),d0                         	| [$05d3: ld   a,(hl)]
+*	move.b	d0,0xD000                       	| [$05d4: ld   ($D000),a]
+*          ^^^^^^ TODO: review absolute 16-bit address write
+*	bset.b	#7,d0                           	| [$05d7: set  7,a]
+*	move.b	d0,0xD000                       	| [$05d9: ld   ($D000),a]
+*          ^^^^^^ TODO: review absolute 16-bit address write
+*	move.b	d6,d0                           	| [$05dc: ld   a,l]
+*	addq.b	#1,d0                           	| [$05dd: inc  a]
+*	and.b	#0x07,d0                         	| [$05de: and  $07]
+*	move.b	d0,unknown_E1DD                 	| [$05e0: ld   (unknown_E1DD),a]
+*	rts                                    	| [$05e3: ret]
 l_05e4:
 	move.b	#0x40,d0                        	| [$05e4: ld   a,$40]
 	jra	l_05ea                             	| [$05e6: jr   $05EA]
@@ -988,7 +1007,7 @@ l_0603:
 	move.b	(a0),d0                         	| [$0606: ld   a,(hl)]
 	eor.b	#0x08,d0                         	| [$0607: xor  $08]
 	move.b	d0,(a0)                         	| [$0609: ld   (hl),a]
-	lea	unknown_E500,a0                	| [$060a: ld   hl,unknown_E500]
+	lea	player_score_E500,a0                	| [$060a: ld   hl,player_score_E500]
 	lea	unknown_E518,a1                	| [$060d: ld   de,unknown_E518]
 	move.b	#0x18,d1                        	| [$0610: ld   b,$18]
 l_0612:
@@ -1011,21 +1030,22 @@ l_0622:
 	add.b	d2,d0                            	| [$0623: add  a,c]
 	add.b	d2,d0                            	| [$0624: add  a,c]
 	move.b	d0,d2                           	| [$0625: ld   c,a]
-	clr.b	d1                               	| [$0626: ld   b,$00]
+	clr.w	d1                               	| [$0626: ld   b,$00]
+	move.b	d2,d1
 	lea	l_2A0C,a0                      	| [$0628: ld   hl,$2A0C]
 	add.w	d1,a0                            	| [$062b: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 	move.b	unknown_E046,d0                 	| [$062c: ld   a,(unknown_E046)]
 	                               	| [$062f: and  a]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$0630: ret  p] [...]
 0:
-	lea	unknown_E500,a1                	| [$0631: ld   de,unknown_E500]
+	lea	player_score_E500,a1                	| [$0631: ld   de,player_score_E500]
 	move.b	#0x03,d1                        	| [$0634: ld   b,$03]
 l_0636:
 	tst.b	d0                               	| [$0636: and  a]
 l_0637:
 	move.b	(a1),d0                         	| [$0637: ld   a,(de)]
+	
 adc  a,(hl)
 daa
 	move.b	d0,(a1)                         	| [$063a: ld   (de),a]
@@ -1035,7 +1055,7 @@ daa
 	jne	l_0637                             	| [$063d: djnz $0637]
 	jbsr	l_06af                            	| [$063f: call $06AF]
 	move.b	#0x03,d1                        	| [$0642: ld   b,$03]
-	lea	unknown_E500,a1                	| [$0644: ld   de,unknown_E500]
+	lea	player_score_E500,a1                	| [$0644: ld   de,player_score_E500]
 	lea	unknown_E008,a0                	| [$0647: ld   hl,unknown_E008]
 	tst.b	d0                               	| [$064a: and  a]
 l_064b:
@@ -1047,7 +1067,7 @@ l_064b:
 	subq.b	#1,d1                           	| [...]
 	jne	l_064b                             	| [$064f: djnz $064B]
 	jcs	l_0668                             	| [$0651: jr   c,$0668]
-	move.w	unknown_E500,a0             	| [$0653: ld   hl,(unknown_E500)]
+	move.w	player_score_E500,a0             	| [$0653: ld   hl,(player_score_E500)]
                   ^^^^^^ TODO: review move.w into address register
 	move.b	a0,unknown_E008                 	| [$0656: ld   (unknown_E008),hl]
 	move.b	unknown_E502,d0                 	| [$0659: ld   a,(unknown_E502)]
@@ -1068,7 +1088,7 @@ l_067b:
 	move.b	#0x03,d1                        	| [$067b: ld   b,$03]
 l_067d:
 	move.b	(a0),d0                         	| [$067d: ld   a,(hl)]
-	jbsr	l_03ae                            	| [$067e: call $03AE]
+	jbsr	set_character_at_address_03ae                            	| [$067e: call $03AE]
 	subq.w	#1,a0                           	| [$0681: dec  hl]
 	subq.b	#1,d1                           	| [...]
 	jne	l_067d                             	| [$0682: djnz $067D]
@@ -1100,9 +1120,10 @@ l_06a1:
 	jbsr	l_03e7                            	| [$06a9: call $03E7]
 	subq.w	#1,a0                           	| [$06ac: dec  hl]
 	jra	l_067b                             	| [$06ad: jr   $067B]
+
 l_06af:
-	move.w	unknown_E501,a0             	| [$06af: ld   hl,(unknown_E501)]
-                  ^^^^^^ TODO: review move.w into address register
+	move.b	unknown_E501,d6             	| [$06af: ld   hl,(unknown_E501)]
+	move.b	unknown_E501+1,d5             	| [$06af: ld   hl,(unknown_E501)]
 	move.b	unknown_E045,d0                 	| [$06b2: ld   a,(unknown_E045)]
 	subq.b	#1,d0                           	| [$06b5: dec  a]
 	bpl.b	0f                               	| [...]
@@ -1115,13 +1136,13 @@ l_06bb:
 	asr.b	#1,d5                            	| [$06bb: sra  h]
 	subq.b	#1,d5                           	| [$06bd: dec  h]
 	addq.b	#1,d0                           	| [$06be: inc  a]
-	move.b	d5,d0                           	| [$06bf: ld   a,h]
 	jne	l_06c7                             	| [$06c0: jr   nz,$06C7]
-      ^^^^^^ TODO: review cpu flags (move.b,jne)
-	tst.b	d0                               	| [$06c2: and  a]
+	move.b	d5,d0                           	| [$06bf: ld   a,h]
+	                               	| [$06c2: and  a]
 	jeq	l_06c7                             	| [$06c3: jr   z,$06C7]
 	move.b	#0xFE,d0                        	| [$06c5: ld   a,$FE]
 l_06c7:
+	move.b	d5,d0                           	| [$06bf: ld   a,h]
 	lea	unknown_E503,a0                	| [$06c7: ld   hl,unknown_E503]
 	cmp.b	(a0),d0                          	| [$06ca: cp   (hl)]
 	beq.b	0f                               	| [...]
@@ -1161,7 +1182,6 @@ l_06ec:
 l_06f2:
 	lea	unknown_E040,a0                	| [$06f2: ld   hl,unknown_E040]
 	jbsr	osd_read_dsw_1                       	| [$06f5: ld   a,($D003)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	move.b	d0,d1                           	| [$06f8: ld   b,a]
 	addq.b	#1,d0                           	| [$06f9: inc  a]
 	and.b	#0x03,d0                         	| [$06fa: and  $03]
@@ -1176,7 +1196,6 @@ l_0700:
 	and.b	#0x03,d0                         	| [$0706: and  $03]
 	move.b	d0,unknown_E045                 	| [$0708: ld   (unknown_E045),a]
 	jbsr	osd_read_dsw_2                       	| [$070b: ld   a,($D004)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#2,d0                           	| [$070e: bit  2,a]
 	move.b	d1,d0                           	| [$0710: ld   a,b]
 	jeq	l_0732                             	| [$0711: jr   z,$0732]
@@ -1194,38 +1213,33 @@ l_071f:
 	addq.w	#1,a0                           	| [$071f: inc  hl]
 	move.b	d0,(a0)                         	| [$0720: ld   (hl),a]
 	jbsr	osd_read_dsw_2                       	| [$0721: ld   a,($D004)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	not.b	d0                               	| [$0724: cpl]
-	roxr.b	#1,d0                           	| [$0725: rra]
-      ^^^^^^ TODO: review cpu X flag
+	ror.b	#1,d0                           	| [$0725: rra]
 	move.b	d0,d1                           	| [$0726: ld   b,a]
 	and.b	#0x01,d0                         	| [$0727: and  $01]
 	addq.w	#1,a0                           	| [$0729: inc  hl]
 	move.b	d0,(a0)                         	| [$072a: ld   (hl),a]
 	move.b	d1,d0                           	| [$072b: ld   a,b]
-	roxr.b	#1,d0                           	| [$072c: rra]
-      ^^^^^^ TODO: review cpu X flag
+	ror.b	#1,d0                           	| [$072c: rra]
 	and.b	#0x01,d0                         	| [$072d: and  $01]
 	addq.w	#1,a0                           	| [$072f: inc  hl]
 	move.b	d0,(a0)                         	| [$0730: ld   (hl),a]
 	rts                                    	| [$0731: ret]
 
 l_0732:
-	roxr.b	#1,d0                           	| [$0732: rra]
-      ^^^^^^ TODO: review cpu X flag
-	roxr.b	#1,d0                           	| [$0733: rra]
+	ror.b	#2,d0                           	| [$0732: rra] * 2
 	not.b	d0                               	| [$0734: cpl]
 	move.b	d0,d1                           	| [$0735: ld   b,a]
 	addq.b	#1,d0                           	| [$0736: inc  a]
 	and.b	#0x03,d0                         	| [$0737: and  $03]
 	move.b	d0,(a0)                         	| [$0739: ld   (hl),a]
 	move.b	d1,d0                           	| [$073a: ld   a,b]
-	roxr.b	#2,d0                           	| [$073b: rra] * 2
-      ^^^^^^ TODO: review cpu X flag
-	and.b	#0x03,d0                         	| [$073d: and  $03]
+	ror.b	#2,d0                           	| [$073b: rra] * 2
+ 	and.b	#0x03,d0                         	| [$073d: and  $03]
 	cmp.b	#0x02,d0                         	| [$073f: cp   $02]
+	SET_X_FROM_C
+	* TODO: sbc C flag???
 	subx.b	#0xF5,d0                        	| [$0741: sbc  a,$F5]
-      ^^^^^^ TODO: review cpu X flag, cmp doesn't affect it!
 	jra	l_071f                             	| [$0743: jr   $071F]
 l_0745:
 	jbsr	l_0d29                            	| [$0745: call $0D29]
@@ -1235,8 +1249,7 @@ l_0745:
 	lea	l_2C57,a0                      	| [$0751: ld   hl,$2C57]
 	jbsr	l_034e                            	| [$0754: call $034E]
 	lea	unknown_E054,a1                	| [$0757: ld   de,unknown_E054]
-	move.b	#0x00,d1                        	| [$075a: ld   bc,$0020] 32
-	move.b	#0x20,d2                        	| [$075a: ld   bc,$0020] 32
+	move.w	#0x20,d1                        	| [$075a: ld   bc,$0020] 32
 	move.b	unknown_E044,d0                 	| [$075d: ld   a,(unknown_E044)]
 	                               	| [$0760: and  a]
 	jne	l_0797                             	| [$0761: jr   nz,$0797]
@@ -1275,7 +1288,6 @@ l_0797:
 l_079f:
 	lea	l_2C67,a0                      	| [$079f: ld   hl,$2C67]
 	jbsr	ldir                              	| [$07a2: ldir]
-     ^^^^ TODO: review special instruction inputs
 	lea	unknown_E057,a0                	| [$07a4: ld   hl,unknown_E057]
 l_07a7:
 	move.b	unknown_E041,d0                 	| [$07a7: ld   a,(unknown_E041)]
@@ -1286,13 +1298,11 @@ l_07aa:
 	add.b	#0x28,d0                         	| [$07b1: add  a,$28]
 	move.b	d0,(a0)                         	| [$07b3: ld   (hl),a]
 	add.w	d3,a0                            	| [$07b4: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	#0x53,(a0)                      	| [$07b5: ld   (hl),$53]
 	addq.w	#3,a0                           	| [$07b7: inc  hl] * 3
 	move.b	#0x31,(a0)                      	| [$07ba: ld   (hl),$31]
 	move.w	#0x0006,d3                      	| [$07bc: ld   de,$0006] 6
 	add.w	d3,a0                            	| [$07bf: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	clr.b	(a0)                             	| [$07c0: ld   (hl),$00]
 	rts                                    	| [$07c2: ret]
 l_07c3:
@@ -1302,18 +1312,15 @@ l_07c3:
 0:
 	move.w	#0x000B,d3                      	| [$07c5: ld   de,$000B] 11
 	add.w	d3,a0                            	| [$07c8: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	add.b	#0x31,d0                         	| [$07c9: add  a,$31]
 	move.b	d0,(a0)                         	| [$07cb: ld   (hl),a]
 	move.w	#0x0006,d3                      	| [$07cc: ld   de,$0006] 6
 	add.w	d3,a0                            	| [$07cf: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	#0x53,(a0)                      	| [$07d0: ld   (hl),$53]
 	rts                                    	| [$07d2: ret]
 l_07d3:
 	lea	l_2C7D,a0                      	| [$07d3: ld   hl,$2C7D]
 	jbsr	ldir                              	| [$07d6: ldir]
-     ^^^^ TODO: review special instruction inputs
 	lea	unknown_E05B,a0                	| [$07d8: ld   hl,unknown_E05B]
 	jra	l_07a7                             	| [$07db: jr   $07A7]
 l_07dd:
@@ -1328,7 +1335,6 @@ l_07e8:
                   ^^^^^^ TODO: review move.w into address register
 	move.w	#0x0040,d3                      	| [$07f1: ld   de,$0040] 64
 	add.w	d3,a0                            	| [$07f4: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	a0,unknown_E054                 	| [$07f5: ld   (unknown_E054),hl]
 	lea	unknown_E057,a0                	| [$07f8: ld   hl,unknown_E057]
 	addq.b	#1,(a0)                         	| [$07fb: inc  (hl)]
@@ -1368,10 +1374,8 @@ l_081b:
   ^^^^ TODO: review d5 computation above
 	move.b	(0x03,a2),d0                    	| [$0825: ld   a,(ix+$03)]
 	roxr.b	#1,d0                           	| [$0828: rra]
-      ^^^^^^ TODO: review cpu X flag
 	move.b	d0,d3                           	| [$0829: ld   d,a]
 	roxr.b	#2,d0                           	| [$082a: rra] * 2
-      ^^^^^^ TODO: review cpu X flag
 	and.b	#0x1F,d0                         	| [$082c: and  $1F]
 	add.b	d6,d0                            	| [$082e: add  a,l]
 	move.b	d0,d6                           	| [$082f: ld   l,a]
@@ -1399,32 +1403,27 @@ l_0856:
 	move.b	(0x0d,a2),d0                    	| [$0856: ld   a,(ix+$0d)]
 	SET_XC_FLAGS                           	| [$0859: scf]
 	roxl.b	#1,d0                           	| [$085a: rla]
-      ^^^^^^ TODO: review cpu X flag
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$085b: ret  c] [...]
 0:
 	SET_XC_FLAGS                           	| [$085c: scf]
 	roxl.b	#1,d0                           	| [$085d: rla]
-      ^^^^^^ TODO: review cpu X flag
 	lea	l_2E18,a0                      	| [$085e: ld   hl,$2E18]
 	jcc	l_0864                             	| [$0861: jr   nc,$0864]
 	addq.b	#1,d5                           	| [$0863: inc  h]
 l_0864:
-	move.b	d0,d4                           	| [$0864: ld   e,a]
-	clr.b	d3                               	| [$0865: ld   d,$00]
+	clr.w	d3                               	| [$0865: ld   d,$00]
+	move.b	d0,d3                           	| [$0864: ld   e,a]
 	add.w	d3,a0                            	| [$0867: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	(a0),d1                         	| [$0868: ld   b,(hl)]
 l_0869:
 	move.b	(0x01,a2),d4                    	| [$0869: ld   e,(ix+$01)]
 	move.b	#0xE1,d3                        	| [$086c: ld   d,$E1]
 	move.b	d1,d0                           	| [$086e: ld   a,b]
 	roxl.b	#1,d0                           	| [$086f: rla]
-      ^^^^^^ TODO: review cpu X flag
 	jcc	l_0882                             	| [$0870: jr   nc,$0882]
 	move.b	#0x01,d1                        	| [$0872: ld   b,$01]
 	roxl.b	#1,d0                           	| [$0874: rla]
-      ^^^^^^ TODO: review cpu X flag
 	jcs	l_089e                             	| [$0875: jr   c,$089E]
 	move.b	d4,d0                           	| [$0877: ld   a,e]
 	cmp.b	#0x60,d0                         	| [$0878: cp   $60]
@@ -1449,7 +1448,6 @@ l_0882:
 l_0895:
 	move.b	d3,(0x02,a3)                    	| [$0895: ld   (iy+$02),d]
 	add.w	d3,a3                            	| [$0898: add  iy,de]
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_0895                             	| [$089a: djnz $0895]
 	move.b	d3,(a0)                         	| [$089c: ld   (hl),d]
@@ -1482,34 +1480,31 @@ l_08b8:
 	rts                                    	| [$08bc: ret  c] [...]
 0:
 	roxl.b	#1,d0                           	| [$08bd: rla]
-      ^^^^^^ TODO: review cpu X flag
 	lea	l_2E18,a0                      	| [$08be: ld   hl,$2E18]
 	jcc	l_08c4                             	| [$08c1: jr   nc,$08C4]
 	addq.b	#1,d5                           	| [$08c3: inc  h]
 l_08c4:
-	move.b	d0,d4                           	| [$08c4: ld   e,a]
-	clr.b	d3                               	| [$08c5: ld   d,$00]
+	clr.w	d3                               	| [$08c5: ld   d,$00]
+	move.b	d0,d3                           	| [$08c4: ld   e,a]
 	add.w	d3,a0                            	| [$08c7: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	(0x01,a2),d4                    	| [$08c8: ld   e,(ix+$01)]
 	move.b	#0xE1,d3                        	| [$08cb: ld   d,$E1]
 	move.w	#0x0000,a3                      	| [$08cd: ld   iy,$0000] 0
                   ^^^^^^ TODO: review move.w into address register
 	add.w	d3,a3                            	| [$08d1: add  iy,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	(a0),d3                         	| [$08d3: ld   d,(hl)]
 	addq.w	#1,a0                           	| [$08d4: inc  hl]
 	move.b	(a0),d4                         	| [$08d5: ld   e,(hl)]
 	addq.w	#1,a0                           	| [$08d6: inc  hl]
-	move.b	(a0),d2                         	| [$08d7: ld   c,(hl)]
-	clr.b	d1                               	| [$08d8: ld   b,$00]
+	clr.w	d1                               	| [$08d8: ld   b,$00]
+	move.b	(a0),d1                         	| [$08d7: ld   c,(hl)]
 	lea	jump_table_08F5,a0             	| [$08da: ld   hl,jump_table_08F5]
 	add.w	d1,a0                            	| [$08dd: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
-	move.b	(a0),d2                         	| [$08de: ld   c,(hl)]
-	addq.w	#1,a0                           	| [$08df: inc  hl]
-	move.b	(a0),d5                         	| [$08e0: ld   h,(hl)]
-	move.b	d2,d6                           	| [$08e1: ld   l,c]
+	add.w	d1,a0			| 32 bit: add once more
+	move.l	(a0),a0                         	| [$08de: ld   c,(hl)]
+									| [$08df: inc  hl]
+									| [$08e0: ld   h,(hl)]
+									| [$08e1: ld   l,c]
 	move.b	(0x03,a2),d2                    	| [$08e2: ld   c,(ix+$03)]
 	move.b	(0x07,a2),d0                    	| [$08e5: ld   a,(ix+$07)]
 	jbsr	l_08ed                            	| [$08e8: call $08ED]
@@ -1571,11 +1566,10 @@ l_095e:
   ^^^^ TODO: review d3 computation above
 	exg	a1,a0                              	| [$0968: ex   de,hl]
 l_0969:
-	move.b	(0x0b,a2),d0                    	| [$0969: ld   a,(ix+$0b)]
 	                               	| [$096c: and  a]
 	move.b	d2,d0                           	| [$096d: ld   a,c]
+	tst.b	(0x0b,a2)                    	| [$0969: ld   a,(ix+$0b)]
 	jne	l_09a5                             	| [$096e: jr   nz,$09A5]
-      ^^^^^^ TODO: review cpu flags (move.b,jne)
 	add.b	#0x08,d0                         	| [$0970: add  a,$08]
 	cmp.b	#0x20,d0                         	| [$0972: cp   $20]
 	jcs	l_09ab                             	| [$0974: jr   c,$09AB]
@@ -1705,7 +1699,6 @@ l_0a1e:
 l_0a30:
 	move.w	#0x0004,d3                      	| [$0a30: ld   de,$0004] 4
 	add.w	d3,a3                            	| [$0a33: add  iy,de]
-  ^^^^ TODO: review d3 computation above
 	move.l	(sp)+,a1                        	| [$0a35: pop  de]
 	movem.w	(sp)+,d3/d4                    	| [$0a35: pop  de]
 
@@ -1740,7 +1733,6 @@ l_0a62:
 	exg	a1,a0                              	| [$0a66: ex   de,hl]
 	move.w	#0x0008,d3                      	| [$0a67: ld   de,$0008] 8
 	add.w	d3,a3                            	| [$0a6a: add  iy,de]
-  ^^^^ TODO: review d3 computation above
 	exg	a1,a0                              	| [$0a6c: ex   de,hl]
 	move.b	#0x10,d0                        	| [$0a6d: ld   a,$10]
 l_0a6f:
@@ -1860,7 +1852,6 @@ l_0b38:
 	jbsr	l_0c8e                            	| [$0b38: call $0C8E]
 	jbsr	l_0cbf                            	| [$0b3b: call $0CBF]
 	jbsr	osd_read_dsw_2                       	| [$0b3e: ld   a,($D004)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#5,d0                           	| [$0b41: bit  5,a]
 	beq.b	0f                               	| [...]
 	rts                                    	| [$0b43: ret  nz] [...]
@@ -1939,8 +1930,7 @@ l_0b99:
 	rts                                    	| [$0bb6: ret]
 l_0bb7:
 	lea	sprite_shadow_E100,a0          	| [$0bb7: ld   hl,sprite_shadow_E100]
-	move.b	#0x04,d1                        	| [$0bba: ld   bc,$0400] 1024
-	move.b	#0x00,d2                        	| [$0bba: ld   bc,$0400] 1024
+	move.w	#0x400,d1                        	| [$0bba: ld   bc,$0400] 1024
 	jbsr	clear_area_05fa                   	| [$0bbd: call clear_area_05fa]
 	lea	unknown_E300,a2                	| [$0bc0: ld   ix,unknown_E300]
 	move.b	#0x01,(a2)                 	| [$0bc4: ld   (ix+$00),$01]
@@ -1954,7 +1944,6 @@ l_0bb7:
 l_0bdf:
 	move.b	d0,(0x01,a2)                    	| [$0bdf: ld   (ix+$01),a]
 	add.w	d3,a2                            	| [$0be2: add  ix,de]
-  ^^^^ TODO: review d3 computation above
 	addq.b	#0x04,d0                        	| [$0be4: add  a,$04]
 	subq.b	#1,d1                           	| [...]
 	jne	l_0bdf                             	| [$0be6: djnz $0BDF]
@@ -2063,9 +2052,8 @@ l_0c8e:
 	jbsr	l_0c95                            	| [$0c92: call $0C95]
 l_0c95:
 	jbsr	l_0603                            	| [$0c95: call $0603]
-	lea	unknown_E500,a0                	| [$0c98: ld   hl,unknown_E500]
-	move.b	#0x00,d1                        	| [$0c9b: ld   bc,$0016] 22
-	move.b	#0x16,d2                        	| [$0c9b: ld   bc,$0016] 22
+	lea	player_score_E500,a0                	| [$0c98: ld   hl,player_score_E500]
+	move.w	#0x16,d1                        	| [$0c9b: ld   bc,$0016] 22
 l_0c9e:
 	jbsr	clear_area_05fa                   	| [$0c9e: call clear_area_05fa]
 	move.b	d0,unknown_E50F                 	| [$0ca1: ld   (unknown_E50F),a]
@@ -2078,8 +2066,7 @@ l_0cb1:
 	lea	l_26DE,a0                      	| [$0cb1: ld   hl,$26DE]
 	move.b	a0,unknown_pointer_E0F7                 	| [$0cb4: ld   (unknown_pointer_E0F7),hl]
 	lea	unknown_E503,a0                	| [$0cb7: ld   hl,unknown_E503]
-	move.b	#0x00,d1                        	| [$0cba: ld   bc,$0011] 17
-	move.b	#0x11,d2                        	| [$0cba: ld   bc,$0011] 17
+	move.w	#0x11,d1                        	| [$0cba: ld   bc,$0011] 17
 	jra	l_0c9e                             	| [$0cbd: jr   $0C9E]
 l_0cbf:
 	jbsr	l_0d29                            	| [$0cbf: call $0D29]
@@ -2143,13 +2130,12 @@ l_0d1f:
 	rts                                    	| [$0d28: ret]
 
 l_0d29:
+	* clear screen
 	lea	l_8000,a0                      	| [$0d29: ld   hl,$8000]
-	move.b	#0x08,d1                        	| [$0d2c: ld   bc,$0800] 2048
-	move.b	#0x00,d2                        	| [$0d2c: ld   bc,$0800] 2048
+	move.w	#0x0800,d1                        	| [$0d2c: ld   bc,$0800] 2048
 	jbsr	clear_area_05fa                   	| [$0d2f: call clear_area_05fa] clear screen
 	lea	sprite_shadow_E100,a0          	| [$0d32: ld   hl,sprite_shadow_E100]
-	move.b	#0x00,d1                        	| [$0d35: ld   bc,$00C6] 198
-	move.b	#0xc6,d2                        	| [$0d35: ld   bc,$00C6] 198
+	move.w	#0xc6,d1                        	| [$0d35: ld   bc,$00C6] 198
 	jbsr	clear_area_05fa                   	| [$0d38: call clear_area_05fa] clear part of RAM
 l_0d3b:
 	move.b	unknown_E043,d0                 	| [$0d3b: ld   a,(unknown_E043)]
@@ -2646,7 +2632,7 @@ l_1064:
 	cmp.b	#0x3A,d0                         	| [$1089: cp   $3A]
 	jeq	l_10c3                             	| [$108b: jr   z,$10C3]
 	jbsr	l_2092                            	| [$108d: call $2092]
-	move.b	#r,d0                           	| [$1090: ld   a,r]
+	jbsr	osd_get_random                           	| [$1090: ld   a,r]
 	and.b	#0x7F,d0                         	| [$1092: and  $7F]
 	move.b	d0,d1                           	| [$1094: ld   b,a]
 	move.b	unknown_E303,d0                 	| [$1095: ld   a,(unknown_E303)]
@@ -3811,8 +3797,7 @@ l_17d8:
 	move.b	d2,(0x0c,a2)                    	| [$17d8: ld   (ix+$0c),c]
 	addq.w	#3,a0                           	| [$17db: inc  hl] * 3
 	move.b	(a0),d0                         	| [$17de: ld   a,(hl)]
-	roxr.b	#4,d0                           	| [$17df: rra] * 4
-      ^^^^^^ TODO: review cpu X flag
+	ror.b	#4,d0                           	| [$17df: rra] * 4
 	and.b	#0x0F,d0                         	| [$17e3: and  $0F]
 	move.b	#0x01,d2                        	| [$17e5: ld   c,$01]
 	jra	l_02c2                             	| [$17e7: jp   $02C2]
@@ -3822,7 +3807,7 @@ l_17ea:
 	jcc	l_17d8                             	| [$17ed: jr   nc,$17D8]
 	rts                                    	| [$17ef: ret]
 l_17f0:
-	move.b	#r,d0                           	| [$17f0: ld   a,r]
+	jbsr	osd_get_random                           	| [$17f0: ld   a,r]
 	and.b	#0x03,d0                         	| [$17f2: and  $03]
 	beq.b	0f                               	| [...]
 	rts                                    	| [$17f4: ret  nz] [...]
@@ -4207,11 +4192,9 @@ l_1a44:
 	move.b	#0x06,(0x0e,a2)                 	| [$1a50: ld   (ix+$0e),$06]
 	move.b	(0x0d,a2),d0                    	| [$1a54: ld   a,(ix+$0d)]
 	subq.b	#1,d0                           	| [$1a57: dec  a]
-	move.b	#0x00,d1                        	| [$1a58: ld   bc,$0003] 3
-	move.b	#0x03,d2                        	| [$1a58: ld   bc,$0003] 3
+	move.w	#0x03,d1                        	| [$1a58: ld   bc,$0003] 3
 	lea	l_1A8E,a0                      	| [$1a5b: ld   hl,$1A8E]
 	jbsr	cpir                              	| [$1a5e: cpir]
-     ^^^^ TODO: review special instruction inputs
 	jne	l_1a63                             	| [$1a60: jr   nz,$1A63]
 	move.b	(a0),d0                         	| [$1a62: ld   a,(hl)]
 l_1a63:
@@ -4336,7 +4319,7 @@ l_1b27:
 0:
 	move.b	#0x10,d1                        	| [$1b42: ld   bc,$1000] 4096
 	move.b	#0x00,d2                        	| [$1b42: ld   bc,$1000] 4096
-	move.b	#r,d0                           	| [$1b45: ld   a,r]
+	jbsr	osd_get_random                           	| [$1b45: ld   a,r]
 	and.b	#0xF0,d0                         	| [$1b47: and  $F0]
 	move.b	#0xE4,d5                        	| [$1b49: ld   h,$E4]
 	move.b	d2,d3                           	| [$1b4b: ld   d,c]
@@ -4402,7 +4385,7 @@ l_1b90:
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1b9b: ret  z] [...]
 0:
-	move.b	#r,d0                           	| [$1b9c: ld   a,r]
+	jbsr	osd_get_random                           	| [$1b9c: ld   a,r]
 	and.b	#0x0F,d0                         	| [$1b9e: and  $0F]
 	add.b	#0x19,d0                         	| [$1ba0: add  a,$19]
 	lea	unknown_E04E,a0                	| [$1ba2: ld   hl,unknown_E04E]
@@ -4435,7 +4418,7 @@ l_1bc7:
 	beq.b	0f                               	| [...]
 	rts                                    	| [$1bd0: ret  nz] [...]
 0:
-	move.b	#r,d0                           	| [$1bd1: ld   a,r]
+	jbsr	osd_get_random                           	| [$1bd1: ld   a,r]
 	move.b	d0,(a0)                         	| [$1bd3: ld   (hl),a]
 	lea	unknown_E1C6,a0                	| [$1bd4: ld   hl,unknown_E1C6]
 	move.b	#0x03,d1                        	| [$1bd7: ld   b,$03]
@@ -4468,7 +4451,6 @@ l_1c00:
 	                               	| [$1c03: and  a]
 	jeq	l_1c0b                             	| [$1c04: jr   z,$1C0B]
 	add.w	d3,a2                            	| [$1c06: add  ix,de]
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_1c00                             	| [$1c08: djnz $1C00]
 	rts                                    	| [$1c0a: ret]
@@ -4477,39 +4459,37 @@ l_1c0b:
 	move.b	d2,d0                           	| [$1c0c: ld   a,c]
 	cmp.b	#0x02,d0                         	| [$1c0d: cp   $02]
 	jcc	l_1c54                             	| [$1c0f: jr   nc,$1C54]
-	move.b	#r,d0                           	| [$1c11: ld   a,r]
+	jbsr	osd_get_random                           	| [$1c11: ld   a,r]
 	and.b	#0x1F,d0                         	| [$1c13: and  $1F]
 	add.b	#0x20,d0                         	| [$1c15: add  a,$20]
 	move.b	d0,(0x0f,a2)                    	| [$1c17: ld   (ix+$0f),a]
 	lea	unknown_E1D6,a0                	| [$1c1a: ld   hl,unknown_E1D6]
 	subq.b	#1,(a0)                         	| [$1c1d: dec  (hl)]
 l_1c1e:
-	move.b	#r,d0                           	| [$1c1e: ld   a,r]
+	jbsr	osd_get_random                           	| [$1c1e: ld   a,r]
 	and.b	#0x1E,d0                         	| [$1c20: and  $1E]
-	move.b	d0,d4                           	| [$1c22: ld   e,a]
-	clr.b	d3                               	| [$1c23: ld   d,$00]
-	cmp.b	#0x0E,d0                         	| [$1c25: cp   $0E]
+	clr.w	d3                               	| [$1c23: ld   d,$00]
+	move.b	d0,d3                           	| [$1c22: ld   e,a]
+	move.b	d0,d7
 	move.b	#0x82,d0                        	| [$1c27: ld   a,$82]
+	cmp.b	#0x0E,d7                         	| [$1c25: cp   $0E]
 	jcs	l_1c2f                             	| [$1c29: jr   c,$1C2F]
-      ^^^^^^ TODO: review cpu flags (move.b,jcs)
-	move.b	#r,d0                           	| [$1c2b: ld   a,r]
+	jbsr	osd_get_random                           	| [$1c2b: ld   a,r]
 	and.b	#0x80,d0                         	| [$1c2d: and  $80]
 l_1c2f:
 	move.b	d0,(0x0c,a2)                    	| [$1c2f: ld   (ix+$0c),a]
 	lea	l_3008,a0                      	| [$1c32: ld   hl,$3008]
 	add.w	d3,a0                            	| [$1c35: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	(a0),d0                         	| [$1c36: ld   a,(hl)]
 	move.b	d0,(0x07,a2)                    	| [$1c37: ld   (ix+$07),a]
 	addq.w	#1,a0                           	| [$1c3a: inc  hl]
 	move.b	(a0),d0                         	| [$1c3b: ld   a,(hl)]
 	move.b	d0,(0x03,a2)                    	| [$1c3c: ld   (ix+$03),a]
-	clr.b	d1                               	| [$1c3f: ld   b,$00]
+	clr.w	d1                               	| [$1c3f: ld   b,$00]
+	move.b	d2,d1
 	lea	l_1C59,a0                      	| [$1c41: ld   hl,$1C59]
 	add.w	d1,a0                            	| [$1c44: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 	add.w	d1,a0                            	| [$1c45: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 	move.b	(a0),d0                         	| [$1c46: ld   a,(hl)]
 	move.b	d0,(0x0d,a2)                    	| [$1c47: ld   (ix+$0d),a]
 	clr.b	(0x0e,a2)                        	| [$1c4a: ld   (ix+$0e),$00]
@@ -4579,8 +4559,7 @@ l_1cbc:
 	jne	l_1cd7                             	| [$1cc2: jr   nz,$1CD7]
 	move.b	#0x3B,d2                        	| [$1cc4: ld   c,$3B]
 	move.b	(0x05,a2),d1                    	| [$1cc6: ld   b,(ix+$05)]
-	roxl.b	#1,d1                           	| [$1cc9: rl   b]
-      ^^^^^^ TODO: review cpu X flag
+	rol.b	#1,d1                           	| [$1cc9: rl   b]
 	jcc	l_1ccf                             	| [$1ccb: jr   nc,$1CCF]
 	move.b	#0x50,d2                        	| [$1ccd: ld   c,$50]
 l_1ccf:
@@ -4647,12 +4626,14 @@ l_1d3a:
 	move.b	unknown_E300,d0                 	| [$1d3a: ld   a,(unknown_E300)]
 	cmp.b	#0x06,d0                         	| [$1d3d: cp   $06]
 	jcc	l_08b8                             	| [$1d3f: jp   nc,$08B8]
-	lea	l_0605,a0                      	| [$1d42: ld   hl,$0605]
+	move.b	#6,d5                      	| [$1d42: ld   hl,$0605]
+	move.b	#5,d6                      	| [$1d42: ld   hl,$0605]
 	move.b	(a2),d0                    	| [$1d45: ld   a,(ix+$00)]
 	cmp.b	#0x2A,d0                         	| [$1d48: cp   $2A]
 	jcc	l_1d4f                             	| [$1d4a: jr   nc,$1D4F]
 l_1d4c:
-	lea	l_020B,a0                      	| [$1d4c: ld   hl,$020B]
+	move.b	#2,d5                      	| [$1d4c: ld   hl,$020B]
+	move.b	#0xB,d6                      	| [$1d4c: ld   hl,$020B]
 l_1d4f:
 	lea	unknown_E330,a3                	| [$1d4f: ld   iy,unknown_E330]
 	move.w	#0x0010,d3                      	| [$1d53: ld   de,$0010] 16
@@ -4672,7 +4653,6 @@ l_1d58:
 	jcs	l_1d9e                             	| [$1d71: jr   c,$1D9E]
 l_1d73:
 	add.w	d3,a3                            	| [$1d73: add  iy,de]
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_1d58                             	| [$1d75: djnz $1D58]
 	move.b	unknown_E307,d0                 	| [$1d77: ld   a,(unknown_E307)]
@@ -4686,7 +4666,6 @@ l_1d73:
 	cmp.b	#0xEA,d0                         	| [$1d8b: cp   $EA]
 	jcs	l_08b8                             	| [$1d8d: jp   c,$08B8]
 	jbsr	osd_read_dsw_2                       	| [$1d90: ld   a,($D004)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#6,d0                           	| [$1d93: bit  6,a]
 	jeq	l_08b8                             	| [$1d95: jp   z,$08B8]
 	jbsr	l_0852                            	| [$1d98: call $0852]
@@ -4795,8 +4774,7 @@ l_1e51:
 	cmp.b	#0x3F,d0                         	| [$1e67: cp   $3F]
 	jne	l_1e7d                             	| [$1e69: jr   nz,$1E7D]
 	move.b	(0x0f,a2),d0                    	| [$1e6b: ld   a,(ix+$0f)]
-	roxr.b	#3,d0                           	| [$1e6e: rra] * 3
-      ^^^^^^ TODO: review cpu X flag
+	ror.b	#3,d0                           	| [$1e6e: rra] * 3
 	and.b	#0x1F,d0                         	| [$1e71: and  $1F]
 	move.b	d0,d4                           	| [$1e73: ld   e,a]
 	move.b	#0x83,d3                        	| [$1e74: ld   d,$83]
@@ -4828,25 +4806,17 @@ l_1eaa:
 	asl.b	#1,d0                            	| [$1eb0: sla  a]
 	jeq	l_1ef1                             	| [$1eb2: jr   z,$1EF1]
 
-	bcs.b	0f
-	clr.b	d7
-	bra.b	1f
-0:
-	st.b	d7
-1:
-	cmp.b	#1,d7                            	| [$1eb4: ccf]
+	INVERT_XC_FLAGS                            	| [$1eb4: ccf]
 	roxr.b	#1,d0                           	| [$1eb5: rra]
-      ^^^^^^ TODO: review cpu X flag, cmp doesn't affect it!
 	and.b	#0x80,d0                         	| [$1eb6: and  $80]
 	move.b	d0,(0x0c,a2)                    	| [$1eb8: ld   (ix+$0c),a]
 	move.b	d0,d2                           	| [$1ebb: ld   c,a]
-	move.b	#r,d0                           	| [$1ebc: ld   a,r]
+	jbsr	osd_get_random                           	| [$1ebc: ld   a,r]
 	and.b	#0x3F,d0                         	| [$1ebe: and  $3F]
-	move.b	d0,d4                           	| [$1ec0: ld   e,a]
-	clr.b	d3                               	| [$1ec1: ld   d,$00]
+	clr.w	d3                               	| [$1ec1: ld   d,$00]
+	move.b	d0,d3                           	| [$1ec0: ld   e,a]
 	lea	l_0126,a0                      	| [$1ec3: ld   hl,$0126]
 	add.w	d3,a0                            	| [$1ec6: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	addq.b	#1,d2                           	| [$1ec7: inc  c]
 	jpl	l_1ed2                             	| [$1ec8: jp   p,$1ED2]
 	exg	a1,a0                              	| [$1ecb: ex   de,hl]
@@ -4862,10 +4832,9 @@ l_1ed2:
 	add.b	d0,d0                            	| [$1edc: add  a,a]
 	move.b	d0,(0x08,a2)                    	| [$1edd: ld   (ix+$08),a]
 	clr.b	d0                               	| [$1ee0: ld   a,$00]
-	subx.b	#0x00,d0                        	| [$1ee2: sbc  a,$00]
-      ^^^^^^ TODO: review cpu X flag
+	subx.b	d0,d0                        	| [$1ee2: sbc  a,$00]
 	move.b	d0,(0x09,a2)                    	| [$1ee4: ld   (ix+$09),a]
-	move.b	#r,d0                           	| [$1ee7: ld   a,r]
+	jbsr	osd_get_random                           	| [$1ee7: ld   a,r]
 	and.b	#0x7F,d0                         	| [$1ee9: and  $7F]
 	add.b	#0x20,d0                         	| [$1eeb: add  a,$20]
 	move.b	d0,(0x0a,a2)                    	| [$1eed: ld   (ix+$0a),a]
@@ -4878,7 +4847,7 @@ l_1ef1:
 	move.b	#0x03,d1                        	| [$1efa: ld   b,$03]
 	cmp.b	#0x58,d0                         	| [$1efc: cp   $58]
 	jcc	l_1f06                             	| [$1efe: jr   nc,$1F06]
-	move.b	#r,d0                           	| [$1f00: ld   a,r]
+	jbsr	osd_get_random                           	| [$1f00: ld   a,r]
 	and.b	#0x02,d0                         	| [$1f02: and  $02]
 	addq.b	#1,d0                           	| [$1f04: inc  a]
 	move.b	d0,d1                           	| [$1f05: ld   b,a]
@@ -4886,7 +4855,7 @@ l_1f06:
 	move.b	d1,d0                           	| [$1f06: ld   a,b]
 	add.b	(0x0c,a2),d0                     	| [$1f07: add  a,(ix+$0c)]
 	move.b	d0,(0x0c,a2)                    	| [$1f0a: ld   (ix+$0c),a]
-	move.b	#r,d0                           	| [$1f0d: ld   a,r]
+	jbsr	osd_get_random                           	| [$1f0d: ld   a,r]
 	and.b	#0x0F,d0                         	| [$1f0f: and  $0F]
 	add.b	#0x24,d0                         	| [$1f11: add  a,$24]
 	move.b	d0,(0x0b,a2)                    	| [$1f13: ld   (ix+$0b),a]
@@ -4909,7 +4878,6 @@ l_1f28:
 	move.w	unknown_E0D8,a1             	| [$1f3d: ld   de,(unknown_E0D8)]
                   ^^^^^^ TODO: review move.w into address register
 	add.w	d3,a0                            	| [$1f41: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	d3,d0                           	| [$1f42: ld   a,d]
 	move.w	unknown_E304,a1             	| [$1f43: ld   de,(unknown_E304)]
                   ^^^^^^ TODO: review move.w into address register
@@ -4928,6 +4896,7 @@ l_1f28:
 	jcs	l_1f60                             	| [$1f5c: jr   c,$1F60]
 	move.b	#0xD0,d1                        	| [$1f5e: ld   b,$D0]
 l_1f60:
+	TEST ROM D0xx
 	move.b	d5,d0                           	| [$1f60: ld   a,h]
 	cmp.b	d1,d0                            	| [$1f61: cp   b]
 	jcc	l_1f83                             	| [$1f62: jr   nc,$1F83]
@@ -4968,12 +4937,13 @@ l_1f87:
 	move.b	(0x03,a2),d0                    	| [$1f97: ld   a,(ix+$03)]
 	sub.b	#0x30,d0                         	| [$1f9a: sub  $30]
 	cmp.b	#0x40,d0                         	| [$1f9c: cp   $40]
-	clr.b	d0                               	| [$1f9e: ld   a,$00]
 	jcc	l_1fa6                             	| [$1fa0: jr   nc,$1FA6]
-      ^^^^^^ TODO: review cpu flags (clr.b,jcc)
-	move.b	#r,d0                           	| [$1fa2: ld   a,r]
+	jbsr	osd_get_random                           	| [$1fa2: ld   a,r]
 	and.b	#0x80,d0                         	| [$1fa4: and  $80]
+	jra		l_1fa6_2
 l_1fa6:
+	clr.b	d0                               	| [$1f9e: ld   a,$00]
+l_1fa6_2:
 	add.b	(0x0c,a2),d0                     	| [$1fa6: add  a,(ix+$0c)]
 	addq.b	#1,d0                           	| [$1fa9: inc  a]
 	move.b	d0,(0x0c,a2)                    	| [$1faa: ld   (ix+$0c),a]
@@ -4987,9 +4957,7 @@ l_1fad:
 	rol.b	#1,d0                            	| [$1fb6: rlca]
 	jcs	l_1fbb                             	| [$1fb7: jr   c,$1FBB]
 	add.w	d3,a0                            	| [$1fb9: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	add.w	d3,a0                            	| [$1fba: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 l_1fbb:
 	move.w	unknown_E304,a1             	| [$1fbb: ld   de,(unknown_E304)]
                   ^^^^^^ TODO: review move.w into address register
@@ -5019,15 +4987,12 @@ l_1fd6:
 	ror.b	#1,d0                            	| [$1fe0: rrca]
 	jcs	l_1fe5                             	| [$1fe1: jr   c,$1FE5]
 	add.w	d3,a0                            	| [$1fe3: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	add.w	d3,a0                            	| [$1fe4: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 l_1fe5:
 	move.b	a0,unknown_E0DA                 	| [$1fe5: ld   (unknown_E0DA),hl]
 	jra	l_1f78                             	| [$1fe8: jp   $1F78]
 l_1feb:
 	add.w	d3,a0                            	| [$1feb: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	jra	l_1fd6                             	| [$1fec: jr   $1FD6]
 
 l_2000:
@@ -5057,7 +5022,6 @@ l_201a:
 	move.w	unknown_E0DA,a0             	| [$202f: ld   hl,(unknown_E0DA)]
                   ^^^^^^ TODO: review move.w into address register
 	add.w	d3,a0                            	| [$2032: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	a0,unknown_E0DA                 	| [$2033: ld   (unknown_E0DA),hl]
 	move.b	d5,d0                           	| [$2036: ld   a,h]
 	cmp.b	#0x30,d0                         	| [$2037: cp   $30]
@@ -5083,11 +5047,10 @@ l_205c:
 	roxr.b	#1,d0                           	| [$205c: rra]
 	roxr.b	#2,d0                           	| [$205d: rra] * 2
 	and.b	#0x1E,d0                         	| [$205f: and  $1E]
-	move.b	d0,d2                           	| [$2061: ld   c,a]
-	clr.b	d1                               	| [$2062: ld   b,$00]
+	clr.w	d1                               	| [$2062: ld   b,$00]
+	move.b	d0,d1                           	| [$2061: ld   c,a]
 	lea	l_2D24,a0                      	| [$2064: ld   hl,$2D24]
 	add.w	d1,a0                            	| [$2067: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 	cmp.b	#0x12,d0                         	| [$2068: cp   $12]
 	jcs	l_206d                             	| [$206a: jr   c,$206D]
 	addq.b	#1,d1                           	| [$206c: inc  b]
@@ -5149,30 +5112,24 @@ l_20c4:
 	jra	l_0869                             	| [$20d8: jp   $0869]
 l_20db:
 
-	move.l	a2,-(sp)                        	| [$20db: push ix]
-	move.l	(sp)+,a0                        	| [$20dd: pop  hl]
+	move.l	a2,a0                        	| [$20db: push ix]
+											| [$20dd: pop  hl]
 	lea	unknown_E0D4,a1                	| [$20de: ld   de,unknown_E0D4]
-	move.b	#0x00,d1                        	| [$20e1: ld   bc,$000A] 10
-	move.b	#0x0a,d2                        	| [$20e1: ld   bc,$000A] 10
+	move.w	#0x0a,d1                        	| [$20e1: ld   bc,$000A] 10
 	jbsr	ldir                              	| [$20e4: ldir]
-     ^^^^ TODO: review special instruction inputs
 	move.w	unknown_E0D6,a1             	| [$20e6: ld   de,(unknown_E0D6)]
                   ^^^^^^ TODO: review move.w into address register
 	move.w	unknown_E0D8,a0             	| [$20ea: ld   hl,(unknown_E0D8)]
                   ^^^^^^ TODO: review move.w into address register
 	add.w	d3,a0                            	| [$20ed: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	rts                                    	| [$20ee: ret]
 l_20ef:
 
-	move.l	a2,-(sp)                        	| [$20ef: push ix]
-	move.l	(sp)+,a1                        	| [$20f1: pop  de]
-	movem.w	(sp)+,d3/d4                    	| [$20f1: pop  de]
+	move.l	a2,a1                        	| [$20ef: push ix]
+	                        	| [$20f1: pop  de]
 	lea	unknown_E0D4,a0                	| [$20f2: ld   hl,unknown_E0D4]
-	move.b	#0x00,d1                        	| [$20f5: ld   bc,$000A] 10
-	move.b	#0x0a,d2                        	| [$20f5: ld   bc,$000A] 10
+	move.w	#0x0a,d1                        	| [$20f5: ld   bc,$000A] 10
 	jbsr	ldir                              	| [$20f8: ldir]
-     ^^^^ TODO: review special instruction inputs
 	rts                                    	| [$20fa: ret]
 l_20fb:
 	jbsr	l_20db                            	| [$20fb: call $20DB]
@@ -5186,6 +5143,8 @@ l_20fb:
 	add.w	d3,a0                            	| [$210b: add  hl,de]
   ^^^^ TODO: review d3 computation above
 	rts                                    	| [$210c: ret]
+	
+	* not reached??
 	lea	unknown_E051,a0                	| [$210d: ld   hl,unknown_E051]
 	move.b	unknown_E300,d0                 	| [$2110: ld   a,(unknown_E300)]
 	subq.b	#1,d0                           	| [$2113: dec  a]
@@ -5216,7 +5175,7 @@ l_212c:
 	move.b	unknown_E512,d0                 	| [$2138: ld   a,(unknown_E512)]
 	jbsr	l_03bd                            	| [$213b: call $03BD]
 	move.b	time_bcd_e511,d0                	| [$213e: ld   a,(time_bcd_e511)]
-	jra	l_03ae                             	| [$2141: jp   $03AE]
+	jra	set_character_at_address_03ae                             	| [$2141: jp   $03AE]
 
 l_27c0:
 	lea	unknown_E046,a0                	| [$27c0: ld   hl,unknown_E046]
@@ -5233,8 +5192,8 @@ l_27d2:
 	move.b	#0x1E,d0                        	| [$27d5: ld   a,$1E]
 	jbsr	l_0d75                            	| [$27d7: call $0D75]
 	lea	unknown_E50F,a0                	| [$27da: ld   hl,unknown_E50F]
-	clr.b	(a0)                             	| [$27dd: ld   (hl),$00]
-	addq.w	#1,a0                           	| [$27df: inc  hl]
+	clr.b	(a0)+                             	| [$27dd: ld   (hl),$00]
+	                           	| [$27df: inc  hl]
 	addq.b	#1,(a0)                         	| [$27e0: inc  (hl)]
 	jbsr	l_2948                            	| [$27e1: call $2948]
 	jbsr	l_05e8                            	| [$27e4: call $05E8]
@@ -5387,10 +5346,10 @@ l_28e2:
 	jeq	l_28f6                             	| [$28f2: jr   z,$28F6]
 	move.b	#0x14,d4                        	| [$28f4: ld   e,$14]
 l_28f6:
-	clr.b	d3                               	| [$28f6: ld   d,$00]
+	clr.w	d3                               	| [$28f6: ld   d,$00]
+	move.b	d4,d3
 	lea	unknown_E00C,a0                	| [$28f8: ld   hl,unknown_E00C]
 	add.w	d3,a0                            	| [$28fb: add  hl,de]
-  ^^^^ TODO: review d3 computation above
 	move.b	(a0),d0                         	| [$28fc: ld   a,(hl)]
 	addq.w	#1,a0                           	| [$28fd: inc  hl]
 	move.b	a0,unknown_E096                 	| [$28fe: ld   (unknown_E096),hl]
@@ -5434,21 +5393,17 @@ l_2915:
 	rts                                    	| [$2947: ret]
 l_2948:
 	lea	sprite_shadow_E100,a0          	| [$2948: ld   hl,sprite_shadow_E100]
-	move.b	#0x00,d1                        	| [$294b: ld   bc,$00A4] 164
-	move.b	#0xa4,d2                        	| [$294b: ld   bc,$00A4] 164
+	move.w	#0xa4,d1                        	| [$294b: ld   bc,$00A4] 164
 	jbsr	clear_area_05fa                   	| [$294e: call clear_area_05fa]
-	move.b	#0x02,d1                        	| [$2951: ld   bc,$0220] 544
-	move.b	#0x20,d2                        	| [$2951: ld   bc,$0220] 544
+	move.w	#0x220,d2                        	| [$2951: ld   bc,$0220] 544
 l_2954:
 	lea	l_80E0,a0                      	| [$2954: ld   hl,$80E0]
 	jra	clear_area_05fa                    	| [$2957: jp   clear_area_05fa]
 l_295a:
 	lea	sprite_shadow_E100,a0          	| [$295a: ld   hl,sprite_shadow_E100]
-	move.b	#0x00,d1                        	| [$295d: ld   bc,$00C6] 198
-	move.b	#0xc6,d2                        	| [$295d: ld   bc,$00C6] 198
+	move.w	#0xc6,d1                        	| [$295d: ld   bc,$00C6] 198
 	jbsr	clear_area_05fa                   	| [$2960: call clear_area_05fa]
-	move.b	#0x03,d1                        	| [$2963: ld   bc,$0320] 800
-	move.b	#0x20,d2                        	| [$2963: ld   bc,$0320] 800
+	move.w	#0x320,d1                        	| [$2963: ld   bc,$0320] 800
 	jra	l_2954                             	| [$2966: jr   $2954]
 l_2968:
 	lea	l_81D9,a1                      	| [$2968: ld   de,$81D9]
@@ -5459,8 +5414,8 @@ l_2971:
 	lea	l_8297,a1                      	| [$2974: ld   de,$8297]
 	jbsr	l_0393                            	| [$2977: call $0393]
 	exg	a1,a0                              	| [$297a: ex   de,hl]
-	move.b	#0x30,(a0)                      	| [$297b: ld   (hl),$30]
-	addq.w	#1,a0                           	| [$297d: inc  hl]
+	move.b	#0x30,(a0)+                      	| [$297b: ld   (hl),$30]
+	                           	| [$297d: inc  hl]
 	move.b	#0x30,(a0)                      	| [$297e: ld   (hl),$30]
 	rts                                    	| [$2980: ret]
 l_2981:
@@ -5559,25 +5514,23 @@ l_29ff:
 	jne	l_29ff                             	| [$2a02: djnz $29FF]
 	move.b	#0x1F,(a0)                      	| [$2a04: ld   (hl),$1F]
 	move.b	#0x5A,d0                        	| [$2a06: ld   a,$5A]
-	move.b	d0,0x8052                       	| [$2a08: ld   ($8052),a]
-          ^^^^^^ TODO: review absolute 16-bit address write
+	move.w	#0x8052,d7
+	jbsr	osd_w_videoram                     	| [$2a08: ld   ($8052),a]
 	rts                                    	| [$2a0b: ret]
 
 
 service_mode_3300:
 	st.b	d0                                	| [$3300: ld   a,$FF]
-out  ($C0),a
+*out  ($C0),a
 	move.b	d0,unknown_E1C5                 	| [$3304: ld   (unknown_E1C5),a]
 	lea	sprite_shadow_E100,a0          	| [$3307: ld   hl,sprite_shadow_E100]
 	clr.b	(a0)                             	| [$330a: ld   (hl),$00]
 	move.b	d5,d3                           	| [$330c: ld   d,h]
 	move.b	d6,d4                           	| [$330d: ld   e,l]
 	addq.w	#1,a1                           	| [$330e: inc  de]
-	move.b	#0x00,d1                        	| [$330f: ld   bc,$00CF] 207
-	move.b	#0xcf,d2                        	| [$330f: ld   bc,$00CF] 207
+	move.w	#0xcf,d1                        	| [$330f: ld   bc,$00CF] 207
 	jbsr	ldir                              	| [$3312: ldir]
-     ^^^^ TODO: review special instruction inputs
-	move.b	#0x01,d0                        	| [$3314: ld   a,$01]
+ 	move.b	#0x01,d0                        	| [$3314: ld   a,$01]
 l_3316:
 	move.b	d0,d3                           	| [$3316: ld   d,a]
 	move.b	#0x08,d1                        	| [$3317: ld   bc,$0800] 2048
@@ -5654,7 +5607,7 @@ l_3372:
 	move.b	d3,d0                           	| [$3372: ld   a,d]
 	jra	l_3353                             	| [$3373: jr   $3353]
 l_3375:
-ld   sp,unknown_E800
+	lea		stack_top_E800,sp
 	move.b	#0x01,d0                        	| [$3378: ld   a,$01]
 l_337a:
 	move.b	d0,d3                           	| [$337a: ld   d,a]
@@ -5746,10 +5699,8 @@ l_33f5:
 	move.b	d5,d3                           	| [$33fa: ld   d,h]
 	move.b	d6,d4                           	| [$33fb: ld   e,l]
 	addq.w	#1,a1                           	| [$33fc: inc  de]
-	move.b	#0x00,d1                        	| [$33fd: ld   bc,$00CF] 207
-	move.b	#0xcf,d2                        	| [$33fd: ld   bc,$00CF] 207
+	move.w	#0xcf,d1                        	| [$33fd: ld   bc,$00CF] 207
 	jbsr	ldir                              	| [$3400: ldir]
-     ^^^^ TODO: review special instruction inputs
 	move.w	#0x0000,d5                      	| [$3402: ld   hl,$0000] 0
 	clr.b	d0                               	| [$3405: xor  a]
 l_3406:
@@ -5778,8 +5729,7 @@ out  ($1C),a
     jbsr  osd_enable_interrupts  | [ei]
 l_3426:
 	jbsr	osd_read_in_0                       	| [$3426: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
-	btst.b	#1,d0                           	| [$3429: bit  1,a]
+ 	btst.b	#1,d0                           	| [$3429: bit  1,a]
 	jne	l_3426                             	| [$342b: jr   nz,$3426]
 	move.b	#0x03,d0                        	| [$342d: ld   a,$03]
 	move.b	d0,unknown_E701                 	| [$342f: ld   (unknown_E701),a]
@@ -5790,26 +5740,23 @@ l_3435:
 	jeq	l_343c                             	| [$3438: jr   z,$343C]
 	move.b	#0x08,d2                        	| [$343a: ld   c,$08]
 l_343c:
+	clr.w	d1
+	move.b	d2,d1
 	lea	l_3A86,a0                      	| [$343c: ld   hl,$3A86]
 	add.w	d1,a0                            	| [$343f: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
-	exg	a1,a0                              	| [$3440: ex   de,hl]
+ 	exg	a1,a0                              	| [$3440: ex   de,hl]
 	move.b	unknown_E700,d0                 	| [$3441: ld   a,(unknown_E700)]
 	ror.b	#2,d0                            	| [$3444: rrca] * 2
-	move.b	d0,d2                           	| [$3446: ld   c,a]
+	move.b	d0,d1                           	| [$3446: ld   c,a]
 	lea	l_80C4,a0                      	| [$3447: ld   hl,$80C4]
 	add.w	d1,a0                            	| [$344a: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 
 	move.l	a0,-(sp)                        	| [$344b: push hl]
 	exg	a1,a0                              	| [$344c: ex   de,hl]
-	move.b	#0x08,d2                        	| [$344d: ld   c,$08]
+	move.w	#0x08,d1                        	| [$344d: ld   c,$08]
 	jbsr	ldir                              	| [$344f: ldir]
-     ^^^^ TODO: review special instruction inputs
 	addq.w	#2,a1                           	| [$3451: inc  de] * 2
-	movem.w	d3/d4,-(sp)                    	| [$3453: push de]
-	move.l	a1,-(sp)                        	| [$3453: push de]
-	move.l	(sp)+,a3                        	| [$3454: pop  iy]
+	move.l	a1,a3                        	| [$3453: push de]
 	move.l	(sp)+,a2                        	| [$3456: pop  ix]
 	move.w	(sp)+,d0                        	| [$3458: pop  af]
 	jbsr	l_349a                            	| [$3459: call $349A]
@@ -5826,16 +5773,15 @@ l_3465:
 	addq.w	#1,a0                           	| [$346c: inc  hl]
 	move.b	(a0),d3                         	| [$346d: ld   d,(hl)]
 	addq.w	#1,a0                           	| [$346e: inc  hl]
-	move.b	d0,d2                           	| [$346f: ld   c,a]
-	clr.b	d1                               	| [$3470: ld   b,$00]
+	clr.w	d1                               	| [$3470: ld   b,$00]
+	move.b	d0,d1                           	| [$346f: ld   c,a]
 	jbsr	ldir                              	| [$3472: ldir]
-     ^^^^ TODO: review special instruction inputs
 	jra	l_3465                             	| [$3474: jr   $3465]
 l_3476:
 	jra	(a2)                               	| [$3476: jp   (ix)]
 l_3478:
-	ror.b	#1,d0                            	| [$3478: rrca]
-	ror.b	#3,d0                            	| [$3479: rrca] * 3
+	                            	| [$3478: rrca]
+	ror.b	#4,d0                            	| [$3479: rrca] * 4
 	and.b	#0x0F,d0                         	| [$347c: and  $0F]
 	add.b	#0x30,d0                         	| [$347e: add  a,$30]
 	cmp.b	#0x3A,d0                         	| [$3480: cp   $3A]
@@ -5874,16 +5820,13 @@ l_34b7:
 	rts                                    	| [$34ba: ret]
 l_34bb:
 	exg	d0,d7                              	| [$34bb: ex   af,af']
-         ^^^ TODO review: wrong if carry is needed or D7 used in between!
 	jbsr	exx                               	| [$34bc: exx]
-     ^^^^ TODO: review special instruction inputs
 	lea	l_34C4,a2                      	| [$34bd: ld   ix,$34C4]
 	jra	l_35b1                             	| [$34c1: jp   $35B1]
 	lea	l_3A72,a0                      	| [$34c4: ld   hl,$3A72]
 	lea	l_34CE,a2                      	| [$34c7: ld   ix,$34CE]
 	jra	l_3465                             	| [$34cb: jp   $3465]
 	jbsr	exx                               	| [$34ce: exx]
-     ^^^^ TODO: review special instruction inputs
 	lea	l_808F,a3                      	| [$34cf: ld   iy,$808F]
 	lea	l_34DB,a2                      	| [$34d3: ld   ix,$34DB]
 	move.b	d5,d0                           	| [$34d7: ld   a,h]
@@ -5914,17 +5857,14 @@ l_34bb:
 	jra	l_348b                             	| [$351c: jp   $348B]
 l_351f:
 	jbsr	osd_read_in_0                       	| [$351f: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#0,d0                           	| [$3522: bit  0,a]
 	jeq	l_352f                             	| [$3524: jp   z,$352F]
 	btst.b	#1,d0                           	| [$3527: bit  1,a]
 	jne	l_351f                             	| [$3529: jr   nz,$351F]
 	exg	d0,d7                              	| [$352b: ex   af,af']
-         ^^^ TODO review: wrong if carry is needed or D7 used in between!
 	jra	l_33f5                             	| [$352c: jp   $33F5]
 l_352f:
 	exg	d0,d7                              	| [$352f: ex   af,af']
-         ^^^ TODO review: wrong if carry is needed or D7 used in between!
 	or.b	d0,d0                             	| [$3530: or   a]
 	jeq	l_3372                             	| [$3531: jp   z,$3372]
 	jra	l_3324                             	| [$3534: jp   $3324]
@@ -5932,36 +5872,29 @@ l_3537:
 
 	move.l	a0,-(sp)                        	| [$3537: push hl]
 	jbsr	exx                               	| [$3538: exx]
-     ^^^^ TODO: review special instruction inputs
 	jra	l_3544                             	| [$3539: jr   $3544]
 l_353b:
 
 	move.l	a0,-(sp)                        	| [$353b: push hl]
 	jbsr	exx                               	| [$353c: exx]
-     ^^^^ TODO: review special instruction inputs
 	lea	l_3544,a2                      	| [$353d: ld   ix,$3544]
 	jra	l_35b1                             	| [$3541: jp   $35B1]
 l_3544:
 	lea	l_8000,a0                      	| [$3544: ld   hl,$8000]
 	lea	unknown_E000,a1                	| [$3547: ld   de,unknown_E000]
-	move.b	#0x04,d1                        	| [$354a: ld   bc,$04A0] 1184
-	move.b	#0xa0,d2                        	| [$354a: ld   bc,$04A0] 1184
+	move.w	#0x4a0,d1                        	| [$354a: ld   bc,$04A0] 1184
 	jbsr	ldir                              	| [$354d: ldir]
-     ^^^^ TODO: review special instruction inputs
 	lea	l_8000,a0                      	| [$354f: ld   hl,$8000]
 	clr.b	(a0)                             	| [$3552: ld   (hl),$00]
 	move.b	d5,d3                           	| [$3554: ld   d,h]
 	move.b	d6,d4                           	| [$3555: ld   e,l]
 	addq.w	#1,a1                           	| [$3556: inc  de]
-	move.b	#0x04,d1                        	| [$3557: ld   bc,$049F] 1183
-	move.b	#0x9f,d2                        	| [$3557: ld   bc,$049F] 1183
+	move.w	#0x49f,d1                        	| [$3557: ld   bc,$049F] 1183
 	jbsr	ldir                              	| [$355a: ldir]
-     ^^^^ TODO: review special instruction inputs
-	lea	l_3A72,a0                      	| [$355c: ld   hl,$3A72]
+ 	lea	l_3A72,a0                      	| [$355c: ld   hl,$3A72]
 	lea	l_3566,a2                      	| [$355f: ld   ix,$3566]
 	jra	l_3465                             	| [$3563: jp   $3465]
 	jbsr	exx                               	| [$3566: exx]
-     ^^^^ TODO: review special instruction inputs
 	lea	l_808F,a3                      	| [$3567: ld   iy,$808F]
 	move.b	d5,d0                           	| [$356b: ld   a,h]
 	jbsr	l_349a                            	| [$356c: call $349A]
@@ -5977,7 +5910,6 @@ l_3544:
 	move.l	(sp)+,a0                        	| [$3587: pop  hl]
 l_3588:
 	jbsr	osd_read_in_0                       	| [$3588: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#0,d0                           	| [$358b: bit  0,a]
 	jeq	l_3595                             	| [$358d: jr   z,$3595]
 	btst.b	#1,d0                           	| [$358f: bit  1,a]
@@ -5985,15 +5917,11 @@ l_3588:
 	jra	l_3588                             	| [$3593: jr   $3588]
 l_3595:
 	jbsr	exx                               	| [$3595: exx]
-     ^^^^ TODO: review special instruction inputs
 	lea	unknown_E000,a0                	| [$3596: ld   hl,unknown_E000]
 	lea	l_8000,a1                      	| [$3599: ld   de,$8000]
-	move.b	#0x04,d1                        	| [$359c: ld   bc,$04A0] 1184
-	move.b	#0xa0,d2                        	| [$359c: ld   bc,$04A0] 1184
+	move.w	#0x4a0,d2                        	| [$359c: ld   bc,$04A0] 1184
 	jbsr	ldir                              	| [$359f: ldir]
-     ^^^^ TODO: review special instruction inputs
 	jbsr	exx                               	| [$35a1: exx]
-     ^^^^ TODO: review special instruction inputs
 	rts                                    	| [$35a2: ret]
 l_35a3:
 	lea	l_84A0,a0                      	| [$35a3: ld   hl,$84A0]
@@ -6001,30 +5929,25 @@ l_35a3:
 	move.b	d5,d3                           	| [$35a8: ld   d,h]
 	move.b	d6,d4                           	| [$35a9: ld   e,l]
 	addq.w	#1,a1                           	| [$35aa: inc  de]
-	move.b	#0x03,d1                        	| [$35ab: ld   bc,$035F] 863
-	move.b	#0x5f,d2                        	| [$35ab: ld   bc,$035F] 863
+	move.w	#0x35f,d1                        	| [$35ab: ld   bc,$035F] 863
 	jbsr	ldir                              	| [$35ae: ldir]
-     ^^^^ TODO: review special instruction inputs
 	rts                                    	| [$35b0: ret]
 l_35b1:
 	lea	l_8400,a0                      	| [$35b1: ld   hl,$8400]
-	move.b	#0x03,d1                        	| [$35b4: ld   bc,$03FF] 1023
-	move.b	#0xff,d2                        	| [$35b4: ld   bc,$03FF] 1023
+	move.w	#0x3ff,d1                        	| [$35b4: ld   bc,$03FF] 1023
 	clr.b	(a0)                             	| [$35b7: ld   (hl),$00]
+	illegal
 	move.b	d5,d3                           	| [$35b9: ld   d,h]
 	move.b	d6,d4                           	| [$35ba: ld   e,l]
 	addq.w	#1,a1                           	| [$35bb: inc  de]
 	jbsr	ldir                              	| [$35bc: ldir]
-     ^^^^ TODO: review special instruction inputs
-	lea	l_8000,a0                      	| [$35be: ld   hl,$8000]
-	move.b	#0x03,d1                        	| [$35c1: ld   bc,$03FF] 1023
-	move.b	#0xff,d2                        	| [$35c1: ld   bc,$03FF] 1023
+ 	lea	l_8000,a0                      	| [$35be: ld   hl,$8000]
+	move.w	#0x3ff,d1                        	| [$35c1: ld   bc,$03FF] 1023
 	clr.b	(a0)                             	| [$35c4: ld   (hl),$00]
 	move.b	d5,d3                           	| [$35c6: ld   d,h]
 	move.b	d6,d4                           	| [$35c7: ld   e,l]
 	addq.w	#1,a1                           	| [$35c8: inc  de]
 	jbsr	ldir                              	| [$35c9: ldir]
-     ^^^^ TODO: review special instruction inputs
 	jra	(a2)                               	| [$35cb: jp   (ix)]
 l_35cd:
 	jbsr	l_38ad                            	| [$35cd: call $38AD]
@@ -6035,16 +5958,14 @@ l_35cd:
 	jbsr	l_391c                            	| [$35db: call $391C]
 l_35de:
 	jbsr	osd_read_in_0                       	| [$35de: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#0,d0                           	| [$35e1: bit  0,a]
 	jne	l_35f9                             	| [$35e3: jr   nz,$35F9]
 	move.b	unknown_E701,d0                 	| [$35e5: ld   a,(unknown_E701)]
 	rol.b	#1,d0                            	| [$35e8: rlca]
-	move.b	d0,d2                           	| [$35e9: ld   c,a]
-	clr.b	d1                               	| [$35ea: ld   b,$00]
+	clr.w	d1                               	| [$35ea: ld   b,$00]
+	move.b	d0,d1                           	| [$35e9: ld   c,a]
 	lea	jump_table_3A96,a2             	| [$35ec: ld   ix,jump_table_3A96]
 	add.w	d1,a2                            	| [$35f0: add  ix,bc]
-  ^^^^ TODO: review d1 computation above
 	move.b	(a2),d6                    	| [$35f2: ld   l,(ix+$00)]
 	move.b	(0x01,a2),d5                    	| [$35f5: ld   h,(ix+$01)]
 	jra	(a0)                               	| [$35f8: jp   (hl)]
@@ -6108,30 +6029,25 @@ l_3666:
 	jbsr	l_3908                            	| [$366c: call $3908]
 l_366f:
 	jbsr	osd_read_dsw_1                       	| [$366f: ld   a,($D003)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	lea	l_80CB,a0                      	| [$3672: ld   hl,$80CB]
 	jbsr	l_36b2                            	| [$3675: call $36B2]
 	jbsr	osd_read_dsw_2                       	| [$3678: ld   a,($D004)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	lea	l_810B,a0                      	| [$367b: ld   hl,$810B]
 	jbsr	l_36b2                            	| [$367e: call $36B2]
 	lea	l_3AAC,a2                      	| [$3681: ld   ix,$3AAC]
 	lea	l_3AA8,a3                      	| [$3685: ld   iy,$3AA8]
 	jbsr	osd_read_dsw_1                       	| [$3689: ld   a,($D003)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	eor.b	#0xFF,d0                         	| [$368c: xor  $FF]
 	move.b	#0x02,d1                        	| [$368e: ld   b,$02]
 	jbsr	l_36c6                            	| [$3690: call $36C6]
 	lea	l_3AF8,a2                      	| [$3693: ld   ix,$3AF8]
 	lea	l_3AF4,a3                      	| [$3697: ld   iy,$3AF4]
 	jbsr	osd_read_dsw_2                       	| [$369b: ld   a,($D004)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	eor.b	#0xFF,d0                         	| [$369e: xor  $FF]
 	move.b	#0x01,d1                        	| [$36a0: ld   b,$01]
 	jbsr	l_36c5                            	| [$36a2: call $36C5]
 	jbsr	l_36ec                            	| [$36a5: call $36EC]
 	jbsr	osd_read_in_0                       	| [$36a8: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$36ab: bit  1,a]
 	jne	l_366f                             	| [$36ad: jr   nz,$366F]
 	jra	l_35cd                             	| [$36af: jp   $35CD]
@@ -6161,17 +6077,16 @@ l_36c6:
 	and.b	(a2),d0                     	| [$36c8: and  (ix+$00)]
 	add.b	(0x01,a2),d0                     	| [$36cb: add  a,(ix+$01)]
 	addq.w	#2,a2                           	| [$36ce: inc  ix] * 2
-	move.b	d0,d2                           	| [$36d2: ld   c,a]
-	clr.b	d1                               	| [$36d3: ld   b,$00]
+	clr.w	d1                               	| [$36d3: ld   b,$00]
+	move.b	d0,d1                           	| [$36d2: ld   c,a]
 	move.b	(0x00,a3),d6                    	| [$36d5: ld   l,(iy+$00)]
 	move.b	(0x01,a3),d5                    	| [$36d8: ld   h,(iy+$01)]
 	add.w	d1,a0                            	| [$36db: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 	move.b	(a0),d2                         	| [$36dc: ld   c,(hl)]
+	illegal
 	move.b	(0x02,a3),d6                    	| [$36dd: ld   l,(iy+$02)]
 	move.b	(0x03,a3),d5                    	| [$36e0: ld   h,(iy+$03)]
 	add.w	d1,a0                            	| [$36e3: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 	jbsr	l_3911                            	| [$36e4: call $3911]
 
 	movem.w	(sp)+,d1/d2                    	| [$36e7: pop  bc]
@@ -6181,7 +6096,6 @@ l_36c6:
 	rts                                    	| [$36eb: ret]
 l_36ec:
 	jbsr	osd_read_dsw_2                       	| [$36ec: ld   a,($D004)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#2,d0                           	| [$36ef: bit  2,a]
 	jeq	l_3706                             	| [$36f1: jp   z,$3706]
 	lea	l_3B77,a0                      	| [$36f4: ld   hl,$3B77]
@@ -6198,7 +6112,6 @@ l_3706:
 	move.b	#0x02,d1                        	| [$3714: ld   b,$02]
 l_3716:
 	jbsr	osd_read_dsw_1                       	| [$3716: ld   a,($D003)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	eor.b	#0xFF,d0                         	| [$3719: xor  $FF]
 	ror.b	#2,d0                            	| [$371b: rrca] * 2
 	jbsr	l_36c4                            	| [$371d: call $36C4]
@@ -6215,15 +6128,12 @@ l_3721:
 	jbsr	l_3908                            	| [$3730: call $3908]
 l_3733:
 	jbsr	osd_read_in_0                       	| [$3733: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	lea	l_80CB,a0                      	| [$3736: ld   hl,$80CB]
 	jbsr	l_36b2                            	| [$3739: call $36B2]
 	jbsr	osd_read_in_1                       	| [$373c: ld   a,($D001)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	lea	l_810B,a0                      	| [$373f: ld   hl,$810B]
 	jbsr	l_36b2                            	| [$3742: call $36B2]
-	move.b	0xD002,d0                       	| [$3745: ld   a,($D002)]
-       ^^^^^^ TODO: review absolute 16-bit address read
+	jbsr	osd_read_in_1                       	| [$3745: ld   a,($D002)]
 	lea	l_814B,a0                      	| [$3748: ld   hl,$814B]
 	jbsr	l_36b2                            	| [$374b: call $36B2]
 	jbsr	l_378c                            	| [$374e: call $378C]
@@ -6234,11 +6144,9 @@ l_3733:
 	move.b	unknown_E70E,d0                 	| [$375b: ld   a,(unknown_E70E)]
 	jbsr	l_377a                            	| [$375e: call $377A]
 	jbsr	osd_read_in_0                       	| [$3761: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$3764: bit  1,a]
 	jne	l_3733                             	| [$3766: jr   nz,$3733]
 	jbsr	osd_read_in_1                       	| [$3768: ld   a,($D001)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$376b: bit  1,a]
 	jne	l_3733                             	| [$376d: jr   nz,$3733]
 	jbsr	l_38ad                            	| [$376f: call $38AD]
@@ -6309,7 +6217,6 @@ l_37c0:
 	move.b	d0,unknown_E711                 	| [$37e9: ld   (unknown_E711),a]
 l_37ec:
 	jbsr	osd_read_in_0                       	| [$37ec: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$37ef: bit  1,a]
 	jeq	l_383d                             	| [$37f1: jr   z,$383D]
 	jbsr	l_38f2                            	| [$37f3: call $38F2]
@@ -6350,7 +6257,6 @@ l_383d:
 	move.b	#0x20,d2                        	| [$3842: ld   c,$20]
 	jbsr	l_393e                            	| [$3844: call $393E]
 	jbsr	osd_read_in_0                       	| [$3847: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$384a: bit  1,a]
 	jne	l_37ec                             	| [$384c: jr   nz,$37EC]
 	rts                                    	| [$384e: ret]
@@ -6555,7 +6461,6 @@ l_394e:
 	jne	l_394e                             	| [$394e: djnz $394E]
 	move.w	d0,-(sp)                        	| [$3950: push af]
 	jbsr	osd_read_in_0                       	| [$3951: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$3954: bit  1,a]
 	jeq	l_3961                             	| [$3956: jr   z,$3961]
 	move.w	(sp)+,d0                        	| [$3958: pop  af]
@@ -6577,19 +6482,14 @@ l_3966:
 	jbsr	l_38ad                            	| [$3966: call $38AD]
 	lea	sprite_shadow_E100,a1          	| [$3969: ld   de,sprite_shadow_E100]
 	lea	l_3E6D,a0                      	| [$396c: ld   hl,$3E6D]
-	move.b	#0x00,d1                        	| [$396f: ld   bc,$0010] 16
-	move.b	#0x10,d2                        	| [$396f: ld   bc,$0010] 16
+	move.w	#0x10,d1                        	| [$396f: ld   bc,$0010] 16
 	jbsr	ldir                              	| [$3972: ldir]
-     ^^^^ TODO: review special instruction inputs
 	lea	sprite_shadow_E100+l_60,a1     	| [$3974: ld   de,sprite_shadow_E100+$60]
 	lea	l_3E7D,a0                      	| [$3977: ld   hl,$3E7D]
-	move.b	#0x00,d1                        	| [$397a: ld   bc,$0010] 16
-	move.b	#0x10,d2                        	| [$397a: ld   bc,$0010] 16
+	move.w	#0x10,d1                        	| [$397a: ld   bc,$0010] 16
 	jbsr	ldir                              	| [$397d: ldir]
-     ^^^^ TODO: review special instruction inputs
 l_397f:
 	jbsr	osd_read_in_0                       	| [$397f: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$3982: bit  1,a]
 	jne	l_397f                             	| [$3984: jr   nz,$397F]
 	lea	sprite_shadow_E100,a0          	| [$3986: ld   hl,sprite_shadow_E100]
@@ -6597,11 +6497,9 @@ l_397f:
 	move.b	d5,d3                           	| [$398b: ld   d,h]
 	move.b	d6,d4                           	| [$398c: ld   e,l]
 	addq.w	#1,a1                           	| [$398d: inc  de]
-	move.b	#0x00,d1                        	| [$398e: ld   bc,$00BF] 191
-	move.b	#0xbf,d2                        	| [$398e: ld   bc,$00BF] 191
+	move.w	#0xbf,d1                        	| [$398e: ld   bc,$00BF] 191
 	jbsr	ldir                              	| [$3991: ldir]
-     ^^^^ TODO: review special instruction inputs
-	jra	l_35cd                             	| [$3993: jp   $35CD]
+ 	jra	l_35cd                             	| [$3993: jp   $35CD]
 l_3996:
 	move.b	#0x01,d0                        	| [$3996: ld   a,$01]
 	move.b	d0,unknown_E712                 	| [$3998: ld   (unknown_E712),a]
@@ -6610,7 +6508,6 @@ l_3996:
 	jra	l_39cb                             	| [$399f: jr   $39CB]
 l_39a1:
 	jbsr	osd_read_in_0                       	| [$39a1: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$39a4: bit  1,a]
 	jeq	l_35cd                             	| [$39a6: jp   z,$35CD]
 	jbsr	l_38f2                            	| [$39a9: call $38F2]
@@ -6657,10 +6554,8 @@ l_39e8:
 	move.b	d5,d3                           	| [$39f0: ld   d,h]
 	move.b	d6,d4                           	| [$39f1: ld   e,l]
 	addq.w	#1,a1                           	| [$39f2: inc  de]
-	move.b	#0x03,d1                        	| [$39f3: ld   bc,$03BF] 959
-	move.b	#0xbf,d2                        	| [$39f3: ld   bc,$03BF] 959
+	move.w	#0x3bf,d2                        	| [$39f3: ld   bc,$03BF] 959
 	jbsr	ldir                              	| [$39f6: ldir]
-     ^^^^ TODO: review special instruction inputs
 	lea	l_3E8D,a0                      	| [$39f8: ld   hl,$3E8D]
 	move.b	#0x0A,d1                        	| [$39fb: ld   b,$0A]
 l_39fd:
@@ -6685,6 +6580,7 @@ l_39fd:
 	jra	l_39a1                             	| [$3a10: jp   $39A1]
 l_3a13:
 	lea	l_8420,a0                      	| [$3a13: ld   hl,$8420]
+	illegal
 	move.b	#0x0C,(a0)                      	| [$3a16: ld   (hl),$0C]
 	move.b	d5,d3                           	| [$3a18: ld   d,h]
 	move.b	d6,d4                           	| [$3a19: ld   e,l]
@@ -6692,7 +6588,6 @@ l_3a13:
 	move.b	#0x03,d1                        	| [$3a1b: ld   bc,$03BF] 959
 	move.b	#0xbf,d2                        	| [$3a1b: ld   bc,$03BF] 959
 	jbsr	ldir                              	| [$3a1e: ldir]
-     ^^^^ TODO: review special instruction inputs
 	jra	l_39a1                             	| [$3a20: jp   $39A1]
 l_3a23:
 	movem.w	d1/d2,-(sp)                    	| [$3a23: push bc]
@@ -6704,9 +6599,8 @@ l_3a25:
 	subq.b	#1,d1                           	| [...]
 	jne	l_3a25                             	| [$3a27: djnz $3A25]
 	move.l	(sp)+,a0                        	| [$3a29: pop  hl]
-	move.b	#0x20,d2                        	| [$3a2a: ld   c,$20]
+	move.w	#0x20,d1                        	| [$3a2a: ld   c,$20]
 	add.w	d1,a0                            	| [$3a2c: add  hl,bc]
-  ^^^^ TODO: review d1 computation above
 
 	movem.w	(sp)+,d1/d2                    	| [$3a2d: pop  bc]
 	subq.b	#1,d2                           	| [$3a2e: dec  c]
@@ -6722,6 +6616,7 @@ l_3a3c:
 	movem.w	d1/d2,-(sp)                    	| [$3a3c: push bc]
 	clr.b	d1                               	| [$3a3d: ld   b,$00]
 	move.b	#0x94,(a0)                      	| [$3a3f: ld   (hl),$94]
+	illegal
 	move.b	d5,d3                           	| [$3a41: ld   d,h]
 	move.b	d6,d4                           	| [$3a42: ld   e,l]
 	addq.w	#1,a0                           	| [$3a43: inc  hl]
@@ -6729,10 +6624,10 @@ l_3a3c:
 	addq.w	#1,a0                           	| [$3a46: inc  hl]
 	exg	a1,a0                              	| [$3a47: ex   de,hl]
 	jbsr	ldir                              	| [$3a48: ldir]
-     ^^^^ TODO: review special instruction inputs
 	exg	a1,a0                              	| [$3a4a: ex   de,hl]
 	move.b	#0x1E,d2                        	| [$3a4b: ld   c,$1E]
 	move.b	#0x96,(a0)                      	| [$3a4d: ld   (hl),$96]
+	illegal
 	move.b	d5,d3                           	| [$3a4f: ld   d,h]
 	move.b	d6,d4                           	| [$3a50: ld   e,l]
 	addq.w	#1,a0                           	| [$3a51: inc  hl]
@@ -6740,7 +6635,6 @@ l_3a3c:
 	addq.w	#1,a0                           	| [$3a54: inc  hl]
 	exg	a1,a0                              	| [$3a55: ex   de,hl]
 	jbsr	ldir                              	| [$3a56: ldir]
-     ^^^^ TODO: review special instruction inputs
 	exg	a1,a0                              	| [$3a58: ex   de,hl]
 
 	movem.w	(sp)+,d1/d2                    	| [$3a59: pop  bc]
@@ -6748,7 +6642,6 @@ l_3a3c:
 	jne	l_3a3c                             	| [$3a5a: djnz $3A3C]
 l_3a5c:
 	jbsr	osd_read_in_0                       	| [$3a5c: ld   a,($D000)]
-       ^^^^^^ TODO: review absolute 16-bit address read
 	btst.b	#1,d0                           	| [$3a5f: bit  1,a]
 	jne	l_3a5c                             	| [$3a61: jr   nz,$3A5C]
 	jra	l_35cd                             	| [$3a63: jp   $35CD]
