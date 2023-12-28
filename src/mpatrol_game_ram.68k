@@ -30,7 +30,7 @@
 	.global	unknown_E068
 	.global	unknown_E094
 	.global	unknown_E095
-	.global	unknown_E096
+	.global	unknown_pointer_E096
 	.global	unknown_E098
 	.global	unknown_E099
 	.global	unknown_E0D4
@@ -38,8 +38,8 @@
 	.global	unknown_16bit_E0D8
 	.global	unknown_E0DA
 	.global	unknown_E0DC
-	.global	unknown_E0E4
-	.global	unknown_E0E6
+	.global	unknown_pointer_E0E4
+	.global	unknown_pointer_E0E6
 	.global	unknown_E0E8
 	.global	unknown_E0E9
 	.global	unknown_E0EB
@@ -48,7 +48,7 @@
 	.global	unknown_16bit_E0EF
 	.global	unknown_E0F1
 	.global	unknown_E0F3
-	.global	unknown_E0F4
+	.global	unknown_pointer_E0F4
 	.global	unknown_E0F6
 	.global	unknown_E0F9
 	.global	unknown_E172
@@ -74,7 +74,7 @@
 	.global	unknown_E1D7
 	.global	unknown_E1D8
 	.global	unknown_E1D9
-	.global	unknown_E1DA
+	.global	unknown_pointer_E1DA
 	.global	unknown_E1DC
 	.global	unknown_E1DD
 	.global	unknown_E1DE
@@ -217,14 +217,16 @@ unknown_E094:
 	ds.b	1
 unknown_E095:
 	ds.b	1
-unknown_E096:
-	ds.b	2
+	.align	2
+unknown_pointer_E096:
+	ds.l	1
 unknown_E098:
 	ds.b	1
 unknown_E099:
 	ds.b	59
 unknown_E0D4:
 	ds.b	2
+	.align	2
 unknown_16bit_E0D6:
 	ds.b	2
 unknown_16bit_E0D8:
@@ -233,10 +235,11 @@ unknown_E0DA:
 	ds.b	2
 unknown_E0DC:
 	ds.b	8
-unknown_E0E4:
-	ds.b	2
-unknown_E0E6:
-	ds.b	2
+	.align	2
+unknown_pointer_E0E4:
+	ds.l	1
+unknown_pointer_E0E6:
+	ds.l	1
 unknown_E0E8:
 	ds.b	1
 unknown_E0E9:
@@ -247,14 +250,16 @@ unknown_E0ED:
 	ds.b	1
 unknown_E0EE:
 	ds.b	1
+	.align	2
 unknown_16bit_E0EF:
 	ds.b	2
 unknown_E0F1:
 	ds.b	2
 unknown_E0F3:
 	ds.b	1
-unknown_E0F4:
-	ds.b	2
+	.align	2
+unknown_pointer_E0F4:
+	ds.l	1
 unknown_E0F6:
 	ds.b	1
 	.align	2
@@ -308,8 +313,9 @@ unknown_E1D8:
 	ds.b	1
 unknown_E1D9:
 	ds.b	1
-unknown_E1DA:
-	ds.b	2
+	.align	2
+unknown_pointer_E1DA:
+	ds.l	1
 unknown_E1DC:
 	ds.b	1
 unknown_E1DD:
