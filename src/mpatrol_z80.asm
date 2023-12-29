@@ -3409,11 +3409,8 @@ display_title_1218:
 1A87: DD 77 07    ld   (ix+$07),a
 1A8A: CD 99 16    call $1699
 1A8D: C9          ret
-1A8E: 11 15 1A    ld   de,$1A15
-1A91: 20 DD       jr   nz,$1A70
-1A93: 36 0B       ld   (hl),$0B
-1A95: 01 3A 00    ld   bc,$003A
-1A98: E3          ex   (sp),hl
+1A92: DD 36 0B 01 ld   (ix+$0b),$01                                   
+1A96: 3A 00 E3    ld   a,($E300)                                      
 1A99: FE 06       cp   $06
 1A9B: D0          ret  nc
 1A9C: 2A 72 E3    ld   hl,(unknown_E372)

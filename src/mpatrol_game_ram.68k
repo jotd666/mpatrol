@@ -3,6 +3,8 @@
 	.global	unknown_E00A
 	.global	unknown_E00B
 	.global	unknown_E00C
+	.global	jeep_base_y_e03c
+	.global x_scroll_horizon_e03d
 	.global	unknown_E03E
 	.global	unknown_E03F
 	.global	unknown_E040
@@ -13,6 +15,7 @@
 	.global	unknown_E045
 	.global	unknown_E046
 	.global	unknown_E047
+	.global	nb_credits_e048
 	.global	unknown_E049
 	.global	unknown_E04A
 	.global	unknown_E04C
@@ -28,29 +31,29 @@
 	.global	unknown_E05F
 	.global	unknown_E062
 	.global	unknown_E068
-	.global	unknown_E094
-	.global	unknown_E095
+	.global	unknown_16bit_E094
 	.global	unknown_pointer_E096
-	.global	unknown_E098
+	.global	unknown_16bit_E098
 	.global	unknown_E099
 	.global	unknown_E0D4
 	.global	unknown_16bit_E0D6
 	.global	unknown_16bit_E0D8
-	.global	unknown_E0DA
-	.global	unknown_E0DC
+	.global	unknown_16bit_E0DA
+	.global	unknown_16bit_E0DC
 	.global	unknown_pointer_E0E4
 	.global	unknown_pointer_E0E6
 	.global	unknown_E0E8
-	.global	unknown_E0E9
-	.global	unknown_E0EB
+	.global	unknown_pointer_E0E9
+	.global	unknown_16bit_E0EB
 	.global	unknown_E0ED
 	.global	unknown_E0EE
 	.global	unknown_16bit_E0EF
-	.global	unknown_E0F1
+	.global	unknown_16bit_E0F1
 	.global	unknown_E0F3
 	.global	unknown_pointer_E0F4
 	.global	unknown_E0F6
 	.global	unknown_E0F9
+	.global	sprite_shadow_E100
 	.global	unknown_E172
 	.global	unknown_E174
 	.global	unknown_E1A2
@@ -58,6 +61,10 @@
 	.global	unknown_E1A6
 	.global	unknown_E1AA
 	.global	unknown_E1AE
+	.global	scroll_x_value_ground_layer_E1C0
+	.global	scroll_x_value_green_layer_E1C1
+	.global	scroll_x_value_blue_layer_E1C2
+
 	.global	unknown_E1C3
 	.global	unknown_E1C4
 	.global	unknown_E1C5
@@ -82,28 +89,28 @@
 	.global	unknown_E1E0
 	.global	unknown_16bit_E1E1
 	.global	unknown_E1E2
+	.global	unknown_E200
 	.global	unknown_E210
 	.global	unknown_E23F
 	.global	unknown_E242
 	.global	unknown_E261
 	.global	unknown_E277
 	.global	unknown_E300
-	.global	unknown_E302
+	.global	unknown_16bit_E302
 	.global	unknown_E303
-	.global	unknown_E304
-	.global	unknown_E305
+	.global	unknown_16bit_E304
 	.global	unknown_16bit_E306
 	.global	unknown_E307
 	.global	unknown_16bit_E308
 	.global	unknown_E309
 	.global	unknown_E30A
 	.global	unknown_E30D
-	.global	unknown_E30E
+	.global	unknown_16bit_E30E
 	.global	unknown_16bit_E314
 	.global	unknown_16bit_E31A
-	.global	unknown_E31C
+	.global	unknown_16bit_E31C
 	.global	unknown_E320
-	.global	unknown_E322
+	.global	unknown_16bit_E322
 	.global	unknown_E323
 	.global	unknown_E327
 	.global	unknown_E32A
@@ -129,13 +136,15 @@
 	.global	unknown_E50D
 	.global	unknown_E50E
 	.global	unknown_E50F
+	.global	time_bcd_e510
 	.global	unknown_E512
 	.global	unknown_E513
 	.global	unknown_E514
-	.global	unknown_E516
+	.global	nb_lives_E515
+	.global	unknown_pointer_E516
 	.global	unknown_E518
 	.global	unknown_E523
-	.global	unknown_E52E
+	.global	unknown_pointer_E52E
 	.global	unknown_E700
 	.global	unknown_E701
 	.global	unknown_E702
@@ -162,7 +171,11 @@ unknown_E00A:
 unknown_E00B:
 	ds.b	1
 unknown_E00C:
-	ds.b	50
+	ds.b	48
+jeep_base_y_e03c:
+	ds.b	1
+x_scroll_horizon_e03d:
+	ds.b	1
 unknown_E03E:
 	ds.b	1
 unknown_E03F:
@@ -182,7 +195,9 @@ unknown_E045:
 unknown_E046:
 	ds.b	1
 unknown_E047:
-	ds.b	2
+	ds.b	1
+nb_credits_e048:
+	ds.b	1
 unknown_E049:
 	ds.b	1
 unknown_E04A:
@@ -213,14 +228,12 @@ unknown_E062:
 	ds.b	6
 unknown_E068:
 	ds.b	44
-unknown_E094:
-	ds.b	1
-unknown_E095:
-	ds.b	1
 	.align	2
+unknown_16bit_E094:
+	ds.b	2
 unknown_pointer_E096:
 	ds.l	1
-unknown_E098:
+unknown_16bit_E098:
 	ds.b	1
 unknown_E099:
 	ds.b	59
@@ -231,9 +244,9 @@ unknown_16bit_E0D6:
 	ds.b	2
 unknown_16bit_E0D8:
 	ds.b	2
-unknown_E0DA:
+unknown_16bit_E0DA:
 	ds.b	2
-unknown_E0DC:
+unknown_16bit_E0DC:
 	ds.b	8
 	.align	2
 unknown_pointer_E0E4:
@@ -242,9 +255,10 @@ unknown_pointer_E0E6:
 	ds.l	1
 unknown_E0E8:
 	ds.b	1
-unknown_E0E9:
-	ds.b	2
-unknown_E0EB:
+	.align	2
+unknown_pointer_E0E9:
+	ds.l	1
+unknown_16bit_E0EB:
 	ds.b	2
 unknown_E0ED:
 	ds.b	1
@@ -253,7 +267,7 @@ unknown_E0EE:
 	.align	2
 unknown_16bit_E0EF:
 	ds.b	2
-unknown_E0F1:
+unknown_16bit_E0F1:
 	ds.b	2
 unknown_E0F3:
 	ds.b	1
@@ -266,7 +280,9 @@ unknown_E0F6:
 unknown_pointer_E0F7:
 	ds.l	1
 unknown_E0F9:
-	ds.b	121
+	ds.b	0x10-0x9
+sprite_shadow_E100:
+	ds.b	0x72
 unknown_E172:
 	ds.b	2
 unknown_E174:
@@ -280,7 +296,13 @@ unknown_E1A6:
 unknown_E1AA:
 	ds.b	4
 unknown_E1AE:
-	ds.b	21
+	ds.b	18
+scroll_x_value_ground_layer_E1C0:
+	ds.b	1
+scroll_x_value_green_layer_E1C1:
+	ds.b	1
+scroll_x_value_blue_layer_E1C2:
+	ds.b	1
 unknown_E1C3:
 	ds.b	1
 unknown_E1C4:
@@ -329,7 +351,9 @@ unknown_E1E0:
 unknown_16bit_E1E1:
 	ds.b	1
 unknown_E1E2:
-	ds.b	46
+	ds.b	30
+unknown_E200:
+	ds.b	0x10
 unknown_E210:
 	ds.b	47
 unknown_E23F:
@@ -342,11 +366,10 @@ unknown_E277:
 	ds.b	137
 unknown_E300:
 	ds.b	2
-unknown_E302:
+	.align	2
+unknown_16bit_E302:
 	ds.b	1
-unknown_E303:
-	ds.b	1
-unknown_E304:
+unknown_16bit_E304:
 	ds.b	1
 unknown_E305:
 	ds.b	1
@@ -362,20 +385,20 @@ unknown_E30A:
 	ds.b	3
 unknown_E30D:
 	ds.b	1
-unknown_E30E:
+unknown_16bit_E30E:
 	ds.b	6
 unknown_16bit_E314:
 	ds.b	6
 unknown_16bit_E31A:
 	ds.b	2
-unknown_E31C:
+unknown_16bit_E31C:
 	ds.b	4
 unknown_E320:
 	ds.b	2
-unknown_E322:
-	ds.b	1
-unknown_E323:
-	ds.b	4
+	.align	2
+unknown_16bit_E322:
+	ds.b	2
+
 unknown_E327:
 	ds.b	3
 unknown_E32A:
@@ -423,21 +446,28 @@ unknown_E50D:
 unknown_E50E:
 	ds.b	1
 unknown_E50F:
-	ds.b	3
+	ds.b	1
+time_bcd_e510:
+	ds.b	2
 unknown_E512:
 	ds.b	1
 unknown_E513:
 	ds.b	1
 unknown_E514:
-	ds.b	2
-unknown_E516:
-	ds.b	2
+	ds.b	1
+nb_lives_E515:
+	ds.b	1
+	.align	2
+unknown_pointer_E516:
+	ds.l	1
 unknown_E518:
 	ds.b	11
 unknown_E523:
 	ds.b	11
-unknown_E52E:
-	ds.b	466
+	.align	2
+unknown_pointer_E52E:
+	ds.l	1
+	ds.b	462
 unknown_E600:
 	ds.b	0x100
 unknown_E700:
@@ -469,4 +499,4 @@ unknown_E711:
 unknown_E712:
 	ds.b	238
 unknown_E800:
-	ds.b	0
+
