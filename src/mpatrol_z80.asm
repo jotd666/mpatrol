@@ -293,9 +293,9 @@ jump_table_020C:
 	.word	$209C,$1D23,$1DF3,$1E51,$1E9B,$1C9B,$1CBC,$1E14
 	.word	$1E29
 
-
-0273: 21 CD 3A    ld   hl,$3ACD
-0276: 1B          dec  de
+026E: CD DC 0D    call $0DDC                                          
+0271: CD 0D 21    call $210D                                          
+0274: CD 3A 1B    call $1B3A                                          
 0277: CD C7 1B    call $1BC7
 027A: CD A7 12    call $12A7
 027D: CD E7 12    call $12E7

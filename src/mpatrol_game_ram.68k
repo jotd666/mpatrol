@@ -111,7 +111,7 @@
 	.global	unknown_16bit_E31C
 	.global	unknown_E320
 	.global	unknown_16bit_E322
-	.global	unknown_E323
+
 	.global	unknown_E327
 	.global	unknown_E32A
 	.global	unknown_E32D
