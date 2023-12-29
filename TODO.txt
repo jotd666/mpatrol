@@ -1,1 +1,4 @@
+check lsr/lsl #8, provide macros
+check addresses when computing base+address: ram/rom/display
+(maybe code a get address like tetris: ROM: ok, else error)
 
