@@ -21,7 +21,7 @@
 	.global	unknown_E04C
 	.global	unknown_E04D
 	.global	unknown_E04E
-	.global	unknown_E050
+	.global	sync_flag_E050
 	.global	unknown_E051
 	.global	unknown_E052
 	.global	unknown_E053
@@ -40,7 +40,7 @@
 	.global	unknown_16bit_E0D8
 	.global	unknown_16bit_E0DA
 	.global	unknown_16bit_E0DC
-	.global	unknown_pointer_E0E4
+	.global	screen_address_E0E4
 	.global	unknown_pointer_E0E6
 	.global	unknown_E0E8
 	.global	unknown_pointer_E0E9
@@ -81,7 +81,7 @@
 	.global	unknown_E1D7
 	.global	unknown_E1D8
 	.global	unknown_E1D9
-	.global	unknown_pointer_E1DA
+	.global	screen_address_E1DA
 	.global	unknown_E1DC
 	.global	unknown_E1DD
 	.global	unknown_E1DE
@@ -208,7 +208,7 @@ unknown_E04D:
 	ds.b	1
 unknown_E04E:
 	ds.b	2
-unknown_E050:
+sync_flag_E050:
 	ds.b	1
 unknown_E051:
 	ds.b	1
@@ -249,8 +249,8 @@ unknown_16bit_E0DA:
 unknown_16bit_E0DC:
 	ds.b	8
 	.align	2
-unknown_pointer_E0E4:
-	ds.l	1
+screen_address_E0E4:
+	ds.w	1
 unknown_pointer_E0E6:
 	ds.l	1
 unknown_E0E8:
@@ -336,7 +336,7 @@ unknown_E1D8:
 unknown_E1D9:
 	ds.b	1
 	.align	2
-unknown_pointer_E1DA:
+screen_address_E1DA:
 	ds.l	1
 unknown_E1DC:
 	ds.b	1

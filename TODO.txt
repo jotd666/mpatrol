@@ -1,7 +1,16 @@
-check lsr/lsl #8, provide macros
 check addresses when computing base+address: ram/rom/display
 (maybe code a get address like tetris: ROM: ok, else error)
 	and.w	#0xFF,d0
 	add.w	d0,a0
      d0,d6 adds           	| [$1970: add  a,l]
 					| [$1971: ld   l,a]
+
+blocks here:
+
+l_05ea:
+	move.b	d0,sync_flag_E050                 	| [$05ea: ld   (sync_flag_E050),a]
+l_05ed:
+	move.b	sync_flag_E050,d0                 	| [$05ed: ld   a,(sync_flag_E050)]
+	                               	| [$05f0: and  a]
+	jne	l_05ed                             	| [$05f1: jr   nz,$05ED]
+	rts                                    	| [$05f3: ret]
