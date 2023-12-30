@@ -650,10 +650,29 @@ _vblank:
 4:
     rte
 	
+
+
 osd_break:
-	blitz
-	rts
-	
+	* sends a WinUAE command to enter WinUAE debugger
+	.ifndef	RELEASE
+	move.l	D0,-(a7)
+	pea     0.w
+	* Normally it would point to where the result of the command is written, but since the last parameter (first pushed)
+	* indicating the number of bytes to write is 0, nothing is written.
+	pea     0.w	
+	pea     1003f-1002f
+	pea     1002f(pc)
+	pea     -1.w
+	pea     82.w
+	jsr     0xf0ff60
+	lea     24(sp),sp
+	move.l	(a7)+,d0
+	.endif
+    rts
+		
+1002: .asciz    "AKS_ENTERDEBUGGER 1"
+1003:
+        .align	2
 
 	
 
@@ -1451,44 +1470,23 @@ decode_sprite_data:
 
 osd_w_videoram:
     .ifeq OPT_DISABLE_BG_LAYER
-	movem.l	d0-d3/d6/a0-a2,-(a7)
+	movem.l	d0-d3/d7/a0-a2,-(a7)
 	
 
-	sub.w	#SCREEN_ADDRESS,d6
+	sub.w	#SCREEN_ADDRESS,d7
 	bcs.b	0f
-	cmp.w	#0x400,d6
+	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
 	* should not happen
-	blitz
-	nop
-	move.b	d0,d0
+	lea		write_videoram_out_of_range_error(pc),a0
+	jbsr	osd_break
 	nop	
 	bra.b	0f
 	
 1:
-	cmp.w	#0x288,d6
-	bne.b	2f
-	* location of VA logo tile (to detect title)
-	lea		palette+2,a0			| points on second color 
-	lea		copperlist_colors+4,a1	| second color copperlist entry
-	cmp.b	#0xE5,d0
-	bne.b	22f
-	* title: set proper colors for V/A logo in title: note: if palette is
-	* reordered in python convert_graphics.py script
-	* this will fail changing the proper colors!
-	* But palette is fixed now so it's going to work.
-	* Not as clean as it should be but this is a hack anyway...)
-	move.w	#0xF90,(2,a1)
-	move.w	#0x0DF,(6,a1)
-	bra.b	2f
-22:
-	* not title: remove copperlist dynamic color changes
-	move.w	(A0)+,(2,a1)
-	move.w	(a0),(6,a1)
-2:
 	lea		bg_videoram,a1
-	add.w	d6,a1
+	add.w	d7,a1
 	
 	cmp.b	(a1),d0
 	beq.b	0f		| already the proper value
@@ -1496,37 +1494,35 @@ osd_w_videoram:
 
 	move.b	d0,(a1)	| update logical grid
 	lea		bg_colorram,a1
-	move.b	(a1,d6.W),d1
+	move.b	(a1,d7.W),d1
 	
 
 	jbsr		update_bg_tile
 0:
-	movem.l	(a7)+,d0-d3/d6/a0-a2
+	movem.l	(a7)+,d0-d3/d7/a0-a2
     .endif | OPT_DISABLE_BG_LAYER
 	rts
 
-* d6=screen address (preserved), d0=attribute (preserved)
-* d6 starts at 0x8000 ends at 0x83FF
+* d7=screen address (preserved), d0=attribute (preserved)
+* d7 starts at 0x8400 ends at 0x8800
 * should preserve all registers
 
 osd_w_colorram:
     .ifeq OPT_DISABLE_BG_LAYER
-	movem.l	d0-d3/d6/a0-a2,-(a7)
-	sub.w	#SCREEN_ADDRESS+0x800,d6
+	movem.l	d0-d3/d7/a0-a2,-(a7)
+	sub.w	#SCREEN_ADDRESS+0x400,d7
 	bcs.b	0f
-	cmp.w	#0x400,d6
+	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
 	* should not happen
-	blitz
-	nop
-	move.b	d1,d1
-	nop
-	nop
+	lea		write_colorram_out_of_range_error(pc),a0
+	jbsr	osd_break
+	nop	
 	bra.b	0f
 1:
 	lea		bg_colorram,a1
-	add.w	d6,a1
+	add.w	d7,a1
 	cmp.b	(a1),d0
 	beq.b	0f		| already the proper value
 	
@@ -1534,16 +1530,16 @@ osd_w_colorram:
 	move.b	d0,(a1)	| update logical grid
 	move.b	d0,d1
 	lea		bg_videoram,a1
-	move.b	(a1,d6.W),d0
+	move.b	(a1,d7.W),d0
 	
 	jbsr		update_bg_tile
 0:
-	movem.l	(a7)+,d0-d3/d6/a0-a2
+	movem.l	(a7)+,d0-d3/d7/a0-a2
     .endif | OPT_DISABLE_BG_LAYER
 	rts
 
 
-* d6: screen offset
+* d7: screen offset
 * d0: tile code
 * d1: attribute
 *
@@ -1597,36 +1593,36 @@ update_bg_tile:
 	* "N" of "PRESENTS", but not purple: skip
 	rts
 0:
-	cmp.w	#0x3C0,d6
+	cmp.w	#0x3C0,d7
 	bcc.b	0f
-	cmp.w	#0x40,d6
+	cmp.w	#0x40,d7
 	bcs.b	2f
-	move.w	d6,d3
-	lsr.w	#5,d6		| this is X
-	neg.w	d6
-	add.w	#32,d6
+	move.w	d7,d3
+	lsr.w	#5,d7		| this is X
+	neg.w	d7
+	add.w	#32,d7
 	and.w	#0x1F,d3	| this is Y
 	addq.w	#2,d3
 	bra.b	1f
 	* two first rows are special???
 0:
-	move.w	d6,d3
+	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y
 	
 	sub.w	#30,d3		| minus 2
-	and.w	#0x1F,d6	| this is X
-	neg.w	d6
-	add.w	#32,d6
+	and.w	#0x1F,d7	| this is X
+	neg.w	d7
+	add.w	#32,d7
 	bra.b	0f			| this is not enough to hide 2 first rows
 	bra.b	1f
 	* two last rows as well
 2:
-	move.w	d6,d3
+	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y
 	add.w	#34,d3		| plus 2
-	and.w	#0x1F,d6	| this is X
-	neg.w	d6
-	add.w	#32,d6
+	and.w	#0x1F,d7	| this is X
+	neg.w	d7
+	add.w	#32,d7
 1:
 	lea		mulNB_BYTES_PER_ROW_table(pc),a0
 
@@ -1638,7 +1634,7 @@ update_bg_tile:
 	move.w	(a0,d3.w),d3
 	lsl.w	#3,d3		| times 8
 	add.w	d3,a1
-	add.w	d6,a1
+	add.w	d7,a1
 
 	moveq	#NB_PLAYFIELD_PLANES-1,d3
 
@@ -1791,12 +1787,12 @@ seed:
 	dc.l	0x12345678
 
 	
-* d6=screen address
+* d7=screen address
 osd_r_videoram:
-	movem.l	a0/d6,-(a7)
-	sub.w	#SCREEN_ADDRESS,d6
+	movem.l	a0/d7,-(a7)
+	sub.w	#SCREEN_ADDRESS,d7
 	bmi.b	0f
-	cmp.w	#0x400,d6
+	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
 	* should not happen
@@ -1807,9 +1803,9 @@ osd_r_videoram:
 	bra.b	2f
 1:
 	lea		bg_videoram,a0
-	move.b	(a0,d6.w),d0
+	move.b	(a0,d7.w),d0
 2:
-	movem.l	(a7)+,a0/d6
+	movem.l	(a7)+,a0/d7
 	rts
 
 osd_read_in_1:
@@ -2143,6 +2139,24 @@ hw_sprite_slots:
 * 8 slots (indexed with the amiga sprite index)
 amiga_sprite_slots:
 	ds.b	8
+
+	.ifndef	RELEASE
+sprite_allocation_error:
+	.asciz	"sprite allocation error"
+sprite_doesnt_exist_error:
+	.asciz	"sprite doesn't exist"
+sprite_buffer_doesnt_exist_error:
+	.asciz	"sprite buffer doesn't exist"
+read_videoram_out_of_range_error:
+	.asciz	"read videoram out of range"
+write_videoram_out_of_range_error:
+	.asciz	"write videoram out of range"
+write_colorram_out_of_range_error:
+	.asciz	"write colorram out of range"
+	.align	2
+
+	.endif
+
 
 old_intena:
 	.long	0

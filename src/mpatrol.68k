@@ -171,6 +171,7 @@ l_0000:
 	*jbsr	osd_read_dsw_2                       	| [$0006: ld   a,($D004)]
 	*tst.b	d0                              	| [$0009: and  a]
 	*jpl	service_mode_3300                  	| [$000a: jp   p,service_mode_3300]
+	jbsr	osd_break
 	jbsr	clear_ram_05f4                    	| [$000d: call clear_ram_05f4]
 	jbsr	l_06f2                            	| [$0010: call $06F2]
 	jbsr	l_0d29                            	| [$0013: call $0D29]
@@ -1110,17 +1111,16 @@ l_05ed:
 
 clear_ram_05f4:
 	lea	unknown_E000,a0                	| [$05f4: ld   hl,unknown_E000]
-	move.b	#0x07,d1                        	| [$05f7: ld   bc,$0700] 1792
-	move.b	#0x00,d2                        	| [$05f7: ld   bc,$0700] 1792
+	move.w	#0x0700,d1                        	| [$05f7: ld   bc,$0700] 1792
 * < HL: start
 * < BC: length
 clear_area_05fa:
-	clr.b	(a0)                             	| [$05fa: ld   (hl),$00]
-	addq.w	#1,a0                           	| [$05fc: inc  hl]
-	subq.w	#1,a4                           	| [$05fd: dec  bc]
-	move.b	d1,d0                           	| [$05fe: ld   a,b]
-	or.b	d2,d0                             	| [$05ff: or   c]
-	jne	clear_area_05fa                    	| [$0600: jr   nz,clear_area_05fa]
+	clr.b	(a0)+                             	| [$05fa: ld   (hl),$00]
+	                         	| [$05fc: inc  hl]
+	                         	| [$05fd: dec  bc]
+	                         	| [$05fe: ld   a,b]
+	subq	#1,d1                           	| [$05ff: or   c]
+	jne		clear_area_05fa                    	| [$0600: jr   nz,clear_area_05fa]
 	rts                                    	| [$0602: ret]
 
 l_0603:
