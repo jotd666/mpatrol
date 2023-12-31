@@ -155,7 +155,7 @@ if True:
 
         f.write("""};\n   // cluts
 
-    uint8_t clut[NUM_CLUTS][4] =
+    uint8_t sprite_clut[NUM_CLUTS][4] =
     {
       """)
 
@@ -185,10 +185,10 @@ if True:
                 f.write("\n  ")
             else:
                 f.write("  ")
-        f.write("\n};\n")
+
         f.write("""};\n   // palette
 
-    uint8_t sprite_palette[NUM_TILES_COLOURS][3] =
+    uint8_t tile_palette[NUM_TILES_COLOURS][3] =
     {
       """)
 

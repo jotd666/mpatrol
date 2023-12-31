@@ -43,7 +43,7 @@ _custom = 0xDFF000
 
 
 NB_PLAYFIELD_PLANES = 4
-TOTAL_NB_COLORS = 32
+TOTAL_NB_COLORS = 16
 NB_BYTES_PER_ROW = 40
 NB_LINES = 288
 NB_PLAYFIELD_LINES = NB_LINES
@@ -803,7 +803,7 @@ osd_update_sprites:
 	* all sprites are allocated: now display them
 	lea		host_sprites(pc),a2		| input structure
 	lea		sprites,a3				| copperlist
-	lea		sprite_table,a4
+	*lea		sprite_table,a4
 	moveq	#0,d6
 10:
 	move.b	(SPRITE_X,a2),d0
@@ -1401,19 +1401,6 @@ platform_init:
 
 	
     rts
-
-set_black_palette:
-	movem.l	d0-d1/a1,-(a7)
-
-	move.w	#TOTAL_NB_COLORS-1,d0
-	lea		copperlist_colors+2,a1
-1:
-	clr.w	(a1)+
-	addq.w	#2,a1
-	dbf		d0,1b
-		
-	movem.l	(a7)+,d0-d1/a1
-	rts
 	
 load_palette_in_copperlist:
 	movem.l	d0-d1/a0-a1,-(a7)
