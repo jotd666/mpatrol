@@ -1321,7 +1321,7 @@ platform_init:
 	
 	* restrict borders: we don't see bobs on the borders!
     move.w #0x1C99,diwstrt(a5)
-    move.w #0x2C81-8,diwstop(a5)
+    move.w #0x2C89,diwstop(a5)
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12),bplcon0(a5) | 5 bitplanes
@@ -1572,45 +1572,11 @@ update_bg_tile:
 	* color tile
 	and.w	#0xF,d1
 	
-	* special case parasite brown N when switching screens
-	cmp.w	#0x2E0,d0
-	bne.b	0f
-	cmp.b	#3,d1
-	beq.b	0f
-	* "N" of "PRESENTS", but not purple: skip
-	rts
-0:
-	cmp.w	#0x3C0,d7
-	bcc.b	0f
-	cmp.w	#0x40,d7
-	bcs.b	2f
-	move.w	d7,d3
-	lsr.w	#5,d7		| this is X
-	neg.w	d7
-	add.w	#32,d7
-	and.w	#0x1F,d3	| this is Y
-	addq.w	#2,d3
-	bra.b	1f
-	* two first rows are special???
-0:
 	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y
-	
-	sub.w	#30,d3		| minus 2
 	and.w	#0x1F,d7	| this is X
-	neg.w	d7
-	add.w	#32,d7
-	bra.b	0f			| this is not enough to hide 2 first rows
-	bra.b	1f
-	* two last rows as well
-2:
-	move.w	d7,d3
-	lsr.w	#5,d3		| this is Y
-	add.w	#34,d3		| plus 2
-	and.w	#0x1F,d7	| this is X
-	neg.w	d7
-	add.w	#32,d7
-1:
+	addq.w	#2,d7
+
 	lea		mulNB_BYTES_PER_ROW_table(pc),a0
 
 	
