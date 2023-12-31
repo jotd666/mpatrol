@@ -1561,17 +1561,17 @@ update_bg_tile:
 	movem.w	(a7)+,d0-d1
 	.endif
 	
-	* is it bank 2 ?
-	btst	#4,D1
-	beq.b	0f
-	add.w	#0x200,d0
+*	* is it bank 2 ?
+*	btst	#4,D1
+*	beq.b	0f
+*	add.w	#0x200,d0
 	
-0:
-	* is it upper part of bank ?
-	btst	#5,D1
-	beq.b	0f
-	add.w	#0x100,d0
-0:
+*0:
+*	* is it upper part of bank ?
+*	btst	#5,D1
+*	beq.b	0f
+*	add.w	#0x100,d0
+*0:
 	* color tile
 	and.w	#0xF,d1
 	
@@ -1596,10 +1596,10 @@ update_bg_tile:
 
 	* optimization when a well-known
 	* empty character is passed (standard charset)
-	cmp.w	#0xE0,d0	| empty character
-	jeq	11f
-	cmp.w	#0x10,d0	| empty character
-	jeq	11f
+*	cmp.w	#0xE0,d0	| empty character
+*	jeq	11f
+*	cmp.w	#0x10,d0	| empty character
+*	jeq	11f
 
 	lea		character_table,a0
 	add.w	d0,d0
