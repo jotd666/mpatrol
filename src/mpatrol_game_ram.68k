@@ -19,7 +19,7 @@
 	.global	unknown_E049
 	.global	unknown_E04A
 	.global	unknown_E04C
-	.global	unknown_E04D
+	.global	title_display_timer_E04D
 	.global	unknown_E04E
 	.global	sync_flag_E050
 	.global	unknown_E051
@@ -71,7 +71,7 @@
 	.global	unknown_E1C6
 	.global	unknown_E1C9
 	.global	unknown_E1CF
-	.global	unknown_E1D0
+	.global	event_buffer_index_E1D0
 	.global	unknown_E1D1
 	.global	unknown_E1D2
 	.global	unknown_E1D3
@@ -130,9 +130,9 @@
 	.global	unknown_E503
 	.global	unknown_16bit_E504
 	.global	unknown_16bit_E506
-	.global	unknown_E508
+	.global	terrain_slope_type_E508
 	.global	unknown_E509
-	.global	unknown_E50B
+	.global	fine_position_on_track_E50B
 	.global	unknown_E50D
 	.global	unknown_E50E
 	.global	unknown_E50F
@@ -204,7 +204,9 @@ unknown_E04A:
 	ds.b	2
 unknown_E04C:
 	ds.b	1
-unknown_E04D:
+	* 0x50: jeep jumps, title appears
+	* 0xB0: title screen stops, "insert coin" screen
+title_display_timer_E04D:
 	ds.b	1
 unknown_E04E:
 	ds.b	2
@@ -228,7 +230,6 @@ unknown_E062:
 	ds.b	6
 unknown_E068:
 	ds.b	44
-	.align	2
 unknown_16bit_E094:
 	ds.b	2
 unknown_pointer_E096:
@@ -315,7 +316,7 @@ unknown_E1C9:
 	ds.b	6
 unknown_E1CF:
 	ds.b	1
-unknown_E1D0:
+event_buffer_index_E1D0:
 	ds.b	1
 unknown_E1D1:
 	ds.b	1
@@ -348,10 +349,10 @@ unknown_E1DF:
 	ds.b	1
 unknown_E1E0:
 	ds.b	1
+	ds.b	1	| align
 unknown_16bit_E1E1:
-	ds.b	1
-unknown_E1E2:
-	ds.b	30
+	ds.w	1
+	ds.b	28
 unknown_E200:
 	ds.b	0x10
 unknown_E210:
@@ -364,23 +365,17 @@ unknown_E261:
 	ds.b	22
 unknown_E277:
 	ds.b	137
+	.align	2
 unknown_E300:
 	ds.b	2
-	.align	2
 unknown_16bit_E302:
-	ds.b	1
+	ds.w	1
 unknown_16bit_E304:
-	ds.b	1
-unknown_E305:
-	ds.b	1
+	ds.w	1
 unknown_16bit_E306:
-	ds.b	1
-unknown_E307:
-	ds.b	1
+	ds.w	1
 unknown_16bit_E308:
-	ds.b	1
-unknown_E309:
-	ds.b	1
+	ds.w	1
 unknown_E30A:
 	ds.b	3
 unknown_E30D:
@@ -395,10 +390,9 @@ unknown_16bit_E31C:
 	ds.b	4
 unknown_E320:
 	ds.b	2
-	.align	2
 unknown_16bit_E322:
-	ds.b	2
-
+	ds.w	1
+	ds.b	3
 unknown_E327:
 	ds.b	3
 unknown_E32A:
@@ -435,11 +429,11 @@ unknown_16bit_E504:
 	ds.b	2
 unknown_16bit_E506:
 	ds.b	2
-unknown_E508:
+terrain_slope_type_E508:
 	ds.b	1
 unknown_E509:
 	ds.b	2
-unknown_E50B:
+fine_position_on_track_E50B:
 	ds.b	2
 unknown_E50D:
 	ds.b	1

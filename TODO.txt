@@ -5,12 +5,9 @@ check addresses when computing base+address: ram/rom/display
      d0,d6 adds           	| [$1970: add  a,l]
 					| [$1971: ld   l,a]
 
-blocks here:
+reaches jeep_jumps_and_title_shows_0507
+but no title is showing
 
-l_05ea:
-	move.b	d0,sync_flag_E050                 	| [$05ea: ld   (sync_flag_E050),a]
-l_05ed:
-	move.b	sync_flag_E050,d0                 	| [$05ed: ld   a,(sync_flag_E050)]
-	                               	| [$05f0: and  a]
-	jne	l_05ed                             	| [$05f1: jr   nz,$05ED]
-	rts                                    	| [$05f3: ret]
+check sprite shadow ram
+
+try to implement scroll with copperlist (only lines 192-256 scroll)
