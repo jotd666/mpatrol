@@ -261,7 +261,7 @@ mpatrol_irq_0038:
 01D4: 32 46 E0    ld   (unknown_E046),a
 01D7: C3 68 00    jp   $0068
 
-01DA: 3A 40 E0    ld   a,(unknown_E040)
+01DA: 3A 40 E0    ld   a,(start_nb_lives_E040)
 01DD: 32 15 E5    ld   (nb_lives_E515),a
 01E0: 21 00 00    ld   hl,$0000
 01E3: 22 00 E5    ld   (unknown_E500),hl
@@ -943,7 +943,7 @@ clear_area_05fa:
 06F0: 3C          inc  a
 06F1: C9          ret
 
-06F2: 21 40 E0    ld   hl,unknown_E040
+06F2: 21 40 E0    ld   hl,start_nb_lives_E040
 06F5: 3A 03 D0    ld   a,($D003)
 06F8: 47          ld   b,a
 06F9: 3C          inc  a
@@ -1674,7 +1674,7 @@ display_status_bar_0b8a:
 0C9B: 01 16 00    ld   bc,$0016
 0C9E: CD FA 05    call clear_area_05fa
 0CA1: 32 0F E5    ld   (unknown_E50F),a
-0CA4: 3A 40 E0    ld   a,(unknown_E040)
+0CA4: 3A 40 E0    ld   a,(start_nb_lives_E040)
 0CA7: 32 15 E5    ld   (nb_lives_E515),a
 0CAA: 21 62 21    ld   hl,$2162
 0CAD: 22 16 E5    ld   (unknown_E516),hl

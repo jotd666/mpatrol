@@ -152,6 +152,17 @@ get_rom_address_d3_to_a1:
 	jbsr	osd_break
 	nop
 	rts
+	
+get_rom_address_d5_to_a0:
+	lea	game_rom,a0
+	cmp.w	#0x4000,d5
+	bcc.b	0f
+	add.w	d5,a0
+	rts
+0:
+	jbsr	osd_break
+	nop
+	rts
 
 clear_video_area:
 	moveq	#0,d0
@@ -242,7 +253,7 @@ l_007b:
 l_007d:
 	clr.b	d0                               	| [$007d: xor  a]
 	move.b	d0,unknown_E04D                 	| [$007e: ld   (unknown_E04D),a]
-	lea	unknown_E046,a0                	| [$0081: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$0081: ld   hl,game_status_bits_E046]
 	move.b	d1,(a0)                         	| [$0084: ld   (hl),b]
     jbsr  osd_enable_interrupts  | [ei]
 	jbsr	l_0745                            	| [$0086: call $0745]
@@ -261,7 +272,7 @@ l_0093:
 	jbsr	osd_read_dsw_2                       	| [$00a1: ld   a,($D004)]
 	btst.b	#4,d0                           	| [$00a4: bit  4,a]
 	jne	l_00b6                             	| [$00a6: jr   nz,$00B6]
-	lea	unknown_E046,a0                	| [$00a8: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$00a8: ld   hl,game_status_bits_E046]
 	btst.b	#1,(a0)                         	| [$00ab: bit  1,(hl)]
 	jne	l_00b6                             	| [$00ad: jr   nz,$00B6]
 l_00af:
@@ -287,7 +298,7 @@ l_00c3:
 	move.b	#0x02,d0                        	| [$00d0: ld   a,$02]
 	move.b	d0,nb_credits_e048              	| [$00d2: ld   (nb_credits_e048),a]
 l_00d5:
-	lea	unknown_E046,a0                	| [$00d5: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$00d5: ld   hl,game_status_bits_E046]
 	move.b	(a0),d1                         	| [$00d8: ld   b,(hl)]
 	btst.b	#7,d1                           	| [$00d9: bit  7,b]
 	jne	l_00f2                             	| [$00db: jr   nz,$00F2]
@@ -326,7 +337,7 @@ l_010d:
 	jra	l_0bb7                             	| [$0115: jp   $0BB7]
 l_0118:
 	lea		stack_top_E800,sp		| ld   sp,unknown_E800
-	lea	unknown_E046,a0                	| [$011b: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$011b: ld   hl,game_status_bits_E046]
 	subq.b	#1,(a0)                         	| [$011e: dec  (hl)]
     jbsr  osd_enable_interrupts  | [ei]
 	jpl	l_0068                             	| [$0120: jp   p,$0068]
@@ -336,8 +347,8 @@ l_0118:
 	lea	nb_lives_E515,a0               	| [$012a: ld   hl,nb_lives_E515]
 	subq.b	#1,(a0)                         	| [$012d: dec  (hl)]
 	jeq	l_014b                             	| [$012e: jr   z,$014B]
-	jbsr	l_06d5                            	| [$0130: call $06D5]
-	lea	unknown_E046,a0                	| [$0133: ld   hl,unknown_E046]
+	jbsr	display_nb_lives_06d5                            	| [$0130: call $06D5]
+	lea	game_status_bits_E046,a0                	| [$0133: ld   hl,game_status_bits_E046]
 	btst.b	#4,(a0)                         	| [$0136: bit  4,(hl)]
 	jeq	l_0bb7                             	| [$0138: jp   z,$0BB7]
 	jbsr	l_0603                            	| [$013b: call $0603]
@@ -349,12 +360,12 @@ l_0118:
 l_014b:
 	move.b	#0x1B,d0                        	| [$014b: ld   a,$1B]
 	jbsr	l_0d75                            	| [$014d: call $0D75]
-	lea	unknown_E046,a0                	| [$0150: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$0150: ld   hl,game_status_bits_E046]
 	btst.b	#4,(a0)                         	| [$0153: bit  4,(hl)]
 	jeq	l_0176                             	| [$0155: jr   z,$0176]
 	lea	game_rom+0x2AED,a0                      	| [$0157: ld   hl,$2AED]
 	jbsr	l_034e                            	| [$015a: call $034E]
-	move.b	unknown_E046,d0                 	| [$015d: ld   a,(unknown_E046)]
+	move.b	game_status_bits_E046,d0                 	| [$015d: ld   a,(game_status_bits_E046)]
 	ror.b	#3,d0                           	| [$0160: rra] * 3
 	and.b	#0x01,d0                         	| [$0163: and  $01]
 	addq.b	#1,d0                           	| [$0165: inc  a]
@@ -367,14 +378,14 @@ l_014b:
 l_0176:
 	lea	game_rom+0x2B02,a0                      	| [$0176: ld   hl,$2B02]
 	jbsr	l_034e                            	| [$0179: call $034E]
-	jbsr	l_061c                            	| [$017c: call $061C]
+	jbsr	is_player_2_061c                            	| [$017c: call $061C]
 	jeq	l_0184                             	| [$017f: jr   z,$0184]
 	jbsr	l_0603                            	| [$0181: call $0603]
 l_0184:
 	jbsr	l_05e8                            	| [$0184: call $05E8]
 	jbsr	l_0d29                            	| [$0187: call $0D29]
 	lea	game_rom+0x2A2A,a0                      	| [$018a: ld   hl,$2A2A]
-	jbsr	l_0300                            	| [$018d: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$018d: call $0300]
 	move.b	#0x11,d0                        	| [$0190: ld   a,$11]
 l_0192:
 	                               	| [$0192: and  a]
@@ -410,11 +421,11 @@ l_01c1:
 l_01d2:
     jbsr  osd_disable_interrupts  | [di]
 	clr.b	d0                               	| [$01d3: xor  a]
-	move.b	d0,unknown_E046                 	| [$01d4: ld   (unknown_E046),a]
+	move.b	d0,game_status_bits_E046                 	| [$01d4: ld   (game_status_bits_E046),a]
 	jra	l_0068                             	| [$01d7: jp   $0068]
 
 l_01da:
-	move.b	unknown_E040,d0                 	| [$01da: ld   a,(unknown_E040)]
+	move.b	start_nb_lives_E040,d0                 	| [$01da: ld   a,(start_nb_lives_E040)]
 	move.b	d0,nb_lives_E515                	| [$01dd: ld   (nb_lives_E515),a]
 	                      	| [$01e0: ld   hl,$0000] 0
 	clr.w	player_score_E500                 	| [$01e3: ld   (player_score_E500),hl]
@@ -546,9 +557,13 @@ l_02ed:
 l_02fa:
 	move.b	(0x02,a2),d6                    	| [$02fa: ld   l,(ix+$02)]
 	move.b	(0x03,a2),d5                    	| [$02fd: ld   h,(ix+$03)]
-l_0300:
-	jbsr	l_write_stuff_to_screen_03db                            	| [$0300: call $03DB]
+	LOAD_D5D6_FROM_D5_16
+	bsr		get_rom_address_d5_to_a0
+write_to_screen_possible_typing_effect_300:
+	jbsr	compute_screen_address_03db                            	| [$0300: call $03DB]
 l_0303:
+	* handle special delay effects that simulate typing
+	* if command is found in input data
 	move.b	(a0),d0                         	| [$0303: ld   a,(hl)]
 	move.b	#0x12,d1                        	| [$0304: ld   b,$12]
 	cmp.b	#0x26,d0                         	| [$0306: cp   $26]
@@ -566,7 +581,7 @@ l_0315:
 	jne	l_0315                             	| [$0319: jr   nz,$0315]
 	jra	l_0303                             	| [$031b: jr   $0303]
 l_031d:
-	jbsr	l_03c9                            	| [$031d: call $03C9]
+	jbsr	write_to_screen_03c9                            	| [$031d: call $03C9]
 	jra	l_0303                             	| [$0320: jr   $0303]
 l_0322:
 	move.b	unknown_E04E,d0                 	| [$0322: ld   a,(unknown_E04E)]
@@ -575,7 +590,6 @@ l_0322:
 	move.b	#0x04,(a2)                 	| [$032a: ld   (ix+$00),$04]
 	rts                                    	| [$032e: ret]
 l_032f:
-	moveq	#0,d5
 	move.b	(0x02,a2),d6                    	| [$032f: ld   l,(ix+$02)]
 	move.b	(0x03,a2),d5                    	| [$0332: ld   h,(ix+$03)]
 	LOAD_D5_16_FROM_D5D6
@@ -597,9 +611,9 @@ l_0349:
 	move.b	#0x07,(a2)                 	| [$0349: ld   (ix+$00),$07]
 	rts                                    	| [$034d: ret]
 l_034e:
-	jbsr	l_write_stuff_to_screen_03db                            	| [$034e: call $03DB]
+	jbsr	compute_screen_address_03db                            	| [$034e: call $03DB]
 l_0351:
-	jbsr	l_03c9                            	| [$0351: call $03C9]
+	jbsr	write_to_screen_03c9                            	| [$0351: call $03C9]
 	move.b	#0x03,d0                        	| [$0354: ld   a,$03]
 	move.b	d0,sync_flag_E050                 	| [$0356: ld   (sync_flag_E050),a]
 l_0359:
@@ -621,12 +635,12 @@ l_036f:
 l_0374:
 	move.b	unknown_E04E,d0                 	| [$0374: ld   a,(unknown_E04E)]
 	btst.b	#4,d0                           	| [$0377: bit  4,a]
-	jne	l_0300                             	| [$0379: jr   nz,$0300]
+	jne	write_to_screen_possible_typing_effect_300                             	| [$0379: jr   nz,$0300]
 l_037b:
-	jbsr	l_write_stuff_to_screen_03db                            	| [$037b: call $03DB]
+	jbsr	compute_screen_address_03db                            	| [$037b: call $03DB]
 l_037e:
-	move.b	(a0),d0                         	| [$037e: ld   a,(hl)]
-	addq.w	#1,a0                           	| [$037f: inc  hl]
+	move.b	(a0)+,d0                         	| [$037e: ld   a,(hl)]
+	                           	| [$037f: inc  hl]
 	cmp.b	#0x21,d0                         	| [$0380: cp   $21]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$0382: ret  z] [...]
@@ -636,8 +650,11 @@ l_037e:
 	cmp.b	#0x22,d0                         	| [$0387: cp   $22]
 	jeq	l_037b                             	| [$0389: jr   z,$037B]
 	clr.b	d0                               	| [$038b: xor  a]
-	move.b	d0,(a1)                         	| [$038c: ld   (de),a]
-	addq.w	#1,a1                           	| [$038d: inc  de]
+	exg		a1,d7
+	jbsr	osd_w_videoram		| [$038c: ld   (de),a]
+	exg		d7,a1
+	                         	
+	                           	| [$038d: inc  de]
 	jra	l_037e                             	| [$038e: jr   $037E]
 l_0390:
 	addq.w	#1,a0                           	| [$0390: inc  hl]
@@ -688,16 +705,23 @@ l_03bd:
 * < D0: character code
 * < D2: attribute
 write_to_screen_and_move_cursor_03c1:
+	move.w	d7,-(sp)
 	move.l	a1,d7
 	jbsr	osd_w_videoram                 	| [$03c1: ld   (de),a]
-	move.b	d2,d0                    	| [$03c2: ld   (iy+$00),c]
+	exg		d2,d0                    	| [$03c2: ld   (iy+$00),c]
 	move.l	a3,d7
 	jbsr	osd_w_colorram
+	exg		d2,d0
 	addq.w	#1,a1                           	| [$03c5: inc  de]
 	addq.w	#1,a3                           	| [$03c6: inc  iy]
+	move.w	(sp)+,d7
 	rts                                    	| [$03c8: ret]
+
+* < A0: points on commands???
+* <> A1: screen address
+* <> A3: corresponding screen attribute address (A1+0x400)
 	
-l_03c9:
+write_to_screen_03c9:
 	move.b	(a0)+,d0                         	| [$03c9: ld   a,(hl)]
 	                           	| [$03ca: inc  hl]
 	cmp.b	#0x21,d0                         	| [$03cb: cp   $21]
@@ -705,13 +729,15 @@ l_03c9:
 	cmp.b	#0x23,d0                         	| [$03cf: cp   $23]
 	jeq	l_03e5                             	| [$03d1: jr   z,$03E5]
 	cmp.b	#0x25,d0                         	| [$03d3: cp   $25]
-	jeq	l_0404                             	| [$03d5: jr   z,$0404]
+	jeq	write_text_using_rle_0404                             	| [$03d5: jr   z,$0404]
 	cmp.b	#0x22,d0                         	| [$03d7: cp   $22]
 	jne	write_to_screen_and_move_cursor_03c1                             	| [$03d9: jr   nz,$03C1]
 	
 * < A0: points on screen addresses (little endian)
+* > A1: screen address
+* > A3: corresponding screen attribute address (A1+0x400)
 
-l_write_stuff_to_screen_03db:
+compute_screen_address_03db:
 	* recompose little endian screen address
 	move.b	(a0)+,d4                         	| [$03db: ld   e,(hl)]
 	                           	| [$03dc: inc  hl]
@@ -725,6 +751,8 @@ l_write_stuff_to_screen_03db:
 l_03e5:
 	move.b	(a0)+,d2                         	| [$03e5: ld   c,(hl)]
 	                           	| [$03e6: inc  hl]
+
+* > d2: ??
 l_03e7:
 	move.b	unknown_E0F9,d0                 	| [$03e7: ld   a,(unknown_E0F9)]
 	                               	| [$03ea: and  a]
@@ -752,15 +780,25 @@ l_03fe:
 	add.b	#0x0B,d0                         	| [$03fe: add  a,$0B]
 	move.b	d0,d2                           	| [$0400: ld   c,a]
 	rts                                    	| [$0401: ret]
+	
+	
+	
 l_0402:
+	* pops stack maybe to pop caller
 	move.l	(sp)+,a0                        	| [$0402: pop  hl]
 	rts                                    	| [$0403: ret]
-l_0404:
+	
+write_text_using_rle_0404:
+	* kind of RLE compression to display text/graphics
+	* first number of chars to write
 	move.b	(a0)+,d1                         	| [$0404: ld   b,(hl)]
 	                           	| [$0405: inc  hl]
+	* then char type
 	move.b	(a0)+,d0                         	| [$0406: ld   a,(hl)]
 	                           	| [$0407: inc  hl]
+							
 l_0408:
+	* repeats write char and add 1 to Xtile
 	jbsr	write_to_screen_and_move_cursor_03c1                            	| [$0408: call $03C1]
 	subq.b	#1,d1                           	| [...]
 	jne	l_0408                             	| [$040b: djnz $0408]
@@ -843,7 +881,7 @@ l_0478:
 	move.b	d0,(a0)                         	| [$0478: ld   (hl),a]
 	rts                                    	| [$0479: ret]
 l_047a:
-	move.b	unknown_E046,d0                 	| [$047a: ld   a,(unknown_E046)]
+	move.b	game_status_bits_E046,d0                 	| [$047a: ld   a,(game_status_bits_E046)]
 	rol.b	#1,d0                            	| [$047d: rlca]
 	jcc	l_04db                             	| [$047e: jr   nc,$04DB]
 	lea	osd_read_in_0,a1                      	| [$0480: ld   de,$D001]
@@ -976,7 +1014,7 @@ l_051b:
 	rts                                    	| [$0526: ret]
 l_0527:
 	lea	game_rom+0x2AE2,a0                      	| [$0527: ld   hl,$2AE2]
-	jbsr	l_0300                            	| [$052a: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$052a: call $0300]
 	move.b	nb_credits_e048,d0              	| [$052d: ld   a,(nb_credits_e048)]
 	jra	set_character_at_address_03ae                             	| [$0530: jp   $03AE]
 l_0533:
@@ -989,7 +1027,7 @@ l_0533:
 	jeq	l_0548                             	| [$0543: jr   z,$0548]
 	lea	game_rom+0x2A97,a0                      	| [$0545: ld   hl,$2A97]
 l_0548:
-	jbsr	l_0300                            	| [$0548: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0548: call $0300]
 	move.b	unknown_E053,d0                 	| [$054b: ld   a,(unknown_E053)]
 	and.b	#0x03,d0                         	| [$054e: and  $03]
 	bne.b	0f                               	| [...]
@@ -1013,7 +1051,7 @@ l_055f:
     jbsr  osd_disable_interrupts  | [di]
 	move.b	d0,nb_credits_e048              	| [$0563: ld   (nb_credits_e048),a]
 	move.b	d1,d0                           	| [$0566: ld   a,b]
-	move.b	d0,unknown_E046                 	| [$0567: ld   (unknown_E046),a]
+	move.b	d0,game_status_bits_E046                 	| [$0567: ld   (game_status_bits_E046),a]
 	addq.b	#1,d0                           	| [$056a: inc  a]
     jbsr  osd_enable_interrupts  | [ei]
 	rts                                    	| [$056c: ret]
@@ -1138,7 +1176,7 @@ clear_area_05fa:
 	rts                                    	| [$0602: ret]
 
 l_0603:
-	lea	unknown_E046,a0                	| [$0603: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$0603: ld   hl,game_status_bits_E046]
 	move.b	(a0),d0                         	| [$0606: ld   a,(hl)]
 	eor.b	#0x08,d0                         	| [$0607: xor  $08]
 	move.b	d0,(a0)                         	| [$0609: ld   (hl),a]
@@ -1149,16 +1187,16 @@ l_0612:
 	move.b	(a1),d0                         	| [$0612: ld   a,(de)]
 	move.b	d0,d2                           	| [$0613: ld   c,a]
 	move.b	(a0),d0                         	| [$0614: ld   a,(hl)]
-	move.b	d0,(a1)                         	| [$0615: ld   (de),a]
-	move.b	d2,(a0)                         	| [$0616: ld   (hl),c]
-	addq.w	#1,a0                           	| [$0617: inc  hl]
-	addq.w	#1,a1                           	| [$0618: inc  de]
+	move.b	d0,(a1)+                         	| [$0615: ld   (de),a]
+	move.b	d2,(a0)+                         	| [$0616: ld   (hl),c]
+	                           	| [$0617: inc  hl]
+	                           	| [$0618: inc  de]
 	subq.b	#1,d1                           	| [...]
 	jne	l_0612                             	| [$0619: djnz $0612]
 	rts                                    	| [$061b: ret]
 
-l_061c:
-	move.b	unknown_E046,d0                 	| [$061c: ld   a,(unknown_E046)]
+is_player_2_061c:
+	move.b	game_status_bits_E046,d0                 	| [$061c: ld   a,(game_status_bits_E046)]
 	btst.b	#3,d0                           	| [$061f: bit  3,a]
 	rts                                    	| [$0621: ret]
 l_0622:
@@ -1170,11 +1208,12 @@ l_0622:
 	move.b	d2,d1
 	lea	game_rom+0x2A0C,a0                      	| [$0628: ld   hl,$2A0C]
 	add.w	d1,a0                            	| [$062b: add  hl,bc]
-	move.b	unknown_E046,d0                 	| [$062c: ld   a,(unknown_E046)]
+	move.b	game_status_bits_E046,d0                 	| [$062c: ld   a,(game_status_bits_E046)]
 	                               	| [$062f: and  a]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$0630: ret  p] [...]
 0:
+	* game in play!
 	lea	player_score_E500,a1                	| [$0631: ld   de,player_score_E500]
 	move.b	#0x03,d1                        	| [$0634: ld   b,$03]
 l_0636:
@@ -1202,7 +1241,7 @@ l_064b:
 	addq.w	#1,a1                           	| [$064e: inc  de]
 	subq.b	#1,d1                           	| [...]
 	jne	l_064b                             	| [$064f: djnz $064B]
-	jcs	l_0668                             	| [$0651: jr   c,$0668]
+	jcs	display_score_0668                             	| [$0651: jr   c,$0668]
 	move.w	player_score_E500,unknown_E008             	| [$0653: ld   hl,(player_score_E500)]
 	                 	| [$0656: ld   (unknown_E008),hl]
 	move.b	unknown_E502,d0                 	| [$0659: ld   a,(unknown_E502)]
@@ -1210,9 +1249,9 @@ l_064b:
 	move.b	unknown_E50E,d0                 	| [$065f: ld   a,(unknown_E50E)]
 	move.b	d0,unknown_E00B                 	| [$0662: ld   (unknown_E00B),a]
 	jbsr	l_0685                            	| [$0665: call $0685]
-l_0668:
+display_score_0668:
 	lea	0x8084,a1                      	| [$0668: ld   de,$8084]
-	jbsr	l_061c                            	| [$066b: call $061C]
+	jbsr	is_player_2_061c                            	| [$066b: call $061C]
 	jeq	l_0673                             	| [$066e: jr   z,$0673]
 	lea	0x80A4,a1                      	| [$0670: ld   de,$80A4]
 l_0673:
@@ -1293,20 +1332,21 @@ l_06c7:
 	addq.b	#1,(a0)                         	| [$06d0: inc  (hl)]
 	lea	nb_lives_E515,a0               	| [$06d1: ld   hl,nb_lives_E515]
 	addq.b	#1,(a0)                         	| [$06d4: inc  (hl)]
-l_06d5:
+display_nb_lives_06d5:
 	move.b	nb_lives_E515,d0                	| [$06d5: ld   a,(nb_lives_E515)]
 	subq.b	#1,d0                           	| [$06d8: dec  a]
 	jeq	l_06de                             	| [$06d9: jr   z,$06DE]
 	move.b	d0,d2                           	| [$06db: ld   c,a]
-	move.b	#0x01,d0                        	| [$06dc: ld   a,$01]
+	move.b	#0x01,d0                        	| [$06dc: ld   a,$01] jeep tile 1
 l_06de:
 	move.w	#0x807C,d7                      	| [$06de: ld   hl,$807C]
-	jbsr	l_06ec                            	| [$06e1: call $06EC]
-	jbsr	l_06ec                            	| [$06e4: call $06EC]
-	jeq	l_06ec                             	| [$06e7: jr   z,$06EC]
+	jbsr	write_to_screen_and_inc_x_and_char_06ec                            	| [$06e1: call $06EC]
+	jbsr	write_to_screen_and_inc_x_and_char_06ec                            	| [$06e4: call $06EC]
+	jeq	write_to_screen_and_inc_x_and_char_06ec                             	| [$06e7: jr   z,$06EC] never branches???
 	move.b	d2,d0                           	| [$06e9: ld   a,c]
+	* add '0' to number of lives
 	add.b	#0x30,d0                         	| [$06ea: add  a,$30]
-l_06ec:
+write_to_screen_and_inc_x_and_char_06ec:
 	jbsr	osd_w_videoram                         	| [$06ec: ld   (hl),a]
 	addq.w	#1,d7                           	| [$06ed: inc  hl]
 	tst.b	d0                               	| [$06ee: and  a]
@@ -1317,7 +1357,7 @@ l_06ec:
 	rts                                    	| [$06f1: ret]
 
 l_06f2:
-	lea	unknown_E040,a0                	| [$06f2: ld   hl,unknown_E040]
+	lea	start_nb_lives_E040,a0                	| [$06f2: ld   hl,start_nb_lives_E040]
 	jbsr	osd_read_dsw_1                       	| [$06f5: ld   a,($D003)]
 	move.b	d0,d1                           	| [$06f8: ld   b,a]
 	addq.b	#1,d0                           	| [$06f9: inc  a]
@@ -1382,7 +1422,7 @@ l_0732:
 l_0745:
 	jbsr	l_0d29                            	| [$0745: call $0D29]
 	lea	game_rom+0x2C97,a0                      	| [$0748: ld   hl,$2C97]
-	jbsr	l_0300                            	| [$074b: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$074b: call $0300]
 	jbsr	l_0527                            	| [$074e: call $0527]
 	lea	game_rom+0x2C57,a0                      	| [$0751: ld   hl,$2C57]
 	jbsr	l_034e                            	| [$0754: call $034E]
@@ -1996,7 +2036,7 @@ l_0b38:
 	rts                                    	| [$0b43: ret  nz] [...]
 0:
 	lea	game_rom+0x2AA9,a0                      	| [$0b44: ld   hl,$2AA9]
-	jbsr	l_0300                            	| [$0b47: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0b47: call $0300]
 l_0b4a:
 	st.b	d0                                	| [$0b4a: ld   a,$FF]
 	move.b	d0,unknown_E051                 	| [$0b4c: ld   (unknown_E051),a]
@@ -2124,7 +2164,7 @@ l_0c16:
 	                               	| [$0c2b: and  a]
 	jeq	l_0c86                             	| [$0c2c: jr   z,$0C86]
 	lea	game_rom+0x2A5F,a0                      	| [$0c2e: ld   hl,$2A5F]
-	jbsr	l_0300                            	| [$0c31: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0c31: call $0300]
 	move.b	time_bcd_e510,d0                	| [$0c34: ld   a,(time_bcd_e510)]
 	cmp.b	#0x04,d0                         	| [$0c37: cp   $04]
 	jcs	l_0c3d                             	| [$0c39: jr   c,$0C3D]
@@ -2187,12 +2227,12 @@ l_0c77:
 	addq.w	#1,a0                           	| [$0c7c: inc  hl]
 	jra	l_0c72                             	| [$0c7d: jr   $0C72]
 l_0c7f:
-	lea	unknown_E046,a0                	| [$0c7f: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$0c7f: ld   hl,game_status_bits_E046]
 	addq.b	#1,(a0)                         	| [$0c82: inc  (hl)]
 	jra	l_026e                             	| [$0c83: jp   $026E]
 l_0c86:
 	lea	game_rom+0x2A47,a0                      	| [$0c86: ld   hl,$2A47]
-	jbsr	l_0300                            	| [$0c89: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0c89: call $0300]
 	jra	l_0c42                             	| [$0c8c: jr   $0C42]
 l_0c8e:
 	clr.b	d0                               	| [$0c8e: xor  a]
@@ -2205,7 +2245,7 @@ l_0c95:
 l_0c9e:
 	jbsr	clear_area_05fa                   	| [$0c9e: call clear_area_05fa]
 	move.b	d0,unknown_E50F                 	| [$0ca1: ld   (unknown_E50F),a]
-	move.b	unknown_E040,d0                 	| [$0ca4: ld   a,(unknown_E040)]
+	move.b	start_nb_lives_E040,d0                 	| [$0ca4: ld   a,(start_nb_lives_E040)]
 	move.b	d0,nb_lives_E515                	| [$0ca7: ld   (nb_lives_E515),a]
 	lea	game_rom+0x2162,a0                      	| [$0caa: ld   hl,$2162]
 	move.l	a0,unknown_pointer_E516                 	| [$0cad: ld   (unknown_pointer_E516),hl]
@@ -2219,6 +2259,7 @@ l_0cb1:
 l_0cbf:
 	jbsr	l_0d29                            	| [$0cbf: call $0D29]
 l_0cc2:
+	* displays status bar .. continued
 	move.w	#0x8421,d7                      	| [$0cc2: ld   hl,$8421]
 	move.b	#0x06,d2                        	| [$0cc5: ld   c,$06]
 	move.b	unknown_E50E,d0                 	| [$0cc7: ld   a,(unknown_E50E)]
@@ -2236,30 +2277,38 @@ l_0cd1_2:
 	move.b	d2,d0                           	| [$0cda: ld   a,c]
 
 	movem.w	(sp)+,d1/d2                    	| [$0cdb: pop  bc]
+	* status bar background color (blue rectangle on top)
 l_0cdc:
 	move.b	#0x1E,d1                        	| [$0cdc: ld   b,$1E]
 l_0cde:
+	* writes 0 or 1
 	jbsr	osd_w_colorram                         	| [$0cde: ld   (hl),a]
 	addq.w	#1,d7                           	| [$0cdf: inc  hl]
 	subq.b	#1,d1                           	| [...]
 	jne	l_0cde                             	| [$0ce0: djnz $0CDE]
+	* next line
 	addq.w	#2,d7                           	| [$0ce2: inc  hl] * 2
 	subq.b	#1,d2                           	| [$0ce4: dec  c]
 	jne	l_0cdc                             	| [$0ce5: jr   nz,$0CDC]
+	
+	* now fill the rectangle with shit
 	lea	game_rom+0x2B0F,a0                      	| [$0ce7: ld   hl,$2B0F]
-	jbsr	l_0300                            	| [$0cea: call $0300]
-	jbsr	l_0668                            	| [$0ced: call $0668]
+* displays "TIME", "POINT", "caution",
+* williams logo, 1P, milestone letters...
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0cea: call $0300]
+
+	jbsr	display_score_0668                            	| [$0ced: call $0668]
 	jbsr	l_0685                            	| [$0cf0: call $0685]
-	move.b	unknown_E046,d0                 	| [$0cf3: ld   a,(unknown_E046)]
+	move.b	game_status_bits_E046,d0                 	| [$0cf3: ld   a,(game_status_bits_E046)]
 	btst.b	#4,d0                           	| [$0cf6: bit  4,a]
 	jeq	l_0d09                             	| [$0cf8: jr   z,$0D09]
 	jbsr	l_0603                            	| [$0cfa: call $0603]
-	jbsr	l_0668                            	| [$0cfd: call $0668]
+	jbsr	display_score_0668                            	| [$0cfd: call $0668]
 	jbsr	l_0603                            	| [$0d00: call $0603]
 	lea	game_rom+0x2B72,a0                      	| [$0d03: ld   hl,$2B72]
-	jbsr	l_0300                            	| [$0d06: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0d06: call $0300]
 l_0d09:
-	jbsr	l_06d5                            	| [$0d09: call $06D5]
+	jbsr	display_nb_lives_06d5                            	| [$0d09: call $06D5]
 	jbsr	l_212c                            	| [$0d0c: call $212C]
 	jbsr	l_298a                            	| [$0d0f: call $298A]
 l_0d12:
@@ -2277,6 +2326,7 @@ l_0d1f:
 	move.b	d2,d0                           	| [$0d24: ld   a,c]
 	move.w	#0x8452,d7                       	| [$0d25: ld   ($8452),a]
     jbsr	osd_w_colorram
+	
 	rts                                    	| [$0d28: ret]
 
 l_0d29:
@@ -2296,7 +2346,7 @@ l_0d3b:
 	move.b	unknown_E043,d0                 	| [$0d3b: ld   a,(unknown_E043)]
 	subq.b	#1,d0                           	| [$0d3e: dec  a]
 	jeq	l_0d4a                             	| [$0d3f: jr   z,$0D4A]
-	lea	unknown_E046,a0                	| [$0d41: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$0d41: ld   hl,game_status_bits_E046]
 	clr.b	d0                               	| [$0d44: xor  a]
 	btst.b	#3,(a0)                         	| [$0d45: bit  3,(hl)]
 	jeq	l_0d4a                             	| [$0d47: jr   z,$0D4A]
@@ -2340,7 +2390,7 @@ l_0d6f:
 l_0d75:
 
 	movem.l	a0,-(sp)                        	| [$0d75: push hl]
-	lea	unknown_E046,a0                	| [$0d76: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$0d76: ld   hl,game_status_bits_E046]
 	btst.b	#7,(a0)                         	| [$0d79: bit  7,(hl)]
 	movem.l	(sp)+,a0                        	| [$0d7b: pop  hl]
 	bmi.b	0f                               	| [...]
@@ -3089,7 +3139,7 @@ l_1249:
 	jra	l_1204                             	| [$1253: jr   $1204]
 l_1255:
 	lea	game_rom+0x2C97,a0                      	| [$1255: ld   hl,$2C97]
-	jra	l_0300                             	| [$1258: jp   $0300]
+	jra	write_to_screen_possible_typing_effect_300                             	| [$1258: jp   $0300]
 
 l_125b:
 	move.b	unknown_E50D,d0                 	| [$125b: ld   a,(unknown_E50D)]
@@ -3122,7 +3172,7 @@ l_125b:
 	clr.b	(a0)                             	| [$1282: ld   (hl),$00]
 	rts                                    	| [$1284: ret]
 l_1285:
-	jbsr	l_0300                            	| [$1285: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$1285: call $0300]
 l_1288:
 	move.b	unknown_E50D,d0                 	| [$1288: ld   a,(unknown_E50D)]
 	move.w	#0x8055,d7                      	| [$128b: ld   hl,$8055]
@@ -5292,7 +5342,7 @@ l_212c:
 	jra	set_character_at_address_03ae                             	| [$2141: jp   $03AE]
 
 l_27c0:
-	lea	unknown_E046,a0                	| [$27c0: ld   hl,unknown_E046]
+	lea	game_status_bits_E046,a0                	| [$27c0: ld   hl,game_status_bits_E046]
 	subq.b	#1,(a0)                         	| [$27c3: dec  (hl)]
     jbsr  osd_enable_interrupts  | [ei]
 	move.b	d1,d0                           	| [$27c5: ld   a,b]
@@ -5312,10 +5362,10 @@ l_27d2:
 	jbsr	l_2948                            	| [$27e1: call $2948]
 	jbsr	l_05e8                            	| [$27e4: call $05E8]
 	lea	game_rom+0x2C24,a0                      	| [$27e7: ld   hl,$2C24]
-	jbsr	l_0300                            	| [$27ea: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$27ea: call $0300]
 	jbsr	l_28ba                            	| [$27ed: call $28BA]
 	lea	game_rom+0x2C0C,a0                      	| [$27f0: ld   hl,$2C0C]
-	jbsr	l_0300                            	| [$27f3: call $0300]
+	jbsr	write_to_screen_possible_typing_effect_300                            	| [$27f3: call $0300]
 	move.b	unknown_E513,d0                 	| [$27f6: ld   a,(unknown_E513)]
 l_27f9:
 	rol.b	#4,d0                           	| [$27f9: rla] 4

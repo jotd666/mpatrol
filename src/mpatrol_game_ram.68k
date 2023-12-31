@@ -7,13 +7,13 @@
 	.global x_scroll_horizon_e03d
 	.global	unknown_E03E
 	.global	unknown_E03F
-	.global	unknown_E040
+	.global	start_nb_lives_E040
 	.global	unknown_E041
 	.global	unknown_E042
 	.global	unknown_E043
 	.global	unknown_E044
 	.global	unknown_E045
-	.global	unknown_E046
+	.global	game_status_bits_E046
 	.global	unknown_E047
 	.global	nb_credits_e048
 	.global	unknown_E049
@@ -180,7 +180,7 @@ unknown_E03E:
 	ds.b	1
 unknown_E03F:
 	ds.b	1
-unknown_E040:
+start_nb_lives_E040:
 	ds.b	1
 unknown_E041:
 	ds.b	1
@@ -192,7 +192,7 @@ unknown_E044:
 	ds.b	1
 unknown_E045:
 	ds.b	1
-unknown_E046:
+game_status_bits_E046:
 	ds.b	1
 unknown_E047:
 	ds.b	1

@@ -131,7 +131,7 @@ start:
 		.global osd_enable_interrupts
 		.global osd_ack_vblank_interrupt
 		.global osd_break		| for debug	
-		*.global osd_calibrate_display		| for debug
+		.global osd_blitz		| for debug
 		.global osd_w_videoram
 		.global osd_w_colorram
 		.global osd_r_videoram
@@ -651,7 +651,10 @@ _vblank:
     rte
 	
 
-
+osd_blitz:
+	blitz
+	rts
+	
 osd_break:
 	* sends a WinUAE command to enter WinUAE debugger
 	.ifndef	RELEASE
@@ -1451,8 +1454,8 @@ decode_sprite_data:
 
 
 	
-* d6=screen address (preserved), d0=tile (preserved)
-* d6 starts at 0x8000 ends at 0x83FF
+* d7=screen address (preserved), d0=tile (preserved)
+* d7 starts at 0x8000 ends at 0x83FF
 * should preserve all registers
 
 osd_w_videoram:
