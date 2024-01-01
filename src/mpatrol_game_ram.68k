@@ -43,8 +43,8 @@
 	.global	screen_address_E0E4
 	.global	unknown_pointer_E0E6
 	.global	unknown_E0E8
-	.global	unknown_pointer_E0E9
-	.global	unknown_16bit_E0EB
+	.global	pointer_on_title_char_data_E0E9
+	.global	title_screen_address_E0EB
 	.global	unknown_E0ED
 	.global	unknown_E0EE
 	.global	unknown_16bit_E0EF
@@ -257,9 +257,9 @@ unknown_pointer_E0E6:
 unknown_E0E8:
 	ds.b	1
 	.align	2
-unknown_pointer_E0E9:
+pointer_on_title_char_data_E0E9:
 	ds.l	1
-unknown_16bit_E0EB:
+title_screen_address_E0EB:
 	ds.b	2
 unknown_E0ED:
 	ds.b	1

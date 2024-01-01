@@ -1567,12 +1567,12 @@ update_bg_tile:
 *	beq.b	0f
 *	add.w	#0x200,d0
 	
-*0:
-*	* is it upper part of bank ?
-*	btst	#5,D1
-*	beq.b	0f
-*	add.w	#0x100,d0
-*0:
+0:
+	* is it upper part of bank ?
+	btst	#7,D1
+	beq.b	0f
+	add.w	#0x100,d0
+0:
 	* color tile
 	and.w	#0xF,d1
 	

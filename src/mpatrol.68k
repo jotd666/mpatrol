@@ -3110,9 +3110,9 @@ l_1201:
 l_1204:
 	* D3+D4
 	LOAD_D3_16_FROM_D3D4
-	move.w	d3,unknown_16bit_E0EB                 	| [$1204: ld   (unknown_16bit_E0EB),de]
+	move.w	d3,title_screen_address_E0EB                 	| [$1204: ld   (title_screen_address_E0EB),de]
 l_1208:
-	move.l	a0,unknown_pointer_E0E9                 	| [$1208: ld   (unknown_pointer_E0E9),hl]
+	move.l	a0,pointer_on_title_char_data_E0E9                 	| [$1208: ld   (pointer_on_title_char_data_E0E9),hl]
 	move.b	unknown_E04E,d0                 	| [$120b: ld   a,(unknown_E04E)]
 	addq.b	#0x03,d0                        	| [$120e: add  a,$03]
 	move.b	d0,(0x01,a2)                    	| [$1210: ld   (ix+$01),a]
@@ -3124,14 +3124,16 @@ display_title_1218:
 	move.b	unknown_E04E,d0                 	| [$1218: ld   a,(unknown_E04E)]
 	cmp.b	(0x01,a2),d0                     	| [$121b: cp   (ix+$01)]
 	jne	l_1213                             	| [$121e: jr   nz,$1213]
-	move.w	unknown_16bit_E0EB,d5             	| [$1220: ld   hl,(unknown_16bit_E0EB)]
+	move.w	title_screen_address_E0EB,d5             	| [$1220: ld   hl,(title_screen_address_E0EB)]
 	addq.w	#1,d5                           	| [$1223: inc  hl]
-	move.w	d5,unknown_16bit_E0EB                 	| [$1224: ld   (unknown_16bit_E0EB),hl]
+	move.w	d5,title_screen_address_E0EB                 	| [$1224: ld   (title_screen_address_E0EB),hl]
 	subq.w	#1,d5                           	| [$1227: dec  hl]
 	exg	d3,d5                              	| [$1228: ex   de,hl]
+	and.l	#0xFFFF,d3
 	lea	0x0400,a3                      	| [$1229: ld   iy,$0400]
-	add.w	d3,a3                            	| [$122d: add  iy,de]
-	move.l	unknown_pointer_E0E9,a0             	| [$122f: ld   hl,(unknown_pointer_E0E9)]
+	add.l	d3,a3                            	| [$122d: add  iy,de]
+	
+	move.l	pointer_on_title_char_data_E0E9,a0             	| [$122f: ld   hl,(pointer_on_title_char_data_E0E9)]
 	                        	| [$1232: ld   bc,$0020] 32
 	move.b	#0x0020,d1                        	| [$1232: ld   bc,$0020] 32
 l_1235:
@@ -3143,12 +3145,18 @@ l_1235:
 	addq.b	#1,d0                           	| [$123c: inc  a]
 * write "moon patrol" title loop
 	* character
-	move.b	d0,(a1)                         	| [$123d: ld   (de),a]
+	move.l		d3,d7
+	jbsr	osd_w_videoram                         	| [$123d: ld   (de),a]
 	* attribute
-	move.b	#0x80,(a3)                 	| [$123e: ld   (iy+$00),$80]
-	exg	a1,a0                              	| [$1242: ex   de,hl]
-	add.w	d1,a0                            	| [$1243: add  hl,bc]
-	exg	a1,a0                              	| [$1244: ex   de,hl]
+	move.l		a3,d7
+	exg		d0,d6
+	move.b	#0x80,d0
+	jbsr	osd_w_colorram		| [$123e: ld   (iy+$00),$80]
+	exg		d0,d6
+	                	
+	                             	| [$1242: ex   de,hl]
+	add.w	d1,d3                            	| [$1243: add  hl,bc]
+	                             	| [$1244: ex   de,hl]
 	add.w	d1,a3                            	| [$1245: add  iy,bc]
 	jra	l_1235                             	| [$1247: jr   $1235]
 l_1249:
