@@ -1,13 +1,9 @@
-check addresses when computing base+address: ram/rom/display
-(maybe code a get address like tetris: ROM: ok, else error)
-	and.w	#0xFF,d0
-	add.w	d0,a0
-     d0,d6 adds           	| [$1970: add  a,l]
-					| [$1971: ld   l,a]
-
-reaches jeep_jumps_and_title_shows_0507
-but no title is showing
-
 check sprite shadow ram
 
-try to implement scroll with copperlist (only lines 192-256 scroll)
+try to implement scroll with copperlist (only lines 192-256 scroll): there are probably 4 scroll registers with 16 lines each
+
+
+tricks:
+
+- holes in ground always have green background
+- dual playfield: we could use it to blit volcanoes in the pits

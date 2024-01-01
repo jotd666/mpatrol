@@ -2389,6 +2389,7 @@ l_0d5e:
 	move.b	#0x00,d2                        	| [$0d60: ld   bc,$4000] 16384
 	clr.b	d0                               	| [$0d63: xor  a]
 l_0d64:
+* set scroll value???
 **out  (c),a
 	addq.b	#1,d2                           	| [$0d66: inc  c]
 	subq.b	#1,d1                           	| [...]

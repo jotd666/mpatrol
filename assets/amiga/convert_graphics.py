@@ -86,8 +86,7 @@ tile_palette = [tuple(x) for x in block_dict['tile_palette']["data"]]
 # 16 colors for sprite palette (uses indexed CLUTs)
 sprite_palette = [tuple(x) for x in block_dict['sprite_palette']["data"]]
 # cluts
-sprite_cluts = block_dict['sprite_clut']["data"]
-
+sprite_cluts = [[sprite_palette[i] for i in clut] for clut in block_dict['sprite_clut']["data"]]
 
 
 def dump_rgb_cluts(rgb_cluts,name):
@@ -133,26 +132,44 @@ with open(os.path.join(src_dir,"palette.68k"),"w") as f:
 
 character_codes_list = []
 
-for k,chardat in enumerate(block_dict["tile"]["data"]):
-    img = Image.new('RGB',(8,8))
+if False:
+    for k,chardat in enumerate(block_dict["tile"]["data"]):
+        img = Image.new('RGB',(8,8))
 
-    character_codes = list()
+        character_codes = list()
 
-    for cidx,colors in enumerate([tile_palette[i:i+4] for i in range(0,88,4)]):
-        if not used_cluts or (k in used_cluts and cidx in used_cluts[k]):
-            d = iter(chardat)
-            for i in range(8):
-                for j in range(8):
-                    v = next(d)
-                    img.putpixel((j,i),colors[v])
-            character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette))
-        else:
-            character_codes.append(None)
-        if dump_tiles:
-            scaled = ImageOps.scale(img,5,0)
-            scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}_{cidx}.png"))
-    character_codes_list.append(character_codes)
+        for cidx,colors in enumerate([tile_palette[i:i+4] for i in range(0,88,4)]):
+            if not used_cluts or (k in used_cluts and cidx in used_cluts[k]):
+                d = iter(chardat)
+                for i in range(8):
+                    for j in range(8):
+                        v = next(d)
+                        img.putpixel((j,i),colors[v])
+                character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette))
+            else:
+                character_codes.append(None)
+            if dump_tiles:
+                scaled = ImageOps.scale(img,5,0)
+                scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}_{cidx}.png"))
+        character_codes_list.append(character_codes)
 
+def get_sprite_clut(clut_index):
+    return sprite_cluts[clut_index]
+
+# brutal dump of all sprites in all cluts
+for k,sprdat in enumerate(block_dict["sprite"]["data"]):
+    for cidx in range(15):
+        img = Image.new('RGB',(16,16))
+        spritepal = get_sprite_clut(cidx)
+        d = iter(sprdat)
+        for j in range(16):
+            for i in range(16):
+                v = next(d)
+                img.putpixel((i,j),spritepal[v])
+
+        if dump_sprites:
+            scaled = ImageOps.scale(img,2,0)
+            scaled.save(os.path.join(dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
 
 if False:
     with open(os.path.join(this_dir,"sprite_config.json")) as f:
