@@ -807,7 +807,7 @@ osd_update_sprites:
 	* all sprites are allocated: now display them
 	lea		host_sprites(pc),a2		| input structure
 	lea		sprites,a3				| copperlist
-	*lea		sprite_table,a4
+	lea		sprite_table,a4
 	moveq	#0,d6
 10:
 	move.b	(SPRITE_X,a2),d0
@@ -833,6 +833,7 @@ osd_update_sprites:
 	add.w	d4,d4
 	add.w	d4,d4
 	move.l	(a4,d4.w),d4	| get pointer
+	jmi	30f				| sprite is "attached", no need to display it
 	.ifndef	RELEASE
 	bne.b	25f
 	* sprite doesn't exist: blitz and bail out
@@ -849,10 +850,7 @@ osd_update_sprites:
 	add.w	d4,d4
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
-	tst.b	d5			| x flip bit
-	bpl.b	21f
-	addq.w	#4,a5
-21:
+
 	move.l	(a5),d4
 	.ifndef	RELEASE
 	bne.b	22f
@@ -860,16 +858,23 @@ osd_update_sprites:
 	jra		30f
 22:
 	.endif
-	move.l	d4,a5	| sprite pointer
-
-	* add offsets to both X & Y
-	add.b	#9,d0
-	add.b	#15,d1
-
+	move.l	d4,a5	| sprite struct pointer
+	move.w	(A5)+,d3
+	cmp.w	#16,d3
+	bne.b	221f
 	bsr		store_sprite_pos_16
+	bra.b	223f
+221:
+	cmp.w	#32,d3
+	beq.b	222f
+	blitz		| should not happen, values can be 16 or 32 (sanity check!)
+222:
+	bsr		store_sprite_pos_32
+223:
+
 	move.l	d0,(a5)
 	* set colors
-	lea		cluts+2,a6
+	lea		sprite_cluts+2,a6
 	moveq	#0,d3
 	move.b	(SPRITE_CLUT,a2),d3
 	lsl.w	#3,d3		| times 8
@@ -916,39 +921,146 @@ osd_update_sprites:
 	rts
 
 
-* priorities are from last to first
-test_sprites_demo:
+* what: blits 16x? data on one plane, cookie cut
+* args:
+* < A0: pointers on 16x? data
+* < A1: plane  (40 rows)
+* < A2: background (40 rows) to mix with cookie cut
+* < A3: source mask for cookie cut (16x16)
+* < D0: X
+* < D1: Y
+* < D2: source y-offset
+* < D3: height of data
+* trashes: D0-D1
+blit_planes_cookie_cut_16x:
+    lea _custom,A5
+	move.w	d2,d5
+	move.w	d3,d4
+	moveq	#4,d3		| 4 planes
+    moveq  #4,d2       | 16 pixels + 2 shift bytes
+* < A5: custom
+* < D0.W,D1.W: x,y
+* < A0: source (pointer on array of planes)
+* < A1: destination fg plane, also background to mix with cookie cut fg plane
+* < A3: source mask for cookie cut
+* < D2: width in bytes (inc. 2 extra for shifting)
+* < D3: number of planes
+* < D4: height. If negative, source is copied with negative modulo (flip)
+* < D5: y offset for source planes
+* < D7: blit mask (not considered, optim, -1 all through the game)
+* blit mask set
+* returns: start of destination in A1 (computed from old A1+X,Y)
+* trashes: a1
+blit_planes_any_internal_cookie_cut:
+    movem.l d0-d7/a2/a4,-(a7)
+    * pre-compute the maximum of shit here
+	tst.w	d4
+	bpl.b	1f
+	sub.w	d4,d1	| pre-add height to d1
+	subq.w	#1,d1	| minus one
+1:	
+	tst	d1
+    beq.b   2f    | optim
+    lea		mulNB_BYTES_PER_ROW_table,a4
+	.ifdef	NO68020
+	add.w	d1,d1
+    move.w  (a4,d1.w),d1	| y times 40
+	.else
+    move.w  (a4,d1.w*2),d1	| y times 40
+	.endif
+2:
+	move.w	d5,-(a7)
+	moveq	#0,d5
+    move.w  #0x0fca,d5    | B+C-A->D cookie cut   
+	swap	d5
+    move    d0,d6
+    beq.b   4f
+    lsr.w   #3,d0
+	bclr	#0,d0
+    and.w   #0xF,d6
+	beq.b	3f
+    lsl.l   #8,d6
+    lsl.l   #4,d6
+    or.w    d6,d5            | add shift to mask (bplcon1)
+    swap    d6
+    clr.w   d6
+    or.l    d6,d5            | add shift
+3:   
+    add.w   d0,d1
+4:
+    * make offset even. Blitter will ignore odd address
+    * but a 68000 CPU doesn't and since we RETURN A1...
+    bclr    #0,d1
+    add.w   d1,a1       | plane position (D1 < 0x7FFF, 288*40=0x2D00)
+	move.w	#NB_BYTES_PER_ROW,d0
+	tst.w	d4
+	bpl.b	5f
+	neg.w	d0
+	neg.w	d4    | make d4 positive again
+5:
+    sub.w   d2,d0       | blit width
+    lsl.w   #6,d4
+    lsr.w   #1,d2
+    add.w   d2,d4       | blit height
+    * always the same settings (ATM)
 
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
 
+	clr.w bltamod(a5)		|A modulo=bytes to skip between lines
+	clr.w bltbmod(a5)		|B modulo=bytes to skip between lines
+	move.l d5,bltcon0(a5)	| sets con0 and con1: full cookie cut 2 sources & 1 mask
+	move.l	d5,d7			| save bltcon
+	move.w	(a7)+,d5
+	
+    move.w  d0,bltcmod(a5)	|C modulo
+    move.w  d0,bltdmod(a5)	|D modulo
+					
+	add.w	d5,a3			| apply to mask too
+	subq	#1,d3
+	beq.b	7f
+	subq	#1,d3
+6:
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	bsr.b	start_process_1_plane
+	
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+	WAIT_BLIT
+	dbf		d3,6b
+7:
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	bsr.b	start_process_1_plane
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+    
+    movem.l (a7)+,d0-d7/a2/a4
+    rts
+	
+start_process_1_plane:
+	move.l (a0)+,d0
+	beq.b	60f
+	move.l	d0,a4
+	add.w	d5,a4
+	bra.b	61f
+60:
+	* source is 0: just apply mask (less bandwidth lost) and change bltcon
+	move.l	#0x0BCA0000,d1
+	or.l	d6,d1
+	move.l	d1,bltcon0(a5)	| sets con0 and con1: C-A->D cookie cut, B fixed
+ 	clr.w	bltbdat(a5)	|B word is zero
+	rts
+61:
+	* non-zero: set data source & bltcon
+	move.l	d7,bltcon0(a5)	| sets con0 and con1: C-A+B->D cookie cut full
+	move.l	a4,bltbpt(a5)	|source graphic top left corner
+	rts
 
-* guard chasing mpatrol+barrow
-	.byte	0x3A,0x28,0x9D,0xC1,0x00,0x00,0x00,0x38,0x1E,0x08,0x90,0xC1,0x00,0x00,0x00,0xE1
-	.byte	0x00,0x00,0x00,0x41,0x00,0x00,0x00,0xC9,0x2E,0x0C,0x30,0xC1,0x00,0x00,0x00,0x00
-
-* guard only
-
-	.byte  0x30,0xc,0x64,0xc1
-	.rept	28
-	.byte  0x0
-	.endr
-
-* in game with wagons & guards
-	.byte  0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x12,0x1b,0x8,0x5e,0xe1,0x35,0x4,0x69,0xe1
-	.byte  0x35,0x4,0x67,0xff,0x35,0x4,0x18,0xff,0x0,0x0,0x0,0x0,0x31,0xc,0x51,0x63
-
-test_sprites:
-* 7 active sprites 3 wagons, 1 guard, 1 bag carry 1 player 1 elevator:
-* not possible to have enough palettes for all sprites: bag is blue
-
-	.byte  0xbf,0x20,0xb5,0x67,0x33,0x4,0x97,0x8a,0xa0,0x8,0xad,0x69,0x35,0x4,0x4e,0xe1
-	.byte  0x35,0x4,0x36,0x41,0x35,0x4,0xd1,0xc9,0xae,0xc,0x2,0x0,0x30,0xc,0xac,0x69
-
-* 3rd screen 6 sprites
-	.byte  0x3f,0x20,0xae,0x8f,0x33,0xc,0x2f,0x73,0x1f,0x8,0xb6,0x91,0x35,0x4,0x48,0xff
-	.byte  0x35,0x4,0x6c,0xff,0x35,0x4,0x6f,0xc9,0x2e,0xc,0x22,0xc9,0xa7,0xc,0x84,0xbc
-
-	.byte  0x3f,0x20,0x35,0xdf,0x33,0x4,0x97,0x15,0x1a,0x8,0x3d,0xe1,0x35,0x4,0x3d,0xe1
-	.byte  0x35,0x4,0x39,0x41,0x35,0x4,0x6e,0xff,0x31,0xc,0x1d,0xe1,0x27,0xc,0x1c,0x5c
 
 
 * < D0: sprite X
@@ -1651,6 +1763,12 @@ store_sprite_pos_16:
 	bsr		store_sprite_pos
 	move.l	(a7)+,a1
 	rts
+store_sprite_pos_32:
+	move.l	a1,-(a7)
+	lea		HW_SpriteYTable_32,a1
+	bsr		store_sprite_pos
+	move.l	(a7)+,a1
+	rts
 	
 * < d0.w: x
 * < d1.w: y
@@ -1698,6 +1816,7 @@ HW_SpriteYTable_\height:
 
 
 	DEF_HW_SPRITE_Y_TABLE	16
+	DEF_HW_SPRITE_Y_TABLE	32
 
 
 
@@ -2091,8 +2210,8 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,INFPICK/S,"
-	.ascii	"CHEATKEYS/S,HARDBAGS/S,FRENCH/S,SKILL/K/N,STARTLIVES/K/N,EXTRA40000/S"
+	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,"
+	.ascii	"CHEATKEYS/S,SKILL/K/N,STARTLIVES/K/N"
 read_args_string_end:
 	.align	2
 
