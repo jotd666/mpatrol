@@ -5,5 +5,8 @@ try to implement scroll with copperlist (only lines 192-256 scroll): there are p
 
 tricks:
 
-- holes in ground always have green background
-- dual playfield: we could use it to blit volcanoes in the pits
+
+- dual playfield: all 3 layers of ground, green & blue together, no scroll
+- update green & blue not all the time (slow scroll)
+- all bobs on the other plane
+- sprites to complete the missing colors: map colors carefully

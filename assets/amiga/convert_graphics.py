@@ -11,7 +11,15 @@ src_dir = os.path.join(this_dir,"../../src/amiga")
 dump_dir = os.path.join(this_dir,"dumps")
 dump_tiles_dir = os.path.join(dump_dir,"tiles")
 dump_sprites_dir = os.path.join(dump_dir,"sprites")
-
+uncategorized_dump_sprites_dir = os.path.join(dump_sprites_dir,"__uncategorized")
+def ensure_empty(sd):
+    if os.path.exists(sd):
+        for p in os.listdir(sd):
+            n = os.path.join(sd,p)
+            if os.path.isfile(n):
+                os.remove(n)
+    else:
+        os.mkdir(sd)
 
 dump_tiles = False
 dump_sprites = True
@@ -25,8 +33,9 @@ if dump_tiles:
 if dump_sprites:
     if not os.path.exists(dump_dir):
         os.mkdir(dump_dir)
-    if not os.path.exists(dump_sprites_dir):
-        os.mkdir(dump_sprites_dir)
+    ensure_empty(dump_dir)
+    ensure_empty(dump_sprites_dir)
+    ensure_empty(uncategorized_dump_sprites_dir)
 
 
 NB_POSSIBLE_SPRITES = 128  #64+64 alternate
@@ -156,11 +165,57 @@ if False:
 def get_sprite_clut(clut_index):
     return sprite_cluts[clut_index]
 
+# creating the sprite configuration in the code is more flexible than with a config file
+
+sprite_config = dict()
+jeep_cluts = {0,12}
+
+def add_sprite_block(start,end,prefix,cluts,is_sprite):
+    if isinstance(cluts,int):
+        cluts = [cluts]
+    for i in range(start,end+1):
+        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":True}
+
+add_sprite_block(0xA,0x10,"falling_jeep_part_",jeep_cluts,True)
+add_sprite_block(1,4,"jeep_part_",jeep_cluts,True)
+add_sprite_block(5,8,"jeep_wheel_",0,True)  # todo extract black vs background
+add_sprite_block(0x42,0x42,"saucer",7,False)
+add_sprite_block(0x43,0x44,"hole_making_ship",7,False)
+add_sprite_block(0x45,0x47,"ovoid_ship",7,False)
+add_sprite_block(0x38,0x38,"tank",7,False)
+add_sprite_block(0x3A,0x3B,"missile",9,False)  # todo extract black
+add_sprite_block(0x7B,0x7C,"missile",9,False)  # todo extract black
+add_sprite_block(0x7E,0x7E,"score_800",14,False)
+add_sprite_block(0x7D,0x7D,"score_500",14,False)
+add_sprite_block(0x31,0x34,"rock_ball",4,False)
+add_sprite_block(0x36,0x37,"rock_ball",4,False)
+add_sprite_block(0x40,0x41,"medium_explosion",1,False)
+add_sprite_block(0x2a,0x2c,"shot_explosion",7,False)
+add_sprite_block(0x2D,0x30,"rock",4,False)
+add_sprite_block(0x3E,0x3F,"explosion",7,False)
+add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
+add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
+add_sprite_block(0x61,0x6F,"ground_explosion",3,False)
+add_sprite_block(0x4B,0x4D,"ship_bomb",3,False)
+add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},False)
+add_sprite_block(0x3D,0x3D,"mine",{3,10},False)
+
+transparent = (60,100,200)
+
 # brutal dump of all sprites in all cluts
 for k,sprdat in enumerate(block_dict["sprite"]["data"]):
-    for cidx in range(15):
-        img = Image.new('RGB',(16,16))
+    sprconf = sprite_config.get(k)
+    if sprconf:
+        clut_range = sprconf["cluts"]
+        name = sprconf["name"]
+    else:
+        clut_range = range(0,15)
+        name = f"unknown_{k:02x}"
+
+    for cidx in clut_range:
+        img = Image.new('RGB',(16,16),transparent)
         spritepal = get_sprite_clut(cidx)
+        spritepal[0] = transparent
         d = iter(sprdat)
         for j in range(16):
             for i in range(16):
@@ -169,19 +224,12 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
 
         if dump_sprites:
             scaled = ImageOps.scale(img,2,0)
-            scaled.save(os.path.join(dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
+            if sprconf:
+                scaled.save(os.path.join(dump_sprites_dir,f"{name}_{cidx}.png"))
+            else:
+                scaled.save(os.path.join(uncategorized_dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
 
 if False:
-    with open(os.path.join(this_dir,"sprite_config.json")) as f:
-        sprite_config = {int(k):v for k,v in json.load(f).items()}
-
-    for j,c in enumerate(["pengo","snobee"]):
-        for i in range(0x8):
-            sprite_config[0x20*j+i+0x40] = {"name":f"{c}_zooming_front_left{i}"}
-        for i in range(0x10):
-            sprite_config[0x20*j+i+0x48] = {"name":f"{c}_zooming_back_left{i}"}
-        for i in range(0x8):
-            sprite_config[0x20*j+i+0x58] = {"name":f"{c}_zooming_left_{i}"}
 
 
 
