@@ -1,4 +1,4 @@
-	.global	unknown_E000
+	.global	revolving_buffer_8_E000
 	.global	unknown_E008
 	.global	unknown_E00A
 	.global	unknown_E00B
@@ -84,7 +84,7 @@
 	.global	screen_address_E1DA
 	.global	unknown_E1DC
 	.global	unknown_E1DD
-	.global	unknown_E1DE
+	.global	offset_to_E000_E1DE
 	.global	unknown_E1DF
 	.global	unknown_E1E0
 	.global	unknown_16bit_E1E1
@@ -128,8 +128,8 @@
 	.global	unknown_E501
 	.global	unknown_E502
 	.global	unknown_E503
-	.global	unknown_16bit_E504
-	.global	unknown_16bit_E506
+	.global	fine_scroll_x_value_green_layer_E504
+	.global	fine_scroll_x_value_blue_layer_E506
 	.global	terrain_slope_type_E508
 	.global	unknown_E509
 	.global	fine_position_on_track_E50B
@@ -141,7 +141,7 @@
 	.global	unknown_E513
 	.global	unknown_E514
 	.global	nb_lives_E515
-	.global	unknown_pointer_E516
+	.global	enemy_track_data_pointer_E516
 	.global	unknown_E518
 	.global	unknown_E523
 	.global	unknown_pointer_E52E
@@ -162,7 +162,7 @@
 	.global	unknown_E800
 	.global	unknown_pointer_E0F7
 
-unknown_E000:
+revolving_buffer_8_E000:
 	ds.b	8
 unknown_E008:
 	ds.b	2
@@ -343,7 +343,7 @@ unknown_E1DC:
 	ds.b	1
 unknown_E1DD:
 	ds.b	1
-unknown_E1DE:
+offset_to_E000_E1DE:
 	ds.b	1
 unknown_E1DF:
 	ds.b	1
@@ -425,9 +425,9 @@ unknown_E502:
 	ds.b	1
 unknown_E503:
 	ds.b	1
-unknown_16bit_E504:
+fine_scroll_x_value_green_layer_E504:
 	ds.b	2
-unknown_16bit_E506:
+fine_scroll_x_value_blue_layer_E506:
 	ds.b	2
 terrain_slope_type_E508:
 	ds.b	1
@@ -452,7 +452,7 @@ unknown_E514:
 nb_lives_E515:
 	ds.b	1
 	.align	2
-unknown_pointer_E516:
+enemy_track_data_pointer_E516:
 	ds.l	1
 unknown_E518:
 	ds.b	11
