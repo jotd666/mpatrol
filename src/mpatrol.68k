@@ -3129,7 +3129,6 @@ display_title_1218:
 	move.w	d5,unknown_16bit_E0EB                 	| [$1224: ld   (unknown_16bit_E0EB),hl]
 	subq.w	#1,d5                           	| [$1227: dec  hl]
 	exg	d3,d5                              	| [$1228: ex   de,hl]
-	jbsr	osd_break
 	lea	0x0400,a3                      	| [$1229: ld   iy,$0400]
 	add.w	d3,a3                            	| [$122d: add  iy,de]
 	move.l	unknown_pointer_E0E9,a0             	| [$122f: ld   hl,(unknown_pointer_E0E9)]
@@ -3324,9 +3323,9 @@ l_1311:
 	jra	l_135a                             	| [$132f: jr   $135A]
 l_1331:
 	jbsr	l_1548                            	| [$1331: call $1548]
+	* returns 0x40 at some point (when jeep jumps in the intro)
 	rol.b	#2,d0                            	| [$1334: rlca] * 2
 	jcc	l_1363                             	| [$1336: jr   nc,$1363]
-	jbsr	osd_break
 	move.w	unknown_16bit_E31A,d5             	| [$1338: ld   hl,(unknown_16bit_E31A)]
 										| [$133b: ld   de,-$87]
 	sub.w	#0x87,d5                            	| [$133e: add  hl,de]
@@ -3358,9 +3357,6 @@ l_134a:
 	rol.w	#8,d5
 	move.w	d5,unknown_16bit_E308                 	| [$1357: ld   (unknown_16bit_E308),hl]
 l_135a:
-	* NOT REACHED WTF
-	jbsr	osd_break
-	nop
 	addq.b	#1,(a2)                    	| [$135a: inc  (ix+$00)]
 l_135d:
 	jbsr	l_1576                            	| [$135d: call $1576]
@@ -3656,8 +3652,9 @@ l_153d:
 	move.b	(a0),d0                         	| [$1546: ld   a,(hl)]
 	rts                                    	| [$1547: ret]
 l_1548:
-	move.w	unknown_E04A,d5             	| [$1548: ld   hl,(unknown_E04A)]
-	LOAD_D5D6_FROM_D5_16
+	move.b	unknown_E04A,d6             	| [$1548: ld   hl,(unknown_E04A)]
+	move.b	unknown_E04A+1,d5             	| [$1548: ld   hl,(unknown_E04A)]
+	
 	move.b	d5,d0                           	| [$154b: ld   a,h]
 	eor.b	d6,d0                            	| [$154c: xor  l]
 	and.b	d6,d0                            	| [$154d: and  l]
