@@ -1072,6 +1072,7 @@ l_055f:
 update_sprites_056D:
 ** copy E100 => C800 ($40 bytes)
 	lea	sprite_shadow_E100,a0          	| [$056d: ld   hl,sprite_shadow_E100]
+	jbsr	osd_update_sprites
 *	lea	l_C840,a1                      	| [$0570: ld   de,$C840]
 *	move.b	#0x00,d1                        	| [$0573: ld   bc,$0040] 64
 *	move.b	#0x40,d2                        	| [$0573: ld   bc,$0040] 64
@@ -1087,7 +1088,9 @@ update_sprites_056D:
 ** copy E160 => C8C0 ($40 bytes)
 *	jbsr	ldir                              	| [$0582: ldir]
 *     
-** copy E1A0 => C8A0 ($20 bytes)
+** copy E1A0 => C8A0 ($20 bytes): jeep
+* jeep body uses 7 sprites: 4 for the body
+* and 3 for the wheels which are independent
 *	lea	l_C8A0,a1                      	| [$0584: ld   de,$C8A0]
 *	move.w	#0x20,d1                        	| [$0587: ld   c,$20]
 *	jbsr	ldir                              	| [$0589: ldir]

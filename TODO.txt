@@ -1,6 +1,6 @@
-check sprite shadow ram
-
-try to implement scroll with copperlist (only lines 192-256 scroll): there are probably 4 scroll registers with 16 lines each
+- car body coords completely off, wheels seem ok
+- lockup on "insert coin" screen, typing effect seems
+  not to work
 
 
 tricks:

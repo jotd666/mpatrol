@@ -21,7 +21,16 @@ SCREEN_ADDRESS = 0x8000
 
 SCORE_FILE_SIZE = 0x50
 
+* if the alloc_sprite & update_sprite routines
+* are reused, changing those offsets can make
+* a quick reuse from game to game as most sprite
+* RAMs have 4 bytes per sprite, only the order
+* and some bits differ
 
+TARGET_SPRITE_ATTRIBUTES = 1
+TARGET_SPRITE_CODE = 2
+TARGET_SPRITE_Y = 0
+TARGET_SPRITE_X = 3
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -54,7 +63,10 @@ FG_SCREEN_PLANE_SIZE = BG_SCREEN_PLANE_SIZE
 FG_SCREEN_SIZE =  FG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
 
 NB_HOST_SPRITES = 8
-NB_TARGET_SPRITES = 8
+* hardware can take 64 sprites but game only shadows
+* 48 of them (E100-E1BF) rest is zero, which makes
+* it (slightly) simpler for us
+NB_TARGET_SPRITES = 48
 
 SPRITE_X = 0
 SPRITE_Y = 1
@@ -729,13 +741,22 @@ osd_wait:
 *	movem.l	(a7)+,a0/d0-d1
 *	rts
 
-* < A0: pointer on sprite shadow zone 65A0:
+* < A0: pointer on sprite shadow zone E100
+* length: 256 bytes for 64 max sprites on screen
+* there seem to be 4 sprite blocks of 0x40 bytes
+* in each block, first sprites have priority
+* so top priority sprite is the one with offset 0xF0
+* last priority sprite is the one with offset 0x3C
+* as it's drawn first
+* ATM let's not worry about that. Mixing bobs & sprites
+* will cause us priority issues anyway
 
 osd_update_sprites:
 	*lea		test_sprites,a0
 	* clear host sprites
 	moveq	#NB_HOST_SPRITES-1,d0
 
+	lea		sprite_table,a4
 	lea		host_sprites(pc),a2
 0:
 	clr.b	(SPRITE_X,a2)	| clear X is enough to know it's free
@@ -743,59 +764,54 @@ osd_update_sprites:
 	addq.w	#SPRITE_SIZEOF,a2
 	dbf		d0,0b
 
-	
 	* check active sprites, we'll disable the sprites that aren't active anymore
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	* code = 0 and clut = 0 => disabled
 	moveq	#0,d2
 	moveq	#0,d3
-	move.b	(a0),d2
+	move.b	(TARGET_SPRITE_CODE,a0),d2
 	beq.b	2f
-	move.b	(1,a0),d3
-	beq.b	2f
-	move.b	(3,a0),d1  | sprite Y
+	* check if real/attached sprite
+	* this part is needed when mixing sprites & bobs
+	* or when using "attached" sprites
+	* (my definition of attached sprites differs from
+	* the Amiga HW attached sprites which I don't use)
+	* here I just save a lot of sprites by displaying
+	* one 16x32 sprite instead of 2 16x16 for some objects
+	* like for instance the jeep or explosions
+	
+	* the fact that there's 0 isn't a problem either
+	* in this mixed sprite/bob port as it is probably
+	* a bob. For games like Bagman & Pengo, there are no
+	* bobs, so if a sprite doesn't exist, we have to signal it
+	* but not here. Here the filtering has to be done early
+	* else we'll allocate a sprite and figure out it's not
+	* a sprite, but it will be too late!
+
+	move.w	d2,d4
+	add.w	d4,d4
+	add.w	d4,d4
+	tst.l	(a4,d4.w)	| test pointer
+	bmi.b	2f			| attached: skip
+	beq.b	2f			| not a sprite: skip
+	
+	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	2f			| Y set to 0: not shown
-	cmp.b	#255,d1
-	beq.b	2f			| Y set to 255: not shown	
-	move.b	(2,a0),d0  | sprite X
+	not.b	d1
+	
+*	cmp.b	#255,d1
+*	beq.b	2f			| Y set to 255: not shown	
+	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
 	cmp.b	#240,d0
 	bcc.b	2f			| X >= 240: not shown	
-	* bits 6 and 7 are used to flip Y and X
-	* bit 6 is only set in cocktail mode, so we
-	* can let bit 7 pass, add 0x40 if second bank
-	* and filter it later when displaying
-	btst	#5,d3
-	beq.b	11f
-	add.w	#0x40,d2
-11:
-	and.b	#0x1F,d3	| get attributes
-12:
+
+	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
+	and.b	#0x3F,d3	| get attributes
+
 * < D2: sprite code & flags
 * < D3: sprite color (clut index)
 * > D6: allocated sprite index
-
-	* special case: elevator at screen 2 (ok at screen 3
-	* no need to change anything)
-	cmp.b	#0x33,d2
-	bne.b	21f
-	cmp.b	#0xC,d3
-	bne.b	13f
-	* elevator color hack!
-	* change clut, match player clut
-	move.b	#8,d3		| same colors but match player clut
-	bra.b	21f
-13:
-	cmp.b	#4,d3
-	bne.b	21f
-	* elevator color hack!
-	* change clut, match player clut
-	* also change elevator with different
-	* bitplanes if clut 4 so colors are respected
-	# (red instead of orange on screen 2)
-	move.b	#8,d3	| same CLUT as player so sprite alloc keeps grouping them
-	move.b	#10,d2	| but change graphics with a fake sprite derived from the original
-21:
 
 	* sprite active: allocate a sprite in host table
 	* it HAS to succeed (in Pengo it did, here I'm less sure)
@@ -807,7 +823,6 @@ osd_update_sprites:
 	* all sprites are allocated: now display them
 	lea		host_sprites(pc),a2		| input structure
 	lea		sprites,a3				| copperlist
-	lea		sprite_table,a4
 	moveq	#0,d6
 10:
 	move.b	(SPRITE_X,a2),d0
@@ -826,24 +841,23 @@ osd_update_sprites:
 	move.b	(SPRITE_Y,a2),d1
 	moveq	#0,d2
 	move.b	(SPRITE_CODE,a2),d2
-	move.b	d2,d5		| for flip bit
-	bclr	#7,d2		| clear flip bit
-	
+		
 	move.w	d2,d4
 	add.w	d4,d4
 	add.w	d4,d4
 	move.l	(a4,d4.w),d4	| get pointer
-	jmi	30f				| sprite is "attached", no need to display it
-	.ifndef	RELEASE
-	bne.b	25f
-	* sprite doesn't exist: blitz and bail out
-	blitz
-	move.b	d1,d1
-	move.b	d2,d2
-	jra		30f
-25:
-	.endif
-	
+*   filtering of BOBs & attached sprites has been done
+*   above, let's trust the values to be valid
+*	.ifndef	RELEASE
+*	bne.b	25f
+*	* sprite doesn't exist: blitz and bail out
+*	blitz
+*	move.b	d1,d1
+*	move.b	d2,d2
+*	jra		30f
+*25:
+*	.endif
+*	
 	move.l	d4,a5
 	move.w	d6,d4
 	add.w	d4,d4
@@ -851,14 +865,6 @@ osd_update_sprites:
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
 
-	move.l	(a5),d4
-	.ifndef	RELEASE
-	bne.b	22f
-	blitz		| should not happen
-	jra		30f
-22:
-	.endif
-	move.l	d4,a5	| sprite struct pointer
 	move.w	(A5)+,d3
 	cmp.w	#16,d3
 	bne.b	221f
@@ -893,6 +899,7 @@ osd_update_sprites:
 	move.l	#blank_sprite,d4
 	bra.b	25f
 24:
+	move.l	a5,d4		| sprite pointer
 	* d6 is the sprite index: compute/set proper color
 	move.w	d6,d5
 	bclr	#0,d5
@@ -1279,7 +1286,27 @@ osd_sound_start:
 	bsr		osd_sound_stop
 	jra	1b
 	
-
+	.ifndef		RELEASE
+test_sprites:
+.byte  0xad,0x07,0x42,0x78,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0000
+.byte  0x7d,0x01,0x4d,0x49,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0010
+.byte  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0020
+.byte  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0030
+.byte  0x00,0x00,0x00,0x00,0xad,0x07,0x42,0x54,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0040
+.byte  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0050
+.byte  0xad,0x07,0x42,0x78,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0060
+.byte  0x7d,0x01,0x4d,0x49,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0070
+.byte  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0080
+.byte  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x26,0x04,0x00,0x90	|	0x0090
+.byte  0x26,0x01,0x00,0x7d,0x20,0x00,0x06,0x47,0x21,0x00,0x05,0x50,0x1e,0x00,0x07,0x5d	|	0x00a0
+.byte  0x31,0x00,0x01,0x46,0x21,0x00,0x03,0x46,0x31,0x00,0x02,0x56,0x21,0x00,0x04,0x56	|	0x00b0
+.byte  0x72,0x8b,0xc6,0x94,0x72,0xfb,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x02,0x00,0x18	|	0x00c0
+.byte  0x18,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xdf,0x83,0x00,0x05,0x05,0x02	|	0x00d0
+.byte  0x00,0xbc,0x8d,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x00e0
+.byte  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x00f0
+	.endif
+	
+	
 osd_sound_stop:
 	movem.l	d0/a0/a6,-(a7)
 	lea		_custom,a6
