@@ -39,6 +39,7 @@ if dump_sprites:
 
 
 NB_POSSIBLE_SPRITES = 128
+NB_BOB_PLANES = 4
 
 rw_json = os.path.join(this_dir,"used_cluts.json")
 if os.path.exists(rw_json):
@@ -132,7 +133,7 @@ with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:
 
 
 tile_global_palette = sorted(set(tile_palette))
-tile_global_palette.append((255,255,255))
+tile_global_palette.append((193, 0, 0))
 
 with open(os.path.join(src_dir,"palette.68k"),"w") as f:
     bitplanelib.palette_dump(tile_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
@@ -228,6 +229,9 @@ transparent = (60,100,200)
 bobs_used_colors = collections.Counter()
 sprites_used_colors = collections.Counter()
 
+bitplane_cache = dict()
+plane_next_index = 0
+
 sprites = dict()
 
 for k,sprdat in enumerate(block_dict["sprite"]["data"]):
@@ -271,20 +275,60 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
 
         # only consider sprites/cluts which are pre-registered
         if sprconf:
-            if is_sprite:
-                sdata = bitplanelib.palette_image2sprite(img,None,spritepal,
-                        palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
-            else:
-                sdata = bitplanelib.palette_image2raw(img,None,spritepal,forced_nb_planes=4,
-                    palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
-            sprites[k] = {"is_sprite":is_sprite,"name":name,"bitmap":sdata,"hsize":hsize}
+            if k not in sprites:
+                sprites[k] = {"is_sprite":is_sprite,"name":name,"hsize":hsize}
+            cs = sprites[k]
 
+            if is_sprite:
+                # hardware sprites only need one bitmap data, copied 8 times to be able
+                # to be assigned several times. Doesn't happen a lot in this game for now
+                # but at least wheels have more than 1 instance
+                if "bitmap" not in cs:
+                    # create entry only if not already created (multiple cluts)
+                    # we must not introduce a all black or missing colors palette in here
+                    # (even if the CLUT may be used for this sprite) else base image will miss colors!
+                    #
+                    # example: pengo all-black enemies. If this case occurs, just omit this dummy config
+                    # the amiga engine will manage anyway
+                    #
+                    cs["bitmap"] = bitplanelib.palette_image2sprite(img,None,spritepal,
+                            palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
+            else:
+                # software sprites (bobs) need one copy of bitmaps per palette setup. There are 3 or 4 planes
+                # (4 ATM but will switch to dual playfield)
+                # but not all planes are active as game sprites have max 3 colors (+ transparent)
+                if "bitmap" not in cs:
+                    cs["bitmap"] = dict()
+
+                csb = cs["bitmap"]
+                bitplanes = bitplanelib.palette_image2raw(img,None,sprite_palette,forced_nb_planes=NB_BOB_PLANES,
+                    palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
+                bitplane_size = len(bitplanes)//(NB_BOB_PLANES+1)  # don't forget bob mask!
+
+                plane_list = []
+
+                for ci in range(0,len(bitplanes),bitplane_size):
+                    plane = bitplanes[ci:ci+bitplane_size]
+                    if not any(plane):
+                        # only zeroes
+                        plane_list.append(None)
+                    else:
+                        plane_index = bitplane_cache.get(plane)
+                        if plane_index is None:
+                            bitplane_cache[plane] = plane_next_index
+                            plane_index = plane_next_index
+                            plane_next_index += 1
+                        plane_list.append(plane_index)
+
+                csb[cidx] = plane_list
+                print(csb[cidx])
         if dump_sprites:
             scaled = ImageOps.scale(img,2,0)
             if sprconf:
                 scaled.save(os.path.join(dump_sprites_dir,f"{name}_{cidx}.png"))
             else:
                 scaled.save(os.path.join(uncategorized_dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
+dddd
 
 print("Bobs colors: {}".format(len(bobs_used_colors)))
 print("Sprites colors: {}".format(len(sprites_used_colors)))
@@ -292,6 +336,7 @@ print("Sprites colors: {}".format(len(sprites_used_colors)))
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")
     f.write("\t.global\tsprite_table\n")
+    f.write("\t.global\tbob_table\n")
 
     f.write("character_table:\n")
     for i,c in enumerate(character_codes_list):
@@ -344,9 +389,42 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                 f.write(f"{name}_{j}")
                 f.write("\n")
 
+    f.write("bob_table:\n")
+
+    bob_names = [None]*NB_POSSIBLE_SPRITES
+    for i in range(NB_POSSIBLE_SPRITES):
+        sprite = sprites.get(i)
+        f.write("\t.long\t")
+        if sprite:
+            if sprite == True or sprite["is_sprite"]:
+                f.write("-1")  # hardware sprite: ignore
+            else:
+                name = sprite["name"]
+                bob_names[i] = name
+                f.write(name)
+
+        else:
+            f.write("0")
+        f.write("\n")
+
+    for i in range(NB_POSSIBLE_SPRITES):
+        name = bob_names[i]
+        if name:
+            sprite = sprites.get(i)
+            f.write(f"{name}:\n")
+            csb = sprite["bitmap"]
+            for j in range(16):
+                b = csb.get(j)
+                f.write("\t.long\t")
+                if b:
+                    f.write(f"{name}_{j}")
+                else:
+                    f.write("0")   # clut not active
+                f.write("\n")
+
 
     f.write("\t.section\t.datachip\n")
-
+    # sprites
     for i in range(NB_POSSIBLE_SPRITES):
         name = sprite_names[i]
         if name:
@@ -357,3 +435,16 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                 sprite_label = f"{name}_{j}"
                 f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
                 bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
+
+    # blitter objects
+    for i in range(NB_POSSIBLE_SPRITES):
+        name = bob_names[i]
+        if name:
+            sprite = sprites.get(i)
+            bitmap = sprite["bitmap"]
+            for j in range(16):
+                bm = bitmap.get(j)
+                if bm:
+                    sprite_label = f"{name}_{j}"
+                    f.write(f"{sprite_label}:")
+                    bitplanelib.dump_asm_bytes(bm,f,mit_format=True)

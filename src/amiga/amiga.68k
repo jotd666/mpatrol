@@ -726,21 +726,6 @@ osd_wait:
 	bne.b	2b
 	rts
 	
-*osd_calibrate_display:
-*	movem.l	a0/d0-d1,-(a7)
-*	move.l	bg_drawed_screen_ptr,a0
-*	move.w	#NB_LINES-1,d1
-*	clr		d0
-*0:
-*	st.b	(8,a0,d0.W)
-*	st.b	(9,a0,d0.W)
-*	st.b	(10,a0,d0.W)
-*	
-*	add.w	#NB_BYTES_PER_ROW,d0
-*	dbf		D1,0b
-*	movem.l	(a7)+,a0/d0-d1
-*	rts
-
 * < A0: pointer on sprite shadow zone E100
 * length: 256 bytes for 64 max sprites on screen
 * there seem to be 4 sprite blocks of 0x40 bytes

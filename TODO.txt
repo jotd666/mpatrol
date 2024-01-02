@@ -1,10 +1,15 @@
 - car body coords completely off, wheels seem ok
+  check wheels sprite shadow how it's computed, relate
+  to how body X,Y base is computed
 - lockup on "insert coin" screen, typing effect seems
   not to work
 
+- declare tiles & cluts manually (with playfield info)
 
 tricks:
 
+- use bobs palette for playfield (after status bar)
+- "moon patrol" title displayed: switch to tiles palette for 8 first colors
 
 - dual playfield: all 3 layers of ground, green & blue together, no scroll
 - update green & blue not all the time (slow scroll)

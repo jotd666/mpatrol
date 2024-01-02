@@ -10,6 +10,39 @@ palette_name = "palette0 *_0000.txt"
 groups = {0:{"name":"tile"},1:{"name":"sprite"}}
 text_bitmap = " .=#"
 
+
+
+def process_background_layer(layer_image_path):
+    img = Image.open(layer_image_path)
+
+    # collect colors. 4 max
+    palette = set()
+    matrix = []
+    for y in range(img.size[1]):
+        line_colors = set()
+        line = []
+        for x in range(img.size[0]):
+            pixel = img.getpixel((x,y))
+            line.append(pixel)
+            line_colors.add(pixel)
+            palette.add(pixel)
+        matrix.append(line)
+        xx = set(line_colors)
+        if len(xx)==1:
+            # from now on only uniform color: stop there
+            matrix.pop()
+            break
+
+    # convert RGB to palette
+    palette = sorted(palette)  # black is first this way
+    if len(palette)>4:
+        raise Exception(f"Palette is too big for {layer_image_path}")
+    palette = {rgb:i for i,rgb in enumerate(palette)}
+    matrix = [[palette[x] for x in line] for line in matrix]
+    return {"data":matrix,"palette":list(palette)}
+
+background_dict = {image:process_background_layer(os.path.join(indir,image+".png")) for image in ["blue_mountains","green_mountains","green_city"]}
+
 def read_palette(palette_name):
     # dumped text file has a damn BOM
     palette_file = glob.glob(os.path.join(indir,palette_name))
@@ -202,3 +235,12 @@ if True:
             else:
                 f.write("  ")
         f.write("\n};\n")
+
+        for k,data in background_dict.items():
+            f.write(f"""uint8_t {k}_palette[4][3] =
+    {{
+""")
+
+            for p in data["palette"]:
+                f.write("{{ {:3d},{:3d},{:3d} }},".format(*p))
+            f.write("\n};\n")
