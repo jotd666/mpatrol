@@ -1,7 +1,7 @@
 # generate equivalent of Mark C format _gfx.* from MAME tilesaving edition gfxrips
 
 from PIL import Image,ImageOps
-import os,glob,collections,itertools
+import os,glob,collections,itertools,bitplanelib
 
 this_dir = os.path.abspath(os.path.dirname(__file__))
 game_name = "mpatrol"
@@ -12,7 +12,7 @@ text_bitmap = " .=#"
 
 
 
-def process_background_layer(layer_image_path):
+def process_background_layer(layer_image_path,global_palette):
     img = Image.open(layer_image_path)
 
     # collect colors. 4 max
@@ -28,7 +28,7 @@ def process_background_layer(layer_image_path):
             palette.add(pixel)
         matrix.append(line)
         xx = set(line_colors)
-        if len(xx)==1:
+        if y>10 and len(xx)==1:
             # from now on only uniform color: stop there
             matrix.pop()
             break
@@ -37,11 +37,23 @@ def process_background_layer(layer_image_path):
     palette = sorted(palette)  # black is first this way
     if len(palette)>4:
         raise Exception(f"Palette is too big for {layer_image_path}")
-    palette = {rgb:i for i,rgb in enumerate(palette)}
-    matrix = [[palette[x] for x in line] for line in matrix]
-    return {"data":matrix,"palette":list(palette)}
 
-background_dict = {image:process_background_layer(os.path.join(indir,image+".png")) for image in ["blue_mountains","green_mountains","green_city"]}
+    # quick lookup
+    palette = {rgb:i for i,rgb in enumerate(global_palette)}
+    matrix = [[palette[x] for x in line] for line in matrix]
+    return matrix
+
+global_background_palette = set()
+
+backgrounds = ["green_mountains","blue_mountains","green_city"]
+
+# we need a global palette for the backgrounds
+for image in backgrounds:
+    global_background_palette.update(bitplanelib.palette_extract(os.path.join(indir,image+".png")))
+
+global_background_palette = sorted(global_background_palette)
+
+background_dict = {image:process_background_layer(os.path.join(indir,image+".png"),global_background_palette) for image in backgrounds}
 
 def read_palette(palette_name):
     # dumped text file has a damn BOM
@@ -236,11 +248,28 @@ if True:
                 f.write("  ")
         f.write("\n};\n")
 
-        for k,data in background_dict.items():
-            f.write(f"""uint8_t {k}_palette[4][3] =
+        f.write(f"""uint8_t background_palette[8][3] =
     {{
 """)
 
-            for p in data["palette"]:
-                f.write("{{ {:3d},{:3d},{:3d} }},".format(*p))
-            f.write("\n};\n")
+        for p in global_background_palette:
+            f.write("{{ {:3d},{:3d},{:3d} }},".format(*p))
+        f.write("\n};\n")
+
+        for image,matrix in background_dict.items():
+            f.write(f"""uint8_t {image}[256][{len(matrix)}] =
+    {{
+""")
+            for row in matrix:
+                f.write("  {\n    ")
+                nb_elts = 0
+                for elt in row:
+                    f.write(f"0x{elt:02x},")
+                    nb_elts += 1
+                    if nb_elts == 16:
+                        nb_elts = 0
+                        f.write("\n    ")
+                f.write("  },\n")
+            f.write("\n  };\n")
+
+

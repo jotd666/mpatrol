@@ -86,8 +86,9 @@ with open(os.path.join(this_dir,"..","mpatrol_gfx.c")) as f:
         txt = "".join(block).strip().strip(";")
         block_dict[block_name] = {"size":size,"data":ast.literal_eval(txt)}
 
+
 # block_dict structure is as follows:
-# dict_keys(['tile', 'sprite', 'sprite_clut', 'sprite_palette', 'tile_palette'])
+# dict_keys(['tile', 'sprite', 'sprite_clut', 'sprite_palette', 'tile_palette', 'background_palette', 'green_mountains', 'blue_mountains', 'green_city'])
 
 # 88 colors but only 15 unique colors, but organized like linear cluts which probably explains
 # the high number of color slots but low number of colors. 88 = 11 cluts for 4 consecutive colors
@@ -122,6 +123,13 @@ sprite_cluts = [[sprite_palette[i] for i in clut] for clut in block_dict['sprite
 ##    img.save(out)
 
 
+
+# dump cluts as RGB4 for sprites
+with open(os.path.join(src_dir,"background_palette.68k"),"w") as f:
+    f.write(f"background_palette:")
+    rgb4 = [bitplanelib.to_rgb4_color(rgb) for rgb in block_dict["background_palette"]["data"]]
+    rgb4 += [0]*(8-len(rgb4))
+    bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
 
 
 # dump cluts as RGB4 for sprites
@@ -321,14 +329,12 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                         plane_list.append(plane_index)
 
                 csb[cidx] = plane_list
-                print(csb[cidx])
         if dump_sprites:
             scaled = ImageOps.scale(img,2,0)
             if sprconf:
                 scaled.save(os.path.join(dump_sprites_dir,f"{name}_{cidx}.png"))
             else:
                 scaled.save(os.path.join(uncategorized_dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
-dddd
 
 print("Bobs colors: {}".format(len(bobs_used_colors)))
 print("Sprites colors: {}".format(len(sprites_used_colors)))
@@ -422,6 +428,24 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                     f.write("0")   # clut not active
                 f.write("\n")
 
+    # blitter objects (bitplanes refs, can be in fastmem)
+    for i in range(NB_POSSIBLE_SPRITES):
+        name = bob_names[i]
+        if name:
+            sprite = sprites.get(i)
+            bitmap = sprite["bitmap"]
+            for j in range(16):
+                bm = bitmap.get(j)
+                if bm:
+                    sprite_label = f"{name}_{j}"
+                    f.write(f"{sprite_label}:\n")
+                    for plane_id in bm:
+                        f.write("\t.long\t")
+                        if plane_id is None:
+                            f.write("0")
+                        else:
+                            f.write(f"plane_{plane_id}")
+                        f.write("\n")
 
     f.write("\t.section\t.datachip\n")
     # sprites
@@ -436,15 +460,32 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                 f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
                 bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
 
-    # blitter objects
-    for i in range(NB_POSSIBLE_SPRITES):
-        name = bob_names[i]
-        if name:
-            sprite = sprites.get(i)
-            bitmap = sprite["bitmap"]
-            for j in range(16):
-                bm = bitmap.get(j)
-                if bm:
-                    sprite_label = f"{name}_{j}"
-                    f.write(f"{sprite_label}:")
-                    bitplanelib.dump_asm_bytes(bm,f,mit_format=True)
+    f.write("\n* bitplanes\n")
+    # dump bitplanes
+    for k,v in bitplane_cache.items():
+        f.write(f"plane_{v}:")
+        bitplanelib.dump_asm_bytes(k,f,mit_format=True)
+
+    f.write("\n* backgrounds\n")
+    backgrounds = ['blue_mountains', 'green_mountains', 'green_city']
+    background_palette = [tuple(x) for x in block_dict["background_palette"]["data"]]
+    for b in backgrounds:
+        f.write(f"{b}:\n")
+        data = block_dict[b]["data"]
+        nb_rows = len(data)
+        # first write number of rows, which differ from one background to another
+        f.write(f"\t.word\t{nb_rows}")
+        # then the data itself
+        img = Image.new("RGB",(512,nb_rows))
+        # convert data to picture, twice as large so can be blit-scrolled
+        for y,d in enumerate(data):
+            v = iter(d)
+            for x in range(256):
+                cidx = next(v)
+                rgb = background_palette[cidx]
+                img.putpixel((x,y),rgb)
+                img.putpixel((x+256,y),rgb)
+        # dump, we don't need a mask for the blue layer as it's behind
+        raw = bitplanelib.palette_image2raw(img,None,background_palette,forced_nb_planes=3,
+                    palette_precision_mask=0xFF,generate_mask="green" in backgrounds,blit_pad=True)
+        bitplanelib.dump_asm_bytes(raw,f,mit_format=True)

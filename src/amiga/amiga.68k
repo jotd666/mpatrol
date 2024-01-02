@@ -973,7 +973,7 @@ blit_planes_any_internal_cookie_cut:
 	beq.b	3f
     lsl.l   #8,d6
     lsl.l   #4,d6
-    or.w    d6,d5            | add shift to mask (bplcon1)
+    or.w    d6,d5            | add shift to mask (bltcon1)
     swap    d6
     clr.w   d6
     or.l    d6,d5            | add shift
@@ -1452,7 +1452,7 @@ platform_init:
     move.w #0x2C89,diwstop(a5)
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
-    move.w #0x200+(NB_PLAYFIELD_PLANES<<12),bplcon0(a5) | 5 bitplanes
+    *move.w #0x200+(NB_PLAYFIELD_PLANES<<12),bplcon0(a5)
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 	* AGA-compatible ECS default values
     move.w #0x0C00,bplcon3(a5)     | no AGA specificities, default ECS
@@ -1534,16 +1534,25 @@ load_palette_in_copperlist:
 	movem.l	d0-d1/a0-a1,-(a7)
 	lea		palette,a0
 
-	move.w	#TOTAL_NB_COLORS-1,d0
-	lea		copperlist_colors+2,a1
-1:
-	move.w	(a0)+,(a1)+
-	addq.w	#2,a1
-	dbf		d0,1b
+	move.w	#TOTAL_NB_COLORS,d0
+	lea		panel_tiles_colors,a1
+	bsr		load_palette
 		
 	movem.l	(a7)+,d0-d1/a0-a1
 	rts
-	
+
+* < A0: palette
+* < A1: copperlist
+* < D0: number of colors to load	
+load_palette:
+	subq.w	#1,d0
+	beq.b	2f
+1:
+	addq.w	#2,a1
+	move.w	(a0)+,(a1)+
+	dbf		d0,1b
+2:
+	rts
 	
 	
 * 60Hz VBLANK interrupt (also keyboard)
@@ -2474,13 +2483,15 @@ blank_sprite:
 	
 	* main copperlist
 copperlist:
-    *.word   0x1801,0xFFFE	
+    *.word   0x1801,0xFFFE
+	* no dual playfield, 4 planes (for status panel)
+	.word	bplcon0
+	.word	0x200+(4<<12)
 	* no scrolling
 	.word	bplcon1,0
-
 bg_bitplanes:
 	DECL_BITPLANES	0
-copperlist_colors:
+panel_tiles_colors:
 	DECL_16_COLORS	0
 sprite_cols:
 	DECL_16_COLORS	16
