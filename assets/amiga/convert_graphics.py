@@ -215,7 +215,7 @@ add_sprite_block(0x3E,0x3F,"explosion",7,False)
 add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
 add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
 add_sprite_block(0x61,0x6F,"ground_explosion",3,False)
-add_sprite_block(0x4B,0x4D,"ship_bomb",3,False)
+add_sprite_block(0x4B,0x4D,"ship_bomb",1,False)
 add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},True)
 add_sprite_block(0x3D,0x3D,"mine",{3,10},False)
 add_sprite_block(0x39,0x39,"tank_shot",4,True)   # maybe wrong clut
