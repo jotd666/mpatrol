@@ -56,7 +56,7 @@ _custom = 0xDFF000
 NB_PLAYFIELD_PLANES = 6
 TOTAL_NB_COLORS = 16
 NB_BYTES_PER_ROW = 40
-NB_LINES = 288
+NB_LINES = 256
 NB_PLAYFIELD_LINES = NB_LINES
 
 BG_SCREEN_PLANE_SIZE = NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
@@ -1160,10 +1160,9 @@ start_process_1_plane:
 * (expecting the dynamic copperlist to be reset each time)
 blit_background_layer:
 	lea		_custom,A5
-	move.b	#0,0x200
 	lea		blue_mountains,a0
-	move.l	bg_drawed_screen_ptr,a1
-	add.w	#(PANEL_MAX_Y+10)*NB_BYTES_PER_ROW+BG_SCREEN_PLANE_SIZE,a1
+	move.l	bg_drawed_screen_ptr(pc),a1
+	add.w	#(PANEL_MAX_Y+8)*NB_BYTES_PER_ROW,a1
 	lea		mulNB_BYTES_PER_ROW_table,a2
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
@@ -1171,6 +1170,7 @@ blit_background_layer:
 	lsr.w	#4,d2
 	move.w	(a0)+,d4		| source height
 	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
+
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
 	movem.l	d3-d4,-(a7)
     move.l  #0x09f00000,d3    | A->D copy, ascending mode
@@ -1199,7 +1199,7 @@ blit_background_layer:
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-
+	jbsr	osd_break
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
 
@@ -1212,10 +1212,9 @@ blit_background_layer:
 
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
-
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
-	* plane 2
+	* plane 2 (all zeroes with the palette we've chosen)
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
@@ -1493,7 +1492,7 @@ switch_screen_buffers:
 2:
 	move.l	a1,(a0)
 	move.l	a5,(a4)
-	jbsr		set_bg_bitplanes
+	jbsr		set_bitplanes
 	.endif
 	
 	rts
@@ -1647,7 +1646,7 @@ platform_init:
 	addq.w	#8,a1
 	dbf		d1,0b
 	
-	bsr		set_bg_bitplanes
+	bsr		set_bitplanes
 	
 	bsr		load_palette_in_copperlist
 	
@@ -1706,7 +1705,11 @@ load_palette_in_copperlist:
 	move.w	#TOTAL_NB_COLORS,d0
 	lea		panel_tiles_colors,a1
 	bsr		load_palette
-		
+	
+	move.w	#8,d0
+	lea		background_palette(pc),a0
+	lea		playfield_1_colors,a1
+	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
 	rts
 
@@ -2025,19 +2028,34 @@ HW_SpriteYTable_\height:
 * in the first 48 lines but we're talking about 48*40*2 = 3840 bytes...
 * maybe we can use that memory for something at some point.
 
-set_bg_bitplanes:
+set_bitplanes:
     move.l	bg_displayed_screen_ptr(pc),a0
-    moveq #NB_PLAYFIELD_PLANES-1,d1
+    moveq #4-1,d1
 	move.l	a0,d0
     lea	panel_bitplanes+2,a0
-	move.l	#BG_SCREEN_PLANE_SIZE,d2
+	moveq	#0,d2
+	move.w	#BG_SCREEN_PLANE_SIZE,d2
 1:
     swap d0
     move.w d0,(a0)
     swap d0
     move.w d0,(4,a0)    
     addq.w  #8,a0
-    add.l d2,d0
+    add.l d2,d0		| LONG!
+    dbf d1,1b
+
+    move.l	bg_displayed_screen_ptr(pc),a0
+	add.w	#PANEL_MAX_Y*NB_BYTES_PER_ROW,a0
+    moveq #NB_PLAYFIELD_PLANES-1,d1
+	move.l	a0,d0
+    lea	playfield_bitplanes+2,a0
+1:
+    swap d0
+    move.w d0,(a0)
+    swap d0
+    move.w d0,(4,a0)    
+    addq.w  #8,a0
+    add.l d2,d0		| LONG!
     dbf d1,1b
     rts
 
@@ -2665,6 +2683,13 @@ tile_log_table:
 	.set	colidx,colidx+1
 	.endr
 	.endm
+.macro	DECL_8_COLORS	offset
+	.set	colidx,\offset
+	.rept	8
+	dc.w	color+(colidx*2),0
+	.set	colidx,colidx+1
+	.endr
+	.endm
 
 blank_sound:
 	ds.l	4
@@ -2687,10 +2712,11 @@ copperlist:
 	* no dual playfield, 4 planes (for status panel)
 	.word	bplcon0
 	.word	0x200+(4<<12)
+	
 	* no scrolling
 	.word	bplcon1,0
 panel_bitplanes:
-	DECL_BITPLANES	0,6
+	DECL_BITPLANES	0,4
 panel_tiles_colors:
 	DECL_16_COLORS	0
 sprite_cols:
@@ -2725,8 +2751,17 @@ sprites:
  	.set    beampos,0x5401
     .word  beampos,0xFFFE
 	* now the tricky part: switch to dual playfield
-	*.word	bplcon0
-	*.word	0x6600
+	* this is not optimal as it leaves a 8 high blank space
+	* when it switches maybe because all the color & bitplane writes
+	.word	bplcon0
+	.word	0x6600
+playfield_bitplanes:
+	DECL_BITPLANES	0,6
+playfield_1_colors:
+	DECL_8_COLORS	0
+	*.word	color,0xF00
+playfield_2_colors:
+	*DECL_8_COLORS	8
 
 	* now use the dynamic color changing technique to make up for the sudden
 	* loss of 8 (24 if we were considering using 32) colors thanks to cheap
@@ -2767,7 +2802,6 @@ color_line_copper:
 	.align	8
 	
 		.section .bsschip
-
 bg_screen_data_1:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3

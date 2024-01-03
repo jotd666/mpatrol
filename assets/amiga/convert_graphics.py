@@ -99,31 +99,6 @@ sprite_palette = [tuple(x) for x in block_dict['sprite_palette']["data"]]
 sprite_cluts = [[sprite_palette[i] for i in clut] for clut in block_dict['sprite_clut']["data"]]
 
 
-##def dump_rgb_cluts(rgb_cluts,name):
-##    out = os.path.join(dump_dir,f"{name}_cluts.png")
-##    w = 16
-##    nb_clut_per_row = 4
-##    img = Image.new("RGB",(w*(nb_clut_per_row+1)*4,w*len(rgb_cluts)//nb_clut_per_row))
-##    x = 0
-##    y = 0
-##    row_count = 0
-##    for clut in rgb_cluts:
-##        # undo the clut correction so it's the same as MAME
-##        for color in [clut[0],clut[2],clut[1],clut[3]]:
-##            for dx in range(w):
-##                for dy in range(w):
-##                    img.putpixel((x+dx,y+dy),color)
-##            x += dx
-##        row_count += 1
-##        if row_count == 4:
-##            x = 0
-##            y += dy
-##            row_count = 0
-##
-##    img.save(out)
-
-
-
 # dump cluts as RGB4 for sprites
 with open(os.path.join(src_dir,"background_palette.68k"),"w") as f:
     rgb4 = [bitplanelib.to_rgb4_color(rgb) for rgb in block_dict["background_palette"]["data"]]
@@ -476,7 +451,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         nb_rows = len(data)
         # first write number of rows, then number of bytes total, which differ from one background to another
         # = number of rows * ((512/16)+2) (there's a blit shift mask like all shiftable bobs)
-        f.write(f"\t.word\t{nb_rows},{nb_rows*((512//16)+2)}")
+        f.write(f"\t.word\t{nb_rows},{nb_rows*((512//8)+2)}")
         # then the data itself
         img = Image.new("RGB",(512,nb_rows))
         # convert data to picture, twice as large so can be blit-scrolled
@@ -491,4 +466,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
 
         raw = bitplanelib.palette_image2raw(img,None,background_palette,forced_nb_planes=3,
                     palette_precision_mask=0xFF,generate_mask="green" in backgrounds,blit_pad=True)
-        bitplanelib.dump_asm_bytes(raw,f,mit_format=True)
+        plane_size = len(raw)//3
+        for z in range(3):
+            f.write(f"\n* plane {z} ({plane_size} bytes)")
+            bitplanelib.dump_asm_bytes(raw[z*plane_size:(z+1)*plane_size],f,mit_format=True)

@@ -18,7 +18,19 @@ def process_background_layer(layer_image_path,global_palette):
     # collect colors. 4 max
     palette = set()
     matrix = []
-    for y in range(img.size[1]):
+
+    # first compute max y by looking for a non-uniform line
+    # starting from the bottom
+    for y in reversed(range(img.size[1])):
+        line_colors = set()
+        for x in range(img.size[0]):
+            pixel = img.getpixel((x,y))
+            line_colors.add(pixel)
+        if len(line_colors) != 1:
+            break
+
+
+    for y in range(max_y):
         line_colors = set()
         line = []
         for x in range(img.size[0]):
@@ -27,11 +39,7 @@ def process_background_layer(layer_image_path,global_palette):
             line_colors.add(pixel)
             palette.add(pixel)
         matrix.append(line)
-        xx = set(line_colors)
-        if y>10 and len(xx)==1:
-            # from now on only uniform color: stop there
-            matrix.pop()
-            break
+
 
     # convert RGB to palette
     palette = sorted(palette)  # black is first this way
