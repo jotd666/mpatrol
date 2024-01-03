@@ -743,7 +743,7 @@ osd_update_sprites:
 	move.w	#0,d0     | X position of blue layer (0-256)
 	move.w	#0,d1     | X position of green layer (0-256)
 	move.w	#0,d2     | Y position of blue layer
-	move.w	#0,d3     | Y position of green layer
+	move.w	#20,d3     | Y position of green layer
 	moveq	#0,d4     | 0: green mountains, 1: green city
 	bsr		blit_background_layer
 	move.l	(a7)+,a0
@@ -1160,10 +1160,12 @@ start_process_1_plane:
 * (expecting the dynamic copperlist to be reset each time)
 blit_background_layer:
 	lea		_custom,A5
-	lea		blue_mountains,a0
 	move.l	bg_drawed_screen_ptr(pc),a1
 	add.w	#(PANEL_MAX_Y+8)*NB_BYTES_PER_ROW,a1
 	lea		mulNB_BYTES_PER_ROW_table,a2
+	movem.l	d0-d4/a1,-(a7)
+	
+	lea		blue_mountains,a0
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
@@ -1172,7 +1174,6 @@ blit_background_layer:
 	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
 
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
-	movem.l	d3-d4,-(a7)
     move.l  #0x09f00000,d3    | A->D copy, ascending mode
 	* blit height
 	lsl.w	#6,d4
@@ -1199,7 +1200,6 @@ blit_background_layer:
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	jbsr	osd_break
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
 
@@ -1219,7 +1219,92 @@ blit_background_layer:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
-	movem.l	(a7)+,d3-d4
+	* green part
+	
+	movem.l	(a7)+,d0-d4/a1
+	lea		green_mountains,a0
+	tst.b	d4
+	beq.b	0f
+	lea		green_city,a0
+0:
+	move.w	d3,d2	| same as blue now
+	move.w	d1,d0
+	
+	add.w	d2,d2
+	add.w	(a2,d2.w),a1	| adds Y*40
+	move.w	d0,d2
+	lsr.w	#4,d2
+	move.w	(a0)+,d4		| source height
+	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
+
+	add.w	d2,a0			| adds X/16 to source (destination X = 0)
+    move.l  #0x0fca0000,d3    | B+C-A->D cookie cut   
+
+	* blit height
+	lsl.w	#6,d4
+	add.w	#20,d4		| size: the whole screen
+	* insert shifting in D3 bltcon config
+	and.w	#0xF,d0		| shifting 0-15
+	* apply to bltcon (destination & mask)
+    swap    d0
+    clr.w   d0
+    lsl.l   #8,d0
+    lsl.l   #4,d0
+    or.l    d0,d3
+	swap	d3
+	or.l	d0,d3
+	swap	d3
+	
+	* compute mask
+	move.l	a0,a3
+	add.w	d5,a3
+	add.w	d5,a3
+	add.w	d5,a3
+
+	jbsr	osd_break
+	
+    * always the same settings
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+
+	* plane 0
+	move.l d3,bltcon0(a5)	| sets con0 and con1
+    move.w  #26,bltamod(a5)	|A (mask) modulo: 66 bytes per row - 40 used
+    move.w  #26,bltbmod(a5)	|B (data) modulo: 66 bytes per row - 40 used
+    move.w  #0,bltcmod(a5)	|D modulo: 0 full line is drawn
+    move.w  #0,bltdmod(a5)	|D modulo: 0 full line is drawn
+
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	add.w	d5,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	* plane 1
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
+	add.w	d5,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	* plane 2
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
 	rts
 	
 

@@ -465,8 +465,9 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         # dump, we don't need a mask for the blue layer as it's behind
 
         raw = bitplanelib.palette_image2raw(img,None,background_palette,forced_nb_planes=3,
-                    palette_precision_mask=0xFF,generate_mask="green" in backgrounds,blit_pad=True)
-        plane_size = len(raw)//3
-        for z in range(3):
+                    palette_precision_mask=0xFF,generate_mask="green" in b,blit_pad=True)
+        nb_planes = 4 if "green" in b else 3
+        plane_size = len(raw)//nb_planes
+        for z in range(nb_planes):
             f.write(f"\n* plane {z} ({plane_size} bytes)")
             bitplanelib.dump_asm_bytes(raw[z*plane_size:(z+1)*plane_size],f,mit_format=True)
