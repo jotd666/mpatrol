@@ -126,7 +126,6 @@ sprite_cluts = [[sprite_palette[i] for i in clut] for clut in block_dict['sprite
 
 # dump cluts as RGB4 for sprites
 with open(os.path.join(src_dir,"background_palette.68k"),"w") as f:
-    f.write(f"background_palette:")
     rgb4 = [bitplanelib.to_rgb4_color(rgb) for rgb in block_dict["background_palette"]["data"]]
     rgb4 += [0]*(8-len(rgb4))
     bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
@@ -134,7 +133,6 @@ with open(os.path.join(src_dir,"background_palette.68k"),"w") as f:
 
 # dump cluts as RGB4 for sprites
 with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:
-    f.write(f"sprite_cluts:")
     for clut in sprite_cluts:
         rgb4 = [bitplanelib.to_rgb4_color(x) for x in clut]
         bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
@@ -343,6 +341,9 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")
     f.write("\t.global\tsprite_table\n")
     f.write("\t.global\tbob_table\n")
+    f.write("\t.global\tblue_mountains\n")
+    f.write("\t.global\tgreen_mountains\n")
+    f.write("\t.global\tgreen_city\n")
 
     f.write("character_table:\n")
     for i,c in enumerate(character_codes_list):
@@ -473,8 +474,9 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         f.write(f"{b}:\n")
         data = block_dict[b]["data"]
         nb_rows = len(data)
-        # first write number of rows, which differ from one background to another
-        f.write(f"\t.word\t{nb_rows}")
+        # first write number of rows, then number of bytes total, which differ from one background to another
+        # = number of rows * ((512/16)+2) (there's a blit shift mask like all shiftable bobs)
+        f.write(f"\t.word\t{nb_rows},{nb_rows*((512//16)+2)}")
         # then the data itself
         img = Image.new("RGB",(512,nb_rows))
         # convert data to picture, twice as large so can be blit-scrolled
@@ -486,6 +488,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                 img.putpixel((x,y),rgb)
                 img.putpixel((x+256,y),rgb)
         # dump, we don't need a mask for the blue layer as it's behind
+
         raw = bitplanelib.palette_image2raw(img,None,background_palette,forced_nb_planes=3,
                     palette_precision_mask=0xFF,generate_mask="green" in backgrounds,blit_pad=True)
         bitplanelib.dump_asm_bytes(raw,f,mit_format=True)
