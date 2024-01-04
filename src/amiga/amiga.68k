@@ -53,7 +53,7 @@ OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
 _custom = 0xDFF000
 
 
-NB_PLAYFIELD_PLANES = 6
+NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 16
 NB_BYTES_PER_ROW = 40
 NB_LINES = 256
@@ -1113,7 +1113,7 @@ blit_planes_any_internal_cookie_cut:
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1	| dual playfield: double the offset
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 	WAIT_BLIT
 	dbf		d3,6b
 7:
@@ -1201,7 +1201,7 @@ blit_background_layer:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
@@ -1211,7 +1211,7 @@ blit_background_layer:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
 	* plane 2 (all zeroes with the palette we've chosen)
@@ -1261,7 +1261,6 @@ blit_background_layer:
 	add.w	d5,a3
 	add.w	d5,a3
 
-	jbsr	osd_break
 	
     * always the same settings
 
@@ -1283,7 +1282,7 @@ blit_background_layer:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
@@ -1295,7 +1294,7 @@ blit_background_layer:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE*2,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
 	* plane 2
@@ -1791,9 +1790,9 @@ load_palette_in_copperlist:
 	lea		panel_tiles_colors,a1
 	bsr		load_palette
 	
-	move.w	#8,d0
+	move.w	#4,d0
 	lea		background_palette(pc),a0
-	lea		playfield_1_colors,a1
+	lea		playfield_colors,a1
 	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
 	rts
@@ -2129,19 +2128,6 @@ set_bitplanes:
     add.l d2,d0		| LONG!
     dbf d1,1b
 
-    move.l	bg_displayed_screen_ptr(pc),a0
-	add.w	#PANEL_MAX_Y*NB_BYTES_PER_ROW,a0
-    moveq #NB_PLAYFIELD_PLANES-1,d1
-	move.l	a0,d0
-    lea	playfield_bitplanes+2,a0
-1:
-    swap d0
-    move.w d0,(a0)
-    swap d0
-    move.w d0,(4,a0)    
-    addq.w  #8,a0
-    add.l d2,d0		| LONG!
-    dbf d1,1b
     rts
 
 
@@ -2761,20 +2747,14 @@ tile_log_table:
 	.endr
 	.endm
 
-.macro	DECL_16_COLORS	offset
+.macro	DECL_COLORS	offset,nb_colors
 	.set	colidx,\offset
-	.rept	16
+	.rept	\nb_colors
 	dc.w	color+(colidx*2),0
 	.set	colidx,colidx+1
 	.endr
 	.endm
-.macro	DECL_8_COLORS	offset
-	.set	colidx,\offset
-	.rept	8
-	dc.w	color+(colidx*2),0
-	.set	colidx,colidx+1
-	.endr
-	.endm
+
 
 blank_sound:
 	ds.l	4
@@ -2803,9 +2783,9 @@ copperlist:
 panel_bitplanes:
 	DECL_BITPLANES	0,4
 panel_tiles_colors:
-	DECL_16_COLORS	0
+	DECL_COLORS	16,0
 sprite_cols:
-	DECL_16_COLORS	16
+	DECL_COLORS	16,16
 sprites:
     * #0
     .word    sprpt+0,0
@@ -2833,20 +2813,14 @@ sprites:
     .word    sprpt+30,0
 
 	* wait until line 48, just after the status panel is displayed
+	* to change palette
  	.set    beampos,0x5401
     .word  beampos,0xFFFE
-	* now the tricky part: switch to dual playfield
-	* this is not optimal as it leaves a 8 high blank space
-	* when it switches maybe because all the color & bitplane writes
-	.word	bplcon0
-	.word	0x6600
-playfield_bitplanes:
-	DECL_BITPLANES	0,6
-playfield_1_colors:
-	DECL_8_COLORS	0
+
+playfield_colors:
+	DECL_COLORS	4,0
 	*.word	color,0xF00
-playfield_2_colors:
-	*DECL_8_COLORS	8
+
 
 	* now use the dynamic color changing technique to make up for the sudden
 	* loss of 8 (24 if we were considering using 32) colors thanks to cheap
