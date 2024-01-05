@@ -54,7 +54,7 @@ _custom = 0xDFF000
 
 
 NB_PLAYFIELD_PLANES = 4
-TOTAL_NB_COLORS = 16
+TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
 NB_BYTES_PER_ROW = 40
 NB_LINES = 256
 NB_PLAYFIELD_LINES = NB_LINES
@@ -1020,7 +1020,7 @@ blit_planes_cookie_cut_16x:
     lea _custom,A5
 	move.w	d2,d5
 	move.w	d3,d4
-	moveq	#4,d3		| 4 planes: TO CHANGE dual playfield
+	moveq	#4,d3		| 4 planes
     moveq  #4,d2       | 16 pixels + 2 shift bytes
 * < A5: custom
 * < D0.W,D1.W: x,y
@@ -1166,12 +1166,15 @@ blit_background_layer:
 	movem.l	d0-d4/a1,-(a7)
 	
 	lea		blue_mountains,a0
+	
+	move.w	(a0)+,d4		| source height
+	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
+	move.w	d4,d7
+	add.w	d2,d7			| Y position to set blue color as color 0
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
 	lsr.w	#4,d2
-	move.w	(a0)+,d4		| source height
-	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
 
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
     move.l  #0x09f00000,d3    | A->D copy, ascending mode
@@ -1229,13 +1232,18 @@ blit_background_layer:
 0:
 	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
+
+	move.w	(a0)+,d4		| source height
+	move.w	d4,d6
+	add.w	d3,d6			| Y pos to change color 0 for green
+	
+	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
+
 	
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
 	lsr.w	#4,d2
-	move.w	(a0)+,d4		| source height
-	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
 
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
     move.l  #0x0fca0000,d3    | B+C-A->D cookie cut   
@@ -1304,6 +1312,20 @@ blit_background_layer:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
+	* set copper color 0 to green (color 4 of bobs palette)
+	* at the proper row
+	lea		color_line_copper,a0
+	* Y minus panel Y max times 16 (3 longwords per line in copperlist + wait)
+	lea		bobs_palette(pc),a1
+	lsl.w	#4,d6
+
+	move.w	#color,(A0,d6.w)
+	move.w	(8,a1),(2,a0,d6.w)
+	lsl.w	#4,d7
+	
+
+	move.w	#color,(A0,d7.w)
+	move.w	(6,a1),(2,a0,d7.w)
 	rts
 	
 
@@ -1784,14 +1806,14 @@ platform_init:
 	
 load_palette_in_copperlist:
 	movem.l	d0-d1/a0-a1,-(a7)
-	lea		palette,a0
+	lea		tiles_palette(pc),a0
 
 	move.w	#TOTAL_NB_COLORS,d0
 	lea		panel_tiles_colors,a1
 	bsr		load_palette
 	
-	move.w	#4,d0
-	lea		background_palette(pc),a0
+	move.w	#TOTAL_NB_COLORS,d0
+	lea		bobs_palette(pc),a0
 	lea		playfield_colors,a1
 	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
@@ -2469,7 +2491,7 @@ handle_keyboard:
 
 reset_dynamic_colors:
 	movem.l	a0/d2-d3,-(a7)
-	lea	color_line_copper+4,a0
+	lea	color_line_copper,a0
 	move.w	#DYNAMIC_COPPER_ROWS-1,d3
 	move.w	#0x1FE,d2
 0:
@@ -2709,13 +2731,14 @@ temp_filename_buffer:
 _end_of_ng_code:
 		
 	.align 2
-palette:
-	.include "palette.68k"
+tiles_palette:
+	.include "tiles_palette.68k"
+
+bobs_palette:
+	.include "bobs_palette.68k"
 	* sprites "individual" 4-color palettes
 sprite_cluts:
 	.include "palette_cluts.68k"
-background_palette:	
-	.include "background_palette.68k"
 	
 	* on amiga, this file is included in mpatrol.68k file
 	* so the assembler can optimize by using PC-relative addressing
@@ -2783,7 +2806,7 @@ copperlist:
 panel_bitplanes:
 	DECL_BITPLANES	0,4
 panel_tiles_colors:
-	DECL_COLORS	16,0
+	DECL_COLORS	0,TOTAL_NB_COLORS
 sprite_cols:
 	DECL_COLORS	16,16
 sprites:
@@ -2818,8 +2841,7 @@ sprites:
     .word  beampos,0xFFFE
 
 playfield_colors:
-	DECL_COLORS	4,0
-	*.word	color,0xF00
+	DECL_COLORS	0,TOTAL_NB_COLORS
 
 
 	* now use the dynamic color changing technique to make up for the sudden

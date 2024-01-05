@@ -95,7 +95,7 @@
 	.global	unknown_E242
 	.global	unknown_E261
 	.global	unknown_E277
-	.global	unknown_E300
+	.global	jeep_params_E300
 	.global	unknown_16bit_E302
 	.global	unknown_E303
 	.global	unknown_16bit_E304
@@ -366,7 +366,7 @@ unknown_E261:
 unknown_E277:
 	ds.b	137
 	.align	2
-unknown_E300:
+jeep_params_E300:
 	ds.b	2
 unknown_16bit_E302:
 	ds.w	1

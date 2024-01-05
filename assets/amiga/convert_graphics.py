@@ -220,12 +220,9 @@ print("Sprites colors: {}".format(len(sprites_used_colors)))
 
 
 tile_global_palette = sorted(set(tile_palette))
+tile_global_palette += ((255,255,255),)*(16-len(tile_global_palette))
 
-if dump_palettes:
-    bitplanelib.palette_to_image(sprite_palette,os.path.join(dump_palettes_dir,"sprite.png"))
-    bitplanelib.palette_to_image(sorted(bobs_used_colors),os.path.join(dump_palettes_dir,"bobs.png"))
-    bitplanelib.palette_to_image(tile_global_palette,os.path.join(dump_palettes_dir,"tile.png"))
-    bitplanelib.palette_to_image(background_palette,os.path.join(dump_palettes_dir,"background.png"))
+
 
 # now we'd better have a 16 color palette to display sprites + backgrounds
 # get a 16 global BOB palette by reusing the dark blue color slot to brown when setting the background color
@@ -244,7 +241,12 @@ if len(bob_global_palette) != 16:
     # if too many colors, we can't use 4 bitplanes!
     raise Exception("global bob palette should have exactly 16 colors, found {}".format(len(bob_global_palette)))
 
+
 if dump_palettes:
+    bitplanelib.palette_to_image(sprite_palette,os.path.join(dump_palettes_dir,"sprite.png"))
+    bitplanelib.palette_to_image(sorted(bobs_used_colors),os.path.join(dump_palettes_dir,"bobs.png"))
+    bitplanelib.palette_to_image(tile_global_palette,os.path.join(dump_palettes_dir,"tile.png"))
+    bitplanelib.palette_to_image(background_palette,os.path.join(dump_palettes_dir,"background.png"))
     bitplanelib.palette_to_image(bob_global_palette,os.path.join(dump_palettes_dir,"global_bobs.png"))
 
 
@@ -543,7 +545,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             v = iter(d)
             for x in range(256):
                 cidx = next(v)
-                rgb = bob_global_palette[cidx]
+                rgb = bg_palette[cidx]
                 img.putpixel((x,y),rgb)
                 img.putpixel((x+256,y),rgb)
         # dump, we don't need a mask for the blue layer as it's behind

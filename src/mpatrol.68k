@@ -441,7 +441,7 @@ l_01da:
 	jra	l_0603                             	| [$01e9: jp   $0603]
 
 l_01ec:
-	lea	unknown_E300,a2                	| [$01ec: ld   ix,unknown_E300]
+	lea	jeep_params_E300,a2                	| [$01ec: ld   ix,jeep_params_E300]
 	move.b	#0x20,d0                        	| [$01f0: ld   a,$20]
 	move.b	d0,unknown_E0E8                 	| [$01f2: ld   (unknown_E0E8),a]
 l_01f5:
@@ -996,7 +996,7 @@ l_04fd:
 0:
 	jra	l_007b                             	| [$0504: jp   $007B]
 jeep_jumps_and_title_shows_0507:
-	lea	unknown_E300,a0                	| [$0507: ld   hl,unknown_E300]
+	lea	jeep_params_E300,a0                	| [$0507: ld   hl,jeep_params_E300]
 	move.b	(a0),d0                         	| [$050a: ld   a,(hl)]
 	cmp.b	#0x04,d0                         	| [$050b: cp   $04]
 	jne	l_051b                             	| [$050d: jr   nz,$051B]
@@ -1007,7 +1007,7 @@ jeep_jumps_and_title_shows_0507:
 	bra.b	2f
 1:
 	move.b	unknown_16bit_E308,d0                 	| [$050f: ld   a,(unknown_E309)] endian OK
-	roxl.b	#1,d0                           	| [$0512: rla]
+	rol.b	#1,d0                           	| [$0512: rla]  carry clear!
 2:
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$0513: ret  c] [...]
@@ -1091,6 +1091,8 @@ update_sprites_056D:
 ** copy E1A0 => C8A0 ($20 bytes): jeep
 * jeep body uses 7 sprites: 4 for the body
 * and 3 for the wheels which are independent
+* E1A4-E1AF: wheels
+* E1B0-E1BF: jeep body
 *	lea	l_C8A0,a1                      	| [$0584: ld   de,$C8A0]
 *	move.w	#0x20,d1                        	| [$0587: ld   c,$20]
 *	jbsr	ldir                              	| [$0589: ldir]
@@ -1575,7 +1577,7 @@ l_081b:
 	move.b	d0,d5                           	| [$082f: ld   l,a]
 	rts                                    	| [$0830: ret]
 l_0831:
-	move.b	unknown_E300,d0                 	| [$0831: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$0831: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$0834: cp   $06]
 	jcc	l_08b2                             	| [$0836: jr   nc,$08B2]
 l_0838:
@@ -1667,6 +1669,8 @@ l_08a7:
 l_08b2:
 	move.l	(sp)+,a0                        	| [$08b2: pop  hl]
 	rts                                    	| [$08b3: ret]
+	
+	* a2: jeep params E300
 l_08b4:
 	move.b	#0x01,(0x0b,a2)                 	| [$08b4: ld   (ix+$0b),$01]
 l_08b8:
@@ -1701,15 +1705,19 @@ l_08c4:
 									| [$08df: inc  hl]
 									| [$08e0: ld   h,(hl)]
 									| [$08e1: ld   l,c]
+	move.l	#jeep_params_E300,0x200
+	tst.b	0x200
+	* load jeep X
 	move.b	(0x03,a2),d2                    	| [$08e2: ld   c,(ix+$03)]
+	* load jeep Y (relative to ground)
 	move.b	(0x07,a2),d0                    	| [$08e5: ld   a,(ix+$07)]
-	jbsr	l_08ed                            	| [$08e8: call $08ED]
+	jbsr	compute_jeep_y_08ed                            	| [$08e8: call $08ED]
 	clr.b	d0                               	| [$08eb: xor  a]
-	* called with d1,d2
+	* called with d1,d2 as Y,X
 	jra	(a0)                               	| [$08ec: jp   (hl)]
 
 
-l_08ed:
+compute_jeep_y_08ed:
 	not.b	d0                               	| [$08ed: cpl]
 	move.b	d0,d1                           	| [$08ee: ld   b,a]
 	move.b	jeep_base_y_e03c,d0             	| [$08ef: ld   a,(jeep_base_y_e03c)]
@@ -1718,8 +1726,8 @@ l_08ed:
 	rts                                    	| [$08f4: ret]
 
 jump_table_08F5:
-	.long	l_0969,l_095a,l_09cf,l_09cd,l_0af5,l_0943,l_0ae2,l_0a90
-	.long	l_0a56,l_0ab7,l_0a52,l_0a9f,l_09c9,l_0b25,l_0976,l_0997
+	.long	l_0969,l_095a,l_09cf,l_09cd,l_0af5,l_0943,l_0ae2,update_jeep_movement_0a90
+	.long	l_0a56,l_0ab7,update_jeep_position_0a52,l_0a9f,l_09c9,l_0b25,l_0976,l_0997
 	.long	l_09ba,l_0a1e,l_0a44,l_0934,l_0925,l_0b1d,l_09b0,l_0983
 
 
@@ -1916,7 +1924,7 @@ l_0a44:
 	move.b	d0,unknown_E1AE                 	| [$0a4a: ld   (unknown_E1AE),a]
 	jbsr	l_0a95                            	| [$0a4d: call $0A95]
 	jra	l_0a62                             	| [$0a50: jr   $0A62]
-l_0a52:
+update_jeep_position_0a52:
 	move.b	#0x18,d0                        	| [$0a52: ld   a,$18]
 	jra	l_0a58                             	| [$0a54: jr   $0A58]
 l_0a56:
@@ -1929,30 +1937,38 @@ l_0a58:
 	add.b	d2,d0                            	| [$0a60: add  a,c]
 	move.b	d0,d2                           	| [$0a61: ld   c,a]
 l_0a62:
+	* update jeep sprite
 	clr.b	d0                               	| [$0a62: xor  a]
-	jbsr	l_0a6f                            	| [$0a63: call $0A6F]
+	jbsr	update_jeep_position_0a6f                            	| [$0a63: call $0A6F]
+	
 	                   	| [$0a66: ex   de,hl]
 	                    	| [$0a67: ld   de,$0008] 8
 	addq.w	#8,a3                            	| [$0a6a: add  iy,de]
 	                              	| [$0a6c: ex   de,hl]
 	move.b	#0x10,d0                        	| [$0a6d: ld   a,$10]
-l_0a6f:
+update_jeep_position_0a6f:
 	add.b	d2,d0                            	| [$0a6f: add  a,c]
 	move.b	d0,d6                           	| [$0a70: ld   l,a]
+	* set sprite X for 2 first sprites (jeep rear)
 	move.b	d0,(0x03,a3)                    	| [$0a71: ld   (iy+$03),a]
 	move.b	d0,(0x07,a3)                    	| [$0a74: ld   (iy+$07),a]
+	* set sprite Y
 	move.b	d1,(a3)                    	| [$0a77: ld   (iy+$00),b]
 	move.b	#0xF0,d0                        	| [$0a7a: ld   a,$F0]
 	add.b	d1,d0                            	| [$0a7c: add  a,b]
+	* set sprite Y
 	move.b	d0,(0x04,a3)                    	| [$0a7d: ld   (iy+$04),a]
+	* set attributes
 	move.b	d4,(0x01,a3)                    	| [$0a80: ld   (iy+$01),e]
 	move.b	d4,(0x05,a3)                    	| [$0a83: ld   (iy+$05),e]
+	* set sprite code
 	move.b	d3,(0x02,a3)                    	| [$0a86: ld   (iy+$02),d]
 	addq.b	#2,d3                           	| [$0a89: inc  d] * 2
 	move.b	d3,(0x06,a3)                    	| [$0a8b: ld   (iy+$06),d]
 	subq.b	#1,d3                           	| [$0a8e: dec  d]
 	rts                                    	| [$0a8f: ret]
-l_0a90:
+update_jeep_movement_0a90:
+	* called during the demo & game to update jeep movement
 	jbsr	l_0a95                            	| [$0a90: call $0A95]
 	jra	l_0a62                             	| [$0a93: jr   $0A62]
 l_0a95:
@@ -1973,7 +1989,7 @@ l_0a9f:
 	add.b	d1,d0                            	| [$0aad: add  a,b]
 	move.b	d0,d1                           	| [$0aae: ld   b,a]
 	clr.b	d0                               	| [$0aaf: xor  a]
-	jbsr	l_0a6f                            	| [$0ab0: call $0A6F]
+	jbsr	update_jeep_position_0a6f                            	| [$0ab0: call $0A6F]
 	move.b	d3,(0x06,a3)                    	| [$0ab3: ld   (iy+$06),d]
 	rts                                    	| [$0ab6: ret]
 l_0ab7:
@@ -1989,7 +2005,7 @@ l_0ab7:
 	                              	| [$0aca: ex   de,hl]
 	move.b	#0x08,d0                        	| [$0acb: ld   a,$08]
 l_0acd:
-	jbsr	l_0a6f                            	| [$0acd: call $0A6F]
+	jbsr	update_jeep_position_0a6f                            	| [$0acd: call $0A6F]
 	move.b	d6,(0x0b,a3)                    	| [$0ad0: ld   (iy+$0b),l]
 	sub.b	#0x10,d0                         	| [$0ad3: sub  $10]
 	move.b	d0,(0x08,a3)                    	| [$0ad5: ld   (iy+$08),a]
@@ -2025,7 +2041,7 @@ l_0b0c:
 	addq.w	#8,a3                            	| [$0b10: add  iy,de]
 												| [$0b12: ex   de,hl]
 l_0b13:
-	jbsr	l_0a6f                            	| [$0b13: call $0A6F]
+	jbsr	update_jeep_position_0a6f                            	| [$0b13: call $0A6F]
 	move.b	d3,d0                           	| [$0b16: ld   a,d]
 	addq.b	#0x02,d0                        	| [$0b17: add  a,$02]
 	move.b	d0,(0x06,a3)                    	| [$0b19: ld   (iy+$06),a]
@@ -2128,7 +2144,7 @@ l_0bb7:
 	lea	sprite_shadow_E100,a0          	| [$0bb7: ld   hl,sprite_shadow_E100]
 	move.w	#0x400,d1                        	| [$0bba: ld   bc,$0400] 1024
 	jbsr	clear_area_05fa                   	| [$0bbd: call clear_area_05fa]
-	lea	unknown_E300,a2                	| [$0bc0: ld   ix,unknown_E300]
+	lea	jeep_params_E300,a2                	| [$0bc0: ld   ix,jeep_params_E300]
 	move.b	#0x01,(a2)                 	| [$0bc4: ld   (ix+$00),$01]
 	move.b	#0x09,(0x10,a2)                 	| [$0bc8: ld   (ix+$10),$09]
 	move.b	#0xB0,(0x01,a2)                 	| [$0bcc: ld   (ix+$01),$B0]
@@ -3412,7 +3428,7 @@ l_1388:
 	jbsr	l_1533                            	| [$13a7: call $1533]
 	sub.b	#0x1D,d0                         	| [$13aa: sub  $1D]
 	move.b	d0,d1                           	| [$13ac: ld   b,a]
-	move.b	unknown_16bit_E306,d0                 	| [$13ad: ld   a,(unknown_E307)]
+	move.b	unknown_16bit_E306,d0                 	| [$13ad: ld   a,(unknown_E307)] endian OK
 	cmp.b	d1,d0                            	| [$13b0: cp   b]
 	jcs	l_13b6                             	| [$13b1: jr   c,$13B6]
 	addq.b	#1,(a2)                    	| [$13b3: inc  (ix+$00)]
@@ -3648,11 +3664,11 @@ l_152e:
 	move.w	#-3,d3                          	| [$152e: ld   de,-3] -3
 	jra	l_14df                             	| [$1531: jr   $14DF]
 l_1533:
-	move.b	unknown_16bit_E302,d0                 	| [$1533: ld   a,(unknown_E303)]
+	move.b	unknown_16bit_E302,d0                 	| [$1533: ld   a,(unknown_E303)] endian OK
 	add.b	#0x20,d0                         	| [$1536: add  a,$20]
 l_1538:
 	move.b	d0,d1                           	| [$1538: ld   b,a]
-	move.b	unknown_16bit_E1E1,d0                 	| [$1539: ld   a,(unknown_E1E2)]
+	move.b	unknown_16bit_E1E1,d0                 	| [$1539: ld   a,(unknown_E1E2)] endian OK
 	add.b	d1,d0                            	| [$153c: add  a,b]
 l_153d:
 	addq.b	#0x06,d0                        	| [$153d: add  a,$06]
@@ -3700,7 +3716,7 @@ l_156d:
 	move.b	d2,d0                           	| [$1574: ld   a,c]
 	rts                                    	| [$1575: ret]
 l_1576:
-	move.b	unknown_16bit_E302,d0                 	| [$1576: ld   a,(unknown_E303)]
+	move.b	unknown_16bit_E302,d0                 	| [$1576: ld   a,(unknown_E303)] endian OK
 	move.b	d0,d2                           	| [$1579: ld   c,a]
 	addq.b	#0x04,d0                        	| [$157a: add  a,$04]
 	jbsr	l_1538                            	| [$157c: call $1538]
@@ -3723,16 +3739,16 @@ l_1592:
 	move.b	d0,d6                           	| [$1599: ld   l,a]
 	move.b	(a0),d0                         	| [$159a: ld   a,(hl)]
 	sub.b	#0x09,d0                         	| [$159b: sub  $09]
-	jbsr	l_08ed                            	| [$159d: call $08ED]
+	jbsr	compute_jeep_y_08ed                            	| [$159d: call $08ED]
 	move.b	d0,d1                           	| [$15a0: ld   b,a]
 l_15a1:
 	                           	| [$15a1: inc  iy]
 	addq.w	#4,a3                           	| [$15a3: inc  iy] * 3
 	jra	l_0976                             	| [$15a9: jp   $0976]
 l_15ac:
-	move.b	unknown_16bit_E302,d0                 	| [$15ac: ld   a,(unknown_E303)]
+	move.b	unknown_16bit_E302,d0                 	| [$15ac: ld   a,(unknown_E303)] endian OK
 	move.b	d0,d2                           	| [$15af: ld   c,a]
-	move.b	unknown_16bit_E306,d0                 	| [$15b0: ld   a,(unknown_E307)]
+	move.b	unknown_16bit_E306,d0                 	| [$15b0: ld   a,(unknown_E307)] endian OK
 	add.b	#0x11,d0                         	| [$15b3: add  a,$11]
 	jbsr	l_15c9                            	| [$15b5: call $15C9]
 	move.b	d3,d0                           	| [$15b8: ld   a,d]
@@ -3748,7 +3764,7 @@ l_15c5:
 	jra	l_15a1                             	| [$15c7: jr   $15A1]
 l_15c9:
 	addq.b	#1,d2                           	| [$15c9: inc  c]
-	jbsr	l_08ed                            	| [$15ca: call $08ED]
+	jbsr	compute_jeep_y_08ed                            	| [$15ca: call $08ED]
 	move.b	d0,d1                           	| [$15cd: ld   b,a]
 	move.w	#0x0500,d3                      	| [$15ce: ld   de,$0500]
 	move.b	unknown_16bit_E1E1,d0                 	| [$15d1: ld   a,(unknown_E1E2)]
@@ -3761,7 +3777,7 @@ l_15d9:
 	jra	l_0976                             	| [$15dd: jp   $0976]
 l_15e0:
 	move.b	#0x0C,(0x0a,a2)                 	| [$15e0: ld   (ix+$0a),$0C]
-	move.b	unknown_16bit_E306,d0                 	| [$15e4: ld   a,(unknown_E307)]
+	move.b	unknown_16bit_E306,d0                 	| [$15e4: ld   a,(unknown_E307)] endian OK
 	add.b	#0x0A,d0                         	| [$15e7: add  a,$0A]
 	move.b	d0,unknown_E327                 	| [$15e9: ld   (unknown_E327),a]
 	move.w	unknown_16bit_E302,d5             	| [$15ec: ld   hl,(unknown_16bit_E302)]
@@ -3812,16 +3828,16 @@ l_162d:
 	move.b	#0x03,(0x0a,a2)                 	| [$1644: ld   (ix+$0a),$03]
 	rts                                    	| [$1648: ret]
 l_1649:
-	move.b	unknown_16bit_E302,d0                 	| [$1649: ld   a,(unknown_E303)]
+	move.b	unknown_16bit_E302,d0                 	| [$1649: ld   a,(unknown_E303)] endian OK
 	add.b	#0x0A,d0                         	| [$164c: add  a,$0A]
 	move.b	d0,(0x03,a2)                    	| [$164e: ld   (ix+$03),a]
-	move.b	unknown_16bit_E306,d0                 	| [$1651: ld   a,(unknown_E307)]
+	move.b	unknown_16bit_E306,d0                 	| [$1651: ld   a,(unknown_E307)] endian OK
 	addq.b	#0x02,d0                        	| [$1654: add  a,$02]
 	move.b	d0,(0x07,a2)                    	| [$1656: ld   (ix+$07),a]
 	addq.b	#1,(a2)                    	| [$1659: inc  (ix+$00)]
 	rts                                    	| [$165c: ret]
 l_165d:
-	move.b	unknown_E300,d0                 	| [$165d: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$165d: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$1660: cp   $06]
 	jcc	l_168f                             	| [$1662: jr   nc,$168F]
 	move.b	(0x07,a2),d0                    	| [$1664: ld   a,(ix+$07)]
@@ -3929,7 +3945,7 @@ l_16e1:
 	move.l	(sp)+,a0                        	| [$16fc: pop  hl]
 l_16fd:
 	move.b	#0x07,d0                        	| [$16fd: ld   a,$07]
-	move.b	d0,unknown_E300                 	| [$16ff: ld   (unknown_E300),a]
+	move.b	d0,jeep_params_E300                 	| [$16ff: ld   (jeep_params_E300),a]
 	move.b	#0x03,d0                        	| [$1702: ld   a,$03]
 	move.b	d0,unknown_E30D                 	| [$1704: ld   (unknown_E30D),a]
 	clr.b	d0                               	| [$1707: xor  a]
@@ -4067,7 +4083,7 @@ l_17f8:
 	addq.w	#2,a3                           	| [$1804: inc  iy] * 2
 	rts                                    	| [$1808: ret]
 l_1809:
-	move.b	unknown_E300,d0                 	| [$1809: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$1809: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$180c: cp   $06]
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$180e: ret  nc] [...]
@@ -4246,7 +4262,7 @@ l_191a:
 	move.b	#0x43,(0x0a,a2)                 	| [$1938: ld   (ix+$0a),$43]
 	rts                                    	| [$193c: ret]
 l_193d:
-	move.b	unknown_E300,d0                 	| [$193d: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$193d: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$1940: cp   $06]
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1942: ret  nc] [...]
@@ -4286,7 +4302,7 @@ l_195e:
 	cmp.b	(a0),d0                          	| [$197a: cp   (hl)]
 	jcc	l_19c2                             	| [$197b: jr   nc,$19C2]
 	move.b	d0,d1                           	| [$197d: ld   b,a]
-	move.b	unknown_E300,d0                 	| [$197e: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$197e: ld   a,(jeep_params_E300)]
 	cmp.b	#0x04,d0                         	| [$1981: cp   $04]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1983: ret  z] [...]
@@ -4327,7 +4343,7 @@ l_199a:
 	                      	| [$19b6: ld   hl,$0200]
 	move.w	#0x200,unknown_16bit_E308                 	| [$19b9: ld   (unknown_16bit_E308),hl]
 	move.b	#0x06,d0                        	| [$19bc: ld   a,$06]
-	move.b	d0,unknown_E300                 	| [$19be: ld   (unknown_E300),a]
+	move.b	d0,jeep_params_E300                 	| [$19be: ld   (jeep_params_E300),a]
 	rts                                    	| [$19c1: ret]
 l_19c2:
 	sub.b	(a0),d0                          	| [$19c2: sub  (hl)]
@@ -4410,7 +4426,7 @@ l_1a2f:
 	move.b	#0x07,(0x0a,a2)                 	| [$1a3f: ld   (ix+$0a),$07]
 	rts                                    	| [$1a43: ret]
 l_1a44:
-	move.b	unknown_E300,d0                 	| [$1a44: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$1a44: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$1a47: cp   $06]
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1a49: ret  nc] [...]
@@ -4450,7 +4466,7 @@ l_1a73:
 	
 l_1a92:
 	move.b	#0x01,(0x0b,a2)                 	| [$1a92: ld   (ix+$0b),$01]
-	move.b	unknown_E300,d0                       	| [$1a96: ld   a,($E300)]
+	move.b	jeep_params_E300,d0                       	| [$1a96: ld   a,($E300)]
 	cmp.b	#0x06,d0                         	| [$1a99: cp   $06]
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1a9b: ret  nc] [...]
@@ -4475,7 +4491,7 @@ l_1ab9:
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$1abd: ret  c] [...]
 0:
-	move.b	unknown_E300,d0                 	| [$1abe: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$1abe: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$1ac1: cp   $06]
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1ac3: ret  nc] [...]
@@ -4620,7 +4636,7 @@ l_1b90:
 	move.b	d0,unknown_E0EE                 	| [$1ba6: ld   (unknown_E0EE),a]
 	clr.w	d3                               	| [$1ba9: ld   d,$00]
 	move.b	d4,d3
-	lea	unknown_E300,a2                	| [$1bab: ld   ix,unknown_E300]
+	lea	jeep_params_E300,a2                	| [$1bab: ld   ix,jeep_params_E300]
 	add.w	d3,a2                            	| [$1baf: add  ix,de]
 	lea	unknown_E1D4,a0                	| [$1bb1: ld   hl,unknown_E1D4]
 	move.b	(a0),d4                         	| [$1bb4: ld   e,(hl)]
@@ -4849,7 +4865,7 @@ l_1d23:
 	move.b	#0x10,d2                        	| [$1d35: ld   bc,$0010] 16
 	jra	l_1ce6                             	| [$1d38: jr   $1CE6]
 l_1d3a:
-	move.b	unknown_E300,d0                 	| [$1d3a: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$1d3a: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$1d3d: cp   $06]
 	jcc	l_08b8                             	| [$1d3f: jp   nc,$08B8]
 	move.b	#6,d5                      	| [$1d42: ld   hl,$0605]
@@ -5352,7 +5368,7 @@ l_20fb:
 	
 handle_time_210d:
 	lea	unknown_E051,a0                	| [$210d: ld   hl,unknown_E051]
-	move.b	unknown_E300,d0                 	| [$2110: ld   a,(unknown_E300)]
+	move.b	jeep_params_E300,d0                 	| [$2110: ld   a,(jeep_params_E300)]
 	subq.b	#1,d0                           	| [$2113: dec  a]
 	jeq	l_2127                             	| [$2114: jr   z,$2127]
 	move.b	(a0),d0                         	| [$2116: ld   a,(hl)]

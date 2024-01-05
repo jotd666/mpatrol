@@ -11,9 +11,6 @@
 - declare tiles & cluts manually (with playfield info)
 
 
-- get a 16 global BOB palette by reusing the dark blue color slot to brown when setting the background color
-  below the blue mountains also set the brown color
-
 tricks:
 
 - use bobs palette for playfield (after status bar)
