@@ -369,11 +369,16 @@ unknown_E277:
 jeep_params_E300:
 	ds.b	2
 unknown_16bit_E302:
-	ds.w	1
+	ds.b	1
+jeep_x_E303:		| must follow E302!!
+	ds.b	1
 unknown_16bit_E304:
 	ds.w	1
+	
 unknown_16bit_E306:
-	ds.w	1
+	ds.b	1
+jeep_y_offset_E307:		| must follow E306!!
+	ds.b	1
 unknown_16bit_E308:
 	ds.w	1
 unknown_E30A:

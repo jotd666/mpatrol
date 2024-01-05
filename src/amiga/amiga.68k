@@ -748,7 +748,7 @@ osd_update_sprites:
 	bsr		blit_background_layer
 	move.l	(a7)+,a0
 	
-	lea		test_sprites,a0
+	*lea		test_sprites,a0
 	move.l	a0,-(a7)
 	bsr		update_hardware_sprites
 	move.l	(a7),a0
