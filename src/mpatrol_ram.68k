@@ -15,7 +15,7 @@
 	
 	.ascii	"RAM_STRT"
 	.ifndef	RELEASE
-
+	.global	break_at_startup_flag
 	.endif
 	.else
 	* Neogeo: needs different writable section from ROM code
@@ -64,7 +64,10 @@ vb_ticks_count:
 	.byte	0
 current_ticks_count:
 	.byte	0
-
+	.ifndef	RELEASE
+break_at_startup_flag:
+	.byte	0
+	.endif
 	.align	2
 regscopy:
 	ds.b	64

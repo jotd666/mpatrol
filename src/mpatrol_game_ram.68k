@@ -89,7 +89,7 @@
 	.global	unknown_E1E0
 	.global	unknown_16bit_E1E1
 	.global	unknown_E1E2
-	.global	unknown_E200
+	.global	ground_y_array_E200
 	.global	unknown_E210
 	.global	unknown_E23F
 	.global	unknown_E242
@@ -353,7 +353,7 @@ unknown_E1E0:
 unknown_16bit_E1E1:
 	ds.w	1
 	ds.b	28
-unknown_E200:
+ground_y_array_E200:
 	ds.b	0x10
 unknown_E210:
 	ds.b	47

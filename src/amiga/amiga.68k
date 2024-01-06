@@ -343,6 +343,11 @@ _user:
 	beq.b	0f
 	bset	#6,d0
 0:
+	.ifndef	RELEASE
+	btst	#31,d1
+	sne		break_at_startup_flag
+	.endif
+	
 	move.b	d0,dip_switches
 
 

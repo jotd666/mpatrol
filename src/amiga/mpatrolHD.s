@@ -38,6 +38,9 @@ _expmem
 _config
 ;	dc.b    "C4:L:difficulty:easy,medium,hard,hardest;"
 ;	dc.b    "C5:L:start lives:default,2,3,4,5;"
+	IFD		CHIP_ONLY
+	dc.b	"C3:X:break at startup:31;"
+	ENDC
 	dc.b	0
 
 	IFD BARFLY
