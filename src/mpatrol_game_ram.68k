@@ -65,8 +65,8 @@
 	.global	scroll_x_value_green_layer_E1C1
 	.global	scroll_x_value_blue_layer_E1C2
 
-	.global	unknown_E1C3
-	.global	unknown_E1C4
+	.global	green_layer_y_pos_E1C3
+	.global	blue_layer_y_pos_E1C4
 	.global	unknown_E1C5
 	.global	unknown_E1C6
 	.global	unknown_E1C9
@@ -304,9 +304,9 @@ scroll_x_value_green_layer_E1C1:
 	ds.b	1
 scroll_x_value_blue_layer_E1C2:
 	ds.b	1
-unknown_E1C3:
+green_layer_y_pos_E1C3:
 	ds.b	1
-unknown_E1C4:
+blue_layer_y_pos_E1C4:
 	ds.b	1
 unknown_E1C5:
 	ds.b	1

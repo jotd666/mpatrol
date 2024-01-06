@@ -1133,7 +1133,7 @@ update_sprites_056D:
 *	subq.b	#1,d1                           	| [...]
 *	jne	l_0590                             	| [$0593: djnz $0590]
 	addq.w	#1,a0                           	| [$0595: inc  hl]
-	move.b	unknown_E1C3,d0                 	| [$0596: ld   a,(unknown_E1C3)]
+	move.b	green_layer_y_pos_E1C3,d0                 	| [$0596: ld   a,(green_layer_y_pos_E1C3)]
 	                               	| [$0599: and  a]
 	jeq	l_05c7                             	| [$059a: jr   z,$05C7]
 	move.b	(a0),d0                         	| [$059c: ld   a,(hl)]
@@ -1726,8 +1726,6 @@ l_08c4:
 									| [$08df: inc  hl]
 									| [$08e0: ld   h,(hl)]
 									| [$08e1: ld   l,c]
-	move.l	#jeep_params_E300,0x200
-	tst.b	0x200
 	* load jeep X
 	move.b	(0x03,a2),d2                    	| [$08e2: ld   c,(ix+$03)]
 	* load jeep Y (relative to ground)
@@ -3186,7 +3184,7 @@ l_1235:
 * write "moon patrol" title loop
 	* character
 	move.l		d3,d7
-	jbsr	osd_w_videoram                         	| [$123d: ld   (de),a]
+	jbsr	osd_w_videoram_no_update                         	| [$123d: ld   (de),a]
 	* attribute
 	move.l		a3,d7
 	exg		d0,d6
@@ -3262,7 +3260,7 @@ l_1288:
 l_129f:
 	move.w	d0,-(a7)
 	move.b	d1,d0
-	jbsr	osd_w_videoram
+	jbsr	osd_w_videoram_no_update
 	move.w	(a7)+,d0
 	                         	| [$129f: ld   (hl),b]
 	                     	| [$12a0: ld   de,$0400]
@@ -4206,7 +4204,7 @@ l_188b:
 	exg	d3,d5                              	| [$18a6: ex   de,hl]
 	move.w	fine_scroll_x_value_green_layer_E504,d5             	| [$18a7: ld   hl,(fine_scroll_x_value_green_layer_E504)]
  	add.w	d3,d5                            	| [$18aa: add  hl,de]
- 	move.w	d5,fine_scroll_x_value_green_layer_E504                 	| [$18ab: ld   (fine_scroll_x_value_green_layer_E504),hl]
+ 	move.w	d5,fine_scroll_x_value_green_layer_E504    | [$18ab: ld   (fine_scroll_x_value_green_layer_E504),hl]
 	move.b	d5,d0                           	| [$18ae: ld   a,h]
 	not.b	d0                               	| [$18af: cpl]
 	move.b	d0,scroll_x_value_green_layer_E1C1	| [$18b0: ld   (scroll_x_value_green_layer_E1C1),a]
@@ -4229,11 +4227,11 @@ l_18cc:
 l_18d1:
 	move.b	d0,d1                           	| [$18d1: ld   b,a]
 	add.b	#0x94,d0                         	| [$18d2: add  a,$94]
-	move.b	d0,unknown_E1C3                 	| [$18d4: ld   (unknown_E1C3),a]
+	move.b	d0,green_layer_y_pos_E1C3                 	| [$18d4: ld   (green_layer_y_pos_E1C3),a]
 	asr.b	#1,d1                            	| [$18d7: sra  b]
 	move.b	d1,d0                           	| [$18d9: ld   a,b]
 	add.b	#0x72,d0                         	| [$18da: add  a,$72]
-	move.b	d0,unknown_E1C4                 	| [$18dc: ld   (unknown_E1C4),a]
+	move.b	d0,blue_layer_y_pos_E1C4                 	| [$18dc: ld   (blue_layer_y_pos_E1C4),a]
 	rts                                    	| [$18df: ret]
 l_18e0:
 	jbsr	l_0831                            	| [$18e0: call $0831]

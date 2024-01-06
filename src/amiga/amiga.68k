@@ -21,6 +21,8 @@ SCREEN_ADDRESS = 0x8000
 PANEL_MAX_Y = 48
 DYNAMIC_COPPER_ROWS = 219-48
 
+SPRITE_Y_CORRECTION = 16
+
 SCORE_FILE_SIZE = 0x50
 
 * if the alloc_sprite & update_sprite routines
@@ -33,6 +35,10 @@ TARGET_SPRITE_ATTRIBUTES = 1
 TARGET_SPRITE_CODE = 2
 TARGET_SPRITE_Y = 0
 TARGET_SPRITE_X = 3
+
+TITLE_NB_COLS = 10
+TITLE_NB_ROWS = 10
+
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -146,6 +152,7 @@ start:
 		.global osd_ack_vblank_interrupt
 		.global osd_break		| for debug	
 		.global osd_blitz		| for debug
+		.global osd_w_videoram_no_update
 		.global osd_w_videoram
 		.global osd_w_colorram
 		.global osd_r_videoram
@@ -733,6 +740,23 @@ osd_wait:
 	bne.b	2b
 	rts
 	
+* < A0: 
+update_background:
+	moveq	#0,d0     | X position of blue layer (0-256)
+	moveq	#0,d1     | X position of green layer (0-256)
+	moveq	#0,d2     | Y position of blue layer
+	moveq	#0,d3     | Y position of green layer
+	moveq	#0,d4     | 0: green mountains, 1: green city
+	addq	#1,a0	| ground layer
+	move.b	(a0)+,d1	| green layer
+	move.b	(a0)+,d0	| blue layer
+	move.b	(a0)+,d3
+	beq.b	0f
+	move.b	(a0)+,d2
+	bra		blit_background_layer
+0:
+	rts
+	
 * < A0: pointer on sprite shadow zone E100
 * length: 256 bytes for 64 max sprites on screen
 * there seem to be 4 sprite blocks of 0x40 bytes
@@ -745,16 +769,13 @@ osd_wait:
 
 osd_update_sprites:
 	move.l	a0,-(a7)
-	move.w	#0,d0     | X position of blue layer (0-256)
-	move.w	#0,d1     | X position of green layer (0-256)
-	move.w	#0,d2     | Y position of blue layer
-	move.w	#20,d3     | Y position of green layer
-	moveq	#0,d4     | 0: green mountains, 1: green city
-	bsr		blit_background_layer
 	move.l	(a7)+,a0
 	
 	*lea		test_sprites,a0
 	move.l	a0,-(a7)
+	lea		(0xC0,a0),a0		| shadow for x,y background pos
+	bsr		update_background
+	move.l	(a7),a0
 	bsr		update_hardware_sprites
 	move.l	(a7),a0
 	bsr		update_bobs
@@ -809,6 +830,8 @@ update_hardware_sprites:
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	2f			| Y set to 0: not shown
 	not.b	d1
+	
+	sub.w	#SPRITE_Y_CORRECTION,d1
 	
 *	cmp.b	#255,d1
 *	beq.b	2f			| Y set to 255: not shown	
@@ -973,6 +996,8 @@ update_bobs:
 	beq.b	2f			| Y set to 0: not shown
 	not.b	d1
 	
+	sub.w	#SPRITE_Y_CORRECTION,d1
+
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
@@ -1161,9 +1186,12 @@ start_process_1_plane:
 * < D3.W: Y position of green layer
 * < D4.B: 0: green mountains, 1: green city
 *
+
+	
 * it also changes black background to the relevant background (blue or green)
 * (expecting the dynamic copperlist to be reset each time)
 blit_background_layer:
+
 	lea		_custom,A5
 	move.l	bg_drawed_screen_ptr(pc),a1
 	add.w	#(PANEL_MAX_Y+8)*NB_BYTES_PER_ROW,a1
@@ -1331,9 +1359,36 @@ blit_background_layer:
 
 	move.w	#color,(A0,d7.w)
 	move.w	(6,a1),(2,a0,d7.w)
+	
 	rts
 	
+	* hack: if title "moon patrol" is shown on screen, we have to redraw it
+	* as the mountains share the same layer and have clobbered it partially
+	* this will probably require double buffering
+	lea		bg_videoram,A0
+	cmp.b	#0xB5,(0x149,a0)
+	bne.b	0f
+	
+	
+	move.w	#0x148,d6
+	move.w	#TITLE_NB_ROWS,d2			| rows
+2:
+	move.w	#TITLE_NB_COLS,d1
+1:
+	move.b	(a0,d6.w),d0	| refresh tile
+	st.b	(a0,d6.w)		| to force refresh
+	move.w	d6,d7
+	bset	#15,d7
+	jbsr	osd_w_videoram
+	addq.w	#1,d6
+	dbf		d1,1b
+	add.w	#30-TITLE_NB_COLS,d6
+	dbf		d2,2b
+0:
+	rts
 
+
+	
 * < D0: sprite X
 * < D1: sprite Y
 * < D2: sprite code & flags
@@ -1869,6 +1924,34 @@ decode_sprite_data:
 	move.b	d4,d0	| sprite Y (aka X on amiga)
 	rts
 
+* same was osd_w_videoram but without screen update
+* because we know that osd_w_colorram follows
+osd_w_videoram_no_update:
+    .ifeq OPT_DISABLE_BG_LAYER
+	movem.l	d0-d7/a0-a3,-(a7)
+	
+
+	sub.w	#SCREEN_ADDRESS,d7
+	bcs.b	0f
+	cmp.w	#0x400,d7
+	bcs.b	1f
+0:
+	* should not happen
+	lea		write_videoram_out_of_range_error(pc),a0
+	jbsr	osd_break
+	nop	
+	bra.b	0f
+	
+1:
+	lea		bg_videoram,a1
+	add.w	d7,a1
+	
+
+	move.b	d0,(a1)	| update logical grid
+
+	movem.l	(a7)+,d0-d7/a0-a3
+    .endif | OPT_DISABLE_BG_LAYER
+	rts
 
 	
 * d7=screen address (preserved), d0=tile (preserved)
@@ -1877,7 +1960,7 @@ decode_sprite_data:
 
 osd_w_videoram:
     .ifeq OPT_DISABLE_BG_LAYER
-	movem.l	d0-d3/d7/a0-a2,-(a7)
+	movem.l	d0-d7/a0-a3,-(a7)
 	
 
 	sub.w	#SCREEN_ADDRESS,d7
@@ -1906,7 +1989,7 @@ osd_w_videoram:
 
 	jbsr		update_bg_tile
 0:
-	movem.l	(a7)+,d0-d3/d7/a0-a2
+	movem.l	(a7)+,d0-d7/a0-a3
     .endif | OPT_DISABLE_BG_LAYER
 	rts
 
@@ -1916,7 +1999,7 @@ osd_w_videoram:
 
 osd_w_colorram:
     .ifeq OPT_DISABLE_BG_LAYER
-	movem.l	d0-d3/d7/a0-a2,-(a7)
+	movem.l	d0-d7/a0-a3,-(a7)
 	sub.w	#SCREEN_ADDRESS+0x400,d7
 	bcs.b	0f
 	cmp.w	#0x400,d7
@@ -1941,7 +2024,7 @@ osd_w_colorram:
 	
 	jbsr		update_bg_tile
 0:
-	movem.l	(a7)+,d0-d3/d7/a0-a2
+	movem.l	(a7)+,d0-d7/a0-a3
     .endif | OPT_DISABLE_BG_LAYER
 	rts
 
@@ -1978,17 +2061,15 @@ update_bg_tile:
 	movem.w	(a7)+,d0-d1
 	.endif
 	
-*	* is it bank 2 ?
-*	btst	#4,D1
-*	beq.b	0f
-*	add.w	#0x200,d0
-	
-0:
 	* is it upper part of bank ?
 	btst	#7,D1
+	sne		d6
 	beq.b	0f
+	* second part of tiles ("moon patrol" title...)
 	add.w	#0x100,d0
 0:
+
+
 	* color tile
 	and.w	#0xF,d1
 	
@@ -2037,6 +2118,10 @@ update_bg_tile:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
+	tst.b	d6
+	jne		5f
+	
+	* just copy
 4:
 	.set	offset,0
 	.rept	8
@@ -2048,6 +2133,29 @@ update_bg_tile:
 0:
 	rts
 
+	* "cookie cut" of one char with mask
+5:
+	WAIT_BLIT
+	lea		(NB_PLAYFIELD_PLANES*8,a0),a2		| mask source
+6:
+	move.l	a2,a3
+	.set	offset,0
+	.rept	8
+	move.b	(offset,a1),d1		| previous value
+	move.b	(a3)+,d2
+	not.b	d2
+	and.b	d2,d1
+	move.b	(a0)+,d2
+	or.b	d2,d1
+	move.b	d1,(offset,a1)	
+	.set	offset,offset+NB_BYTES_PER_ROW
+	.endr
+	* next plane
+	add.w	d5,a1
+	dbf		d4,6b
+
+	rts
+	
 	* clear tile
 
 11:

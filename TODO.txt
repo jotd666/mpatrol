@@ -1,12 +1,7 @@
-- car body coords completely off, wheels seem ok
-  check wheels sprite shadow how it's computed, relate
-  to how body X,Y base is computed
+- wheels move but all wheels have the same Y
+- when "moon patrol" title is displayed, jeep is too low
 - lockup on "insert coin" screen, typing effect seems
   not to work
-
-- switch to dual playfield: this is not optimal as it leaves a 8 high blank space
-  when it switches maybe because all the color & bitplane writes
-  if possible, make game 100% dual playfield even status panel
 
 - declare tiles & cluts manually (with playfield info)
 

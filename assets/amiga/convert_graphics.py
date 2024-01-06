@@ -220,8 +220,9 @@ print("Sprites colors: {}".format(len(sprites_used_colors)))
 
 
 tile_global_palette = sorted(set(tile_palette))
-tile_global_palette += ((255,255,255),)*(16-len(tile_global_palette))
 
+def switch_values(t,a,b):
+    t[a],t[b] = t[b],t[a]
 
 
 # now we'd better have a 16 color palette to display sprites + backgrounds
@@ -240,6 +241,23 @@ if len(bob_global_palette) != 16:
     # error if not enough colors, no need to hack to shoehorn it
     # if too many colors, we can't use 4 bitplanes!
     raise Exception("global bob palette should have exactly 16 colors, found {}".format(len(bob_global_palette)))
+
+# hack to make tile & sprite palette partially match for "moon patrol" approx colors
+# one thing we can't do: change order of colors for first half of bob palette (mountains)
+# for tiles we have no constraints
+#switch_values(tile_global_palette,3,5)
+switch_values(bob_global_palette,14,15)
+# same for ground (same pos)
+
+orange_color_index = 12
+switch_values(bob_global_palette,6,orange_color_index)
+# then remove 0,0,26 color which is very close from another to set orange
+almost_black_color = bob_global_palette[orange_color_index]
+bob_global_palette[orange_color_index] =tile_global_palette[orange_color_index]
+deep_brown_color = bob_global_palette[orange_color_index]
+# needed to have exactly 16 colors
+tile_global_palette += ((254,22,11),)*(16-len(tile_global_palette))
+
 
 
 if dump_palettes:
@@ -279,7 +297,7 @@ if True:
                     for j in range(8):
                         v = next(d)
                         img.putpixel((j,i),colors[v])
-                character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette))
+                character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette,generate_mask=True))
             else:
                 character_codes.append(None)
             if dump_tiles:
@@ -366,6 +384,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                 # as we forcefully removed it from the palette to make it fit to 16 colors, don't worry, the
                 # copper will put the proper color back again
                 img_to_raw = replace_color(img,brown_rock_color,blue_dark_mountain_color)
+                img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
 
                 bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
                     palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
