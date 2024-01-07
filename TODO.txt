@@ -1,22 +1,16 @@
-- char cookie cut enabled for all if title is displayed and Y tile > 6
 - wheels move but all wheels have the same Y
 - when "moon patrol" title is displayed, jeep is too low
-- lockup on "insert coin" screen, typing effect seems
-  not to work
+- write_to_screen_03c9: eats first character ("I" of "INSERT COIN"
 
-complete bogus update of
-scroll_x_value_green_layer_E1C1
-scroll_x_value_blue_layer_E1C2
+- (c) IREM not properly displayed
+- small transparency effect on the tip of the "l" of "Moon Patrol"
 
-- declare tiles & cluts manually (with playfield info)
+- moonbase not properly displayed, completely trashed (colors probably
+  wrong too)
+- declare tiles & cluts manually (with playfield info) to save memory
 
 
 tricks:
 
 - use bobs palette for playfield (after status bar)
 - "moon patrol" title displayed: switch to tiles palette for 8 first colors
-
-- dual playfield: all 3 layers of ground, green & blue together, no scroll
-- update green & blue not all the time (slow scroll)
-- all bobs on the other plane
-- sprites to complete the missing colors: map colors carefully
