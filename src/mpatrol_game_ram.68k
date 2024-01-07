@@ -105,7 +105,7 @@
 	.global	unknown_E30A
 	.global	unknown_E30D
 	.global	unknown_16bit_E30E
-	.global	master_fine_x_scroll_16bit_E314
+	.global	jeep_x_speed_E314
 	.global	unknown_16bit_E31A
 	.global	unknown_16bit_E31C
 	.global	unknown_E320
@@ -386,8 +386,9 @@ unknown_E30D:
 	ds.b	1
 unknown_16bit_E30E:
 	ds.b	6
-master_fine_x_scroll_16bit_E314:
-	ds.b	6
+* max speed 0x201 (not tested slopes), min speed around 0x1BD
+jeep_x_speed_E314:
+	ds.w	3
 unknown_16bit_E31A:
 	ds.b	2
 unknown_16bit_E31C:

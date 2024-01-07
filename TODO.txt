@@ -1,3 +1,4 @@
+- char cookie cut enabled for all if title is displayed and Y tile > 6
 - wheels move but all wheels have the same Y
 - when "moon patrol" title is displayed, jeep is too low
 - lockup on "insert coin" screen, typing effect seems

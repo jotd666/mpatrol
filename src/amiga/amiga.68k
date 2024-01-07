@@ -15,6 +15,11 @@ AFB_68010 = 0
 AFB_68020 = 1
 NO68020 = 1
 
+
+BORDERBLANK = 1
+
+Y_MAX = 252
+
 BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x8000
 
@@ -36,7 +41,7 @@ TARGET_SPRITE_CODE = 2
 TARGET_SPRITE_Y = 0
 TARGET_SPRITE_X = 3
 
-TITLE_NB_COLS = 10
+TITLE_NB_COLS = 14
 TITLE_NB_ROWS = 10
 
 
@@ -740,19 +745,25 @@ osd_wait:
 	bne.b	2b
 	rts
 
+is_title_displayed:
+	move.l	a1,-(a7)
+	lea		bg_videoram,A1
+	cmp.b	#0xB5,(0x149,a1)
+	movem.l	(a7)+,a1
+	rts
+	
 * < A0: 
 update_background:
-	lea		bg_videoram,A1
 	move.l	a0,a2
 	* don't update scroll if title displayed and the values are the same as before
-	cmp.b	#0xB5,(0x149,a1)
+	jbsr	is_title_displayed
 	bne.b	1f
 
 	lea		previous_values(pc),a1
 	moveq	#5,d0
 0:
 	cmp.b	(a0)+,(a1)+
-	bne.b	1f
+	bne.b	1f				| only update if values have changed
 	dbf		d0,0b
 	rts
 1:
@@ -764,15 +775,38 @@ update_background:
 	
 	lea		previous_values(pc),a1
 	move.b	(a2)+,(a1)+	| ground layer
-	move.b	(a2)+,d1	| green layer
+	move.b	(a2)+,d1	| green layer X
 	move.b	d1,(a1)+
-	move.b	(a2)+,d0	| blue layer
+	move.b	(a2)+,d0	| blue layer X
 	move.b	d0,(a1)+
-	move.b	(a2)+,d3
+	move.b	(a2)+,d3    | green layer Y
 	move.b	d3,(a1)+
-	move.b	(a2),d2
+	move.b	(a2),d2     | blue layer Y
+	* irem hardware works differently
+	not.b	d0
+	not.b	d1
+	* only display if Y != 0
 	move.b	d2,(a1)
 	jne		blit_background_layer
+	* Y just went 0: clear all mountain layers & copper colors
+	bsr		reset_dynamic_colors
+	
+	lea		_custom,a5
+	lea		previous_values(pc),a1
+	
+	* compute height
+	move.b	(4,a1),d1		| Y previous position of blue layer
+	move.w	d1,d4
+	moveq	#0,d4
+	move.b	(3,a1),d4		| Y pos of green layer
+	sub.b	d1,d4			| sub Y pos of blue layer
+	add.b	#44,d4			| Y height of green layer (approx)
+	* now D4 is the full height to clear
+	move	#NB_PLAYFIELD_PLANES-1,d3	| leave last bitplane
+	moveq	#32,d2			| should be OK
+	moveq	#0,d0
+	bsr		clear_planes_any_blitter_internal
+	
 	rts
 	
 previous_values:
@@ -1053,6 +1087,93 @@ update_bobs:
 	dbf		d7,1b
 	
 	rts
+
+* < A5: custom
+* < D0,D1: x,y
+* < A1: plane pointer
+* < D2: width in bytes (inc. 2 extra for shifting)
+* < D4: blit height
+* trashes D0-D6
+* > A1: even address where blit was done
+clear_plane_any_blitter_internal:
+	moveq	#1,d3
+* < A5: custom
+* < D0,D1: x,y
+* < A1: foreground plane pointer (often first plane!)
+* < D2: width in bytes (inc. 2 extra for shifting)
+* < D3: number of planes to clear
+* < D4: blit height
+* < D7: mask (disabled, -1 set at start)
+* trashes D0-D6
+clear_planes_any_blitter_internal:
+    * pre-compute the maximum of shit here
+	move.w	d1,d6
+    beq.b   1f    | optim
+	* check if y start + height > Y_MAX
+	* (ignores case where y = 0, no risk)
+	add.w	d4,d6
+	sub.w	#Y_MAX,d6
+	bmi.b	0f
+	* y start + height > Y_MAX: clip height
+	sub.w	d6,d4
+	beq.b	10f
+	bpl.b	0f
+10:
+	* null or negative height after clipping: out
+	rts
+0:
+    lea mulNB_BYTES_PER_ROW_table(pc),a2
+    add.w   d1,d1
+    move.w  (a2,d1.w),d1
+1:
+    move.l  #0x01000000,d5   | minterm useD & rect clear (0xA) 
+    move    d0,d6
+    beq.b   2f
+    MOVEQ #15,D6
+    AND.W D0,D6
+    and.w   #0x1F0,d0
+    lsr.w   #3,d0
+    add.w   d0,d1
+    LSL.W #8,D6
+    LSL.W #4,D6
+
+    swap    d6
+    or.l    d6,d5            | add shift
+2:   
+    add.w   d1,a1       | plane position (always even)
+
+	move.w #NB_BYTES_PER_ROW,d0
+    sub.w   d2,d0       | blit width
+
+    lsl.w   #6,d4
+    lsr.w   #1,d2
+    add.w   d2,d4       | blit height
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+	.ifdef	VARIABLE_BLITTER_MASKS_AND_MODS
+    move.l  d7,bltafwm(a5)
+	.endif
+	
+	move.l d5,bltcon0(a5)	
+    move.w  d0,bltdmod(a5)	|D modulo
+	
+	subq	#1,d3
+	beq.b	4f
+	subq	#1,d3
+3:
+	move.l a1,bltdpt(a5)	|destination top left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+	WAIT_BLIT
+	dbf		d3,3b
+4:
+	move.l a1,bltdpt(a5)	|destination top left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	
+    rts
 
 
 * what: blits 16x? data on one plane, cookie cut
@@ -1383,7 +1504,6 @@ blit_background_layer:
 	move.w	#color,(A0,d7.w)
 	move.w	(6,a1),(2,a0,d7.w)
 	
-	rts
 	
 	* hack: if title "moon patrol" is shown on screen, we have to redraw it
 	* as the mountains share the same layer and have clobbered it partially
@@ -1393,10 +1513,10 @@ blit_background_layer:
 	bne.b	0f
 	
 	
-	move.w	#0x148,d6
+	move.w	#0x146,d6
 	move.w	#TITLE_NB_ROWS,d2			| rows
 2:
-	move.w	#TITLE_NB_COLS,d1
+	move.w	#TITLE_NB_COLS-1,d1
 1:
 	move.b	(a0,d6.w),d0	| refresh tile
 	st.b	(a0,d6.w)		| to force refresh
@@ -1405,7 +1525,7 @@ blit_background_layer:
 	jbsr	osd_w_videoram
 	addq.w	#1,d6
 	dbf		d1,1b
-	add.w	#30-TITLE_NB_COLS,d6
+	add.w	#32-TITLE_NB_COLS,d6
 	dbf		d2,2b
 0:
 	rts
@@ -1809,15 +1929,14 @@ platform_init:
     move.w #0x2C89,diwstop(a5)
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
-    *move.w #0x200+(NB_PLAYFIELD_PLANES<<12),bplcon0(a5)
+    move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 	* AGA-compatible ECS default values
-    move.w #0x0C00,bplcon3(a5)     | no AGA specificities, default ECS
+    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS
     move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
     move.w #0,fmode(a5)			
-	
+    move.w #0,bplcon1(a5)
 
-    *move.w #0,bplcon1(a5)    | set in copperlist
 	move.w	#0,d0
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
@@ -2086,7 +2205,6 @@ update_bg_tile:
 	
 	* is it upper part of bank ?
 	btst	#7,D1
-	sne		d6
 	beq.b	0f
 	* second part of tiles ("moon patrol" title...)
 	add.w	#0x100,d0
@@ -2098,6 +2216,14 @@ update_bg_tile:
 	
 	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y
+	
+	moveq	#0,d6		| standard copy mode
+	cmp.w	#7,d3		| lower Y: remain in standard copy at all times (panel)
+	bcs.b	22f
+	jbsr	is_title_displayed
+	sne		d6
+22:
+	
 	and.w	#0x1F,d7	| this is X
 	addq.w	#2,d7
 
@@ -2156,9 +2282,11 @@ update_bg_tile:
 0:
 	rts
 
-	* "cookie cut" of one char with mask
+	* "cookie cut" of one char with mask except for
+	* last plane that doesn't need that (mountains use 3 first planes)
 5:
 	WAIT_BLIT
+	subq	#1,d4
 	lea		(NB_PLAYFIELD_PLANES*8,a0),a2		| mask source
 6:
 	move.l	a2,a3
@@ -2176,6 +2304,13 @@ update_bg_tile:
 	* next plane
 	add.w	d5,a1
 	dbf		d4,6b
+
+	* last plane, plain copy to gain speed
+	.set	offset,0
+	.rept	8
+	move.b	(a0)+,(offset,a1)	
+	.set	offset,offset+NB_BYTES_PER_ROW
+	.endr
 
 	rts
 	
@@ -2933,12 +3068,8 @@ blank_sprite:
 	* main copperlist
 copperlist:
     *.word   0x1801,0xFFFE
-	* no dual playfield, 4 planes (for status panel)
-	.word	bplcon0
-	.word	0x200+(4<<12)
-	
-	* no scrolling
-	.word	bplcon1,0
+
+
 panel_bitplanes:
 	DECL_BITPLANES	0,4
 panel_tiles_colors:
@@ -2995,12 +3126,7 @@ color_line_copper:
 	.word	beampos,0xFFFE
 	.endr
 
-*	* wait until line 192
-*    .word  0xC001,0xFFFE
-*	* now change scroll register value and allow to update bitplane
-*	.word	bplcon1
-*bplcon1_value:
-*	.word	0
+
 	
 	* pal limit
     .word  0xFFDF,0xFFFE       | PAL wait
