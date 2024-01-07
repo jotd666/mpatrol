@@ -648,7 +648,6 @@ l_0349:
 	
 * < HL pointer to X/Y pos + text
 write_text_to_screen_at_xy_034e:
-	jbsr	osd_break
 	jbsr	compute_screen_address_03db                            	| [$034e: call $03DB]
 l_0351:
 	jbsr	write_to_screen_03c9                            	| [$0351: call $03C9]
