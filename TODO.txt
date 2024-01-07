@@ -3,6 +3,10 @@
 - lockup on "insert coin" screen, typing effect seems
   not to work
 
+complete bogus update of
+scroll_x_value_green_layer_E1C1
+scroll_x_value_blue_layer_E1C2
+
 - declare tiles & cluts manually (with playfield info)
 
 

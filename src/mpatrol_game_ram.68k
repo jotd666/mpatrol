@@ -88,7 +88,6 @@
 	.global	unknown_E1DF
 	.global	unknown_E1E0
 	.global	unknown_16bit_E1E1
-	.global	unknown_E1E2
 	.global	ground_y_array_E200
 	.global	unknown_E210
 	.global	unknown_E23F
@@ -106,7 +105,7 @@
 	.global	unknown_E30A
 	.global	unknown_E30D
 	.global	unknown_16bit_E30E
-	.global	unknown_16bit_E314
+	.global	master_fine_x_scroll_16bit_E314
 	.global	unknown_16bit_E31A
 	.global	unknown_16bit_E31C
 	.global	unknown_E320
@@ -387,7 +386,7 @@ unknown_E30D:
 	ds.b	1
 unknown_16bit_E30E:
 	ds.b	6
-unknown_16bit_E314:
+master_fine_x_scroll_16bit_E314:
 	ds.b	6
 unknown_16bit_E31A:
 	ds.b	2

@@ -739,23 +739,44 @@ osd_wait:
 	tst.w	delay_timer
 	bne.b	2b
 	rts
-	
+
 * < A0: 
 update_background:
+	lea		bg_videoram,A1
+	move.l	a0,a2
+	* don't update scroll if title displayed and the values are the same as before
+	cmp.b	#0xB5,(0x149,a1)
+	bne.b	1f
+
+	lea		previous_values(pc),a1
+	moveq	#5,d0
+0:
+	cmp.b	(a0)+,(a1)+
+	bne.b	1f
+	dbf		d0,0b
+	rts
+1:
 	moveq	#0,d0     | X position of blue layer (0-256)
 	moveq	#0,d1     | X position of green layer (0-256)
 	moveq	#0,d2     | Y position of blue layer
 	moveq	#0,d3     | Y position of green layer
 	moveq	#0,d4     | 0: green mountains, 1: green city
-	addq	#1,a0	| ground layer
-	move.b	(a0)+,d1	| green layer
-	move.b	(a0)+,d0	| blue layer
-	move.b	(a0)+,d3
-	beq.b	0f
-	move.b	(a0)+,d2
-	bra		blit_background_layer
-0:
+	
+	lea		previous_values(pc),a1
+	move.b	(a2)+,(a1)+	| ground layer
+	move.b	(a2)+,d1	| green layer
+	move.b	d1,(a1)+
+	move.b	(a2)+,d0	| blue layer
+	move.b	d0,(a1)+
+	move.b	(a2)+,d3
+	move.b	d3,(a1)+
+	move.b	(a2),d2
+	move.b	d2,(a1)
+	jne		blit_background_layer
 	rts
+	
+previous_values:
+	ds.b	6
 	
 * < A0: pointer on sprite shadow zone E100
 * length: 256 bytes for 64 max sprites on screen
@@ -768,19 +789,18 @@ update_background:
 * will cause us priority issues anyway
 
 osd_update_sprites:
-	move.l	a0,-(a7)
-	move.l	(a7)+,a0
 	
 	*lea		test_sprites,a0
-	move.l	a0,-(a7)
+	movem.l	a0-a6/d0-d7,-(a7)
+	move.l	a0,a6
 	lea		(0xC0,a0),a0		| shadow for x,y background pos
 	bsr		update_background
-	move.l	(a7),a0
+	move.l	a6,a0
 	bsr		update_hardware_sprites
-	move.l	(a7),a0
+	move.l	a6,a0
 	bsr		update_bobs
 	
-	move.l	(a7)+,a0
+	movem.l	(a7)+,a0-a6/d0-d7
 	rts
 	
 update_hardware_sprites:
@@ -1191,7 +1211,8 @@ start_process_1_plane:
 * it also changes black background to the relevant background (blue or green)
 * (expecting the dynamic copperlist to be reset each time)
 blit_background_layer:
-
+	sub.w	#PANEL_MAX_Y,d2
+	sub.w	#PANEL_MAX_Y,d3
 	lea		_custom,A5
 	move.l	bg_drawed_screen_ptr(pc),a1
 	add.w	#(PANEL_MAX_Y+8)*NB_BYTES_PER_ROW,a1
@@ -1207,15 +1228,16 @@ blit_background_layer:
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
-	lsr.w	#4,d2
-
-	add.w	d2,a0			| adds X/16 to source (destination X = 0)
+	lsr.w	#3,d2
+	bclr	#0,d2
+	add.w	d2,a0			| adds X/8 to source (destination X = 0)
     move.l  #0x09f00000,d3    | A->D copy, ascending mode
 	* blit height
 	lsl.w	#6,d4
 	add.w	#20,d4		| size: the whole screen
 	* insert shifting in D3 bltcon config
 	and.w	#0xF,d0		| shifting 0-15
+	not.w	d0
 	* apply to bltcon (destination)
     swap    d0
     clr.w   d0
@@ -1276,8 +1298,8 @@ blit_background_layer:
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
-	lsr.w	#4,d2
-
+	lsr.w	#3,d2
+	bclr	#0,d2
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
     move.l  #0x0fca0000,d3    | B+C-A->D cookie cut   
 
@@ -1286,6 +1308,7 @@ blit_background_layer:
 	add.w	#20,d4		| size: the whole screen
 	* insert shifting in D3 bltcon config
 	and.w	#0xF,d0		| shifting 0-15
+	not.w	d0
 	* apply to bltcon (destination & mask)
     swap    d0
     clr.w   d0

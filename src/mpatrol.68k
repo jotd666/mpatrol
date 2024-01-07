@@ -4118,29 +4118,32 @@ l_1809:
 	jeq	l_188b                             	| [$1813: jr   z,$188B]
 	LOAD_LEW	unknown_16bit_E31C,d5             	| [$1815: ld   hl,(unknown_16bit_E31C)]
 	LOAD_LEW	unknown_16bit_E31A,d3             	| [$1818: ld   de,(unknown_16bit_E31A)]
+	* test sign of D which amounts to test sign of D3.W
 	tst.w	d3                           	| [$181c: ld   a,d]
 	
 	                          	| [$181d: and  a]
-	jmi	l_1823                             	| [$181e: jp   m,$1823]
+	* hacked workflow to preserve C flag, jr nc at 1826 would branch
+	* with HL at 3
+	jmi	l_182b                             	| [$181e: jp   m,$1823]
 	sub.w	d3,d5                            	| [$1821: sbc  hl,de]
-l_1823:
 	jcc	l_182b                             	| [$1826: jr   nc,$182B]
 	move.w	#-2,d5                          	| [$1828: ld   hl,-2] -2
 	bra.b	l_182b_2
 l_182b:
-	move.w	#0x0003,d5                      	| [$1823: ld   hl,$0003] 3
+	moveq	#3,d5                      	| [$1823: ld   hl,$0003] 3
 l_182b_2:
 	move.b	unknown_E04E,d0                 	| [$182b: ld   a,(unknown_E04E)]
+	* just tests bit 0, we don't care about D0 value
 	ror.b	#1,d0                           	| [$182e: rra]
 	jcs	l_1832                             	| [$182f: jr   c,$1832]
-	subq.w	#1,d3                           	| [$1831: dec  e]
+	subq.b	#1,d3                           	| [$1831: dec  e]
 l_1832:
 	add.w	d3,d5                            	| [$1832: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E31A                 	| [$1833: ld   (unknown_16bit_E31A),hl]
 	LOAD_LEW	unknown_16bit_E304,d3             	| [$1836: ld   de,(unknown_16bit_E304)]
 	                               	| [$183a: and  a]
 	sub.w	d3,d5                            	| [$183b: sbc  hl,de]
-	STORE_LEW	d5,unknown_16bit_E314                 	| [$183d: ld   (unknown_16bit_E314),hl]
+	STORE_LEW	d5,master_fine_x_scroll_16bit_E314                 	| [$183d: ld   (master_fine_x_scroll_16bit_E314),hl]
 	exg	d5,d3                              	| [$1840: ex   de,hl]
 	LOAD_LEW	unknown_16bit_E1E1,d5             	| [$1841: ld   hl,(unknown_16bit_E1E1)]
 	add.w	d3,d5                            	| [$1844: add  hl,de]
@@ -4192,18 +4195,20 @@ l_188b:
 	lea	x_scroll_horizon_e03d,a0       	| [$188d: ld   hl,x_scroll_horizon_e03d]
 	add.b	(a0),d0                          	| [$1890: add  a,(hl)]
 	move.b	d0,scroll_x_value_ground_layer_E1C0	| [$1891: ld   (scroll_x_value_ground_layer_E1C0),a]
-	LOAD_LEW	unknown_16bit_E314,d5             	| [$1894: ld   hl,(unknown_16bit_E314)]
-	* times 1.5 ?
+	LOAD_LEW	master_fine_x_scroll_16bit_E314,d5             	| [$1894: ld   hl,(master_fine_x_scroll_16bit_E314)]
+ 	* d5 times 1.5
 	move.w	d5,d3                           	| [$1897: ld   d,h]
 	                           	| [$1898: ld   e,l]
 	lsr.w	#1,d5                            	| [$1899: srl  h]
 	                           	| [$189b: rr   l]
 	add.w	d3,d5                            	| [$189d: add  hl,de]
 
-	lsr.w	#2,d5                            	| [$189e: srl  h]
+	* d5 times 0.375
+	lsr.w	#2,d5                            	| [$189e: srl  h] * 2
 	exg	d3,d5                              	| [$18a6: ex   de,hl]
+	* update fine scroll x value for green layer
 	move.w	fine_scroll_x_value_green_layer_E504,d5             	| [$18a7: ld   hl,(fine_scroll_x_value_green_layer_E504)]
- 	add.w	d3,d5                            	| [$18aa: add  hl,de]
+	add.w	d3,d5                            	| [$18aa: add  hl,de]
  	move.w	d5,fine_scroll_x_value_green_layer_E504    | [$18ab: ld   (fine_scroll_x_value_green_layer_E504),hl]
 	move.b	d5,d0                           	| [$18ae: ld   a,h]
 	not.b	d0                               	| [$18af: cpl]
@@ -4881,7 +4886,8 @@ l_1d1d_2:
 	jra	l_0856                             	| [$1d20: jp   $0856]
 l_1d23:
 	jbsr	l_20db                            	| [$1d23: call $20DB]
-	LOAD_LEW	unknown_16bit_E314,d3             	| [$1d26: ld   de,(unknown_16bit_E314)]
+	LOAD_LEW	master_fine_x_scroll_16bit_E314,d3             	| [$1d26: ld   de,(master_fine_x_scroll_16bit_E314)]
+	* divide value by 2
 	asr.w	#1,d3                            	| [$1d2a: sra  d]
 	                           	| [$1d2c: rr   e]
 	sub.w	d3,d5                            	| [$1d2e: sbc  hl,de]
