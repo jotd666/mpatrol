@@ -40,6 +40,37 @@
 *    a0        background #2 y position
 *    c0        background control
 
+*	PORT_START("IN0")
+*	/* Start 1 & 2 also restarts and freezes the game with stop mode on
+*	   and are used in test mode to enter and esc the various tests */
+*	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_START1 )
+*	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_START2 )
+*	/* coin input must be active for 19 frames to be consistently recognized */
+*	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE1 ) PORT_IMPULSE(19)
+*	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_COIN1 )
+*	PORT_BIT( 0xf0, IP_ACTIVE_LOW, IPT_UNUSED )
+*
+*	PORT_START("IN1")
+*	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_8WAY
+*	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT )  PORT_8WAY
+*	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN )  PORT_8WAY
+*	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_UP )    PORT_8WAY
+*	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED )
+*	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON2 )
+*	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNUSED )
+*	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON1 )
+*
+*	PORT_START("IN2")
+*	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_COCKTAIL
+*	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT )  PORT_8WAY PORT_COCKTAIL
+*	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN )  PORT_8WAY PORT_COCKTAIL
+*	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_UP )    PORT_8WAY PORT_COCKTAIL
+*	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_COIN2 )
+*	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_COCKTAIL
+*	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNUSED )
+*	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_COCKTAIL
+
+
 *	PORT_START("DSW2")
 *	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Flip_Screen ) ) PORT_DIPLOCATION("SW2:1")
 *	PORT_DIPSETTING(    0x01, DEF_STR( Off ) )
@@ -297,7 +328,8 @@ l_0093:
 	jbsr	sound_stuff_05cb                            	| [$0093: call $05CB]
 	jbsr	osd_read_in_0                       	| [$0096: ld   a,($D000)]
 	not.b	d0                               	| [$0099: cpl]
-	move.b	d0,unknown_E053                 	| [$009a: ld   (unknown_E053),a]
+	move.b	d0,in0_copy_E053                 	| [$009a: ld   (in0_copy_E053),a]
+	* player 1 start
 	btst.b	#1,d0                           	| [$009d: bit  1,a]
 	jeq	l_00b6                             	| [$009f: jr   z,$00B6]
 	jbsr	osd_read_dsw_2                       	| [$00a1: ld   a,($D004)]
@@ -323,7 +355,7 @@ l_00c3:
 
 	move.l	a2,-(sp)                        	| [$00c5: push ix]
 	jbsr	l_040e                            	| [$00c7: call $040E]
-	move.b	unknown_E041,d0                 	| [$00ca: ld   a,(unknown_E041)]
+	move.b	free_play_E041,d0                 	| [$00ca: ld   a,(free_play_E041)]
 	                               	| [$00cd: and  a]
 	jne	l_00d5                             	| [$00ce: jr   nz,$00D5]
 	move.b	#0x02,d0                        	| [$00d0: ld   a,$02]
@@ -846,14 +878,14 @@ l_0408:
 	rts                                    	| [$040d: ret]
 l_040e:
 	lea	unknown_E03E,a0                	| [$040e: ld   hl,unknown_E03E]
-	lea	unknown_E041,a1                	| [$0411: ld   de,unknown_E041]
+	lea	free_play_E041,a1                	| [$0411: ld   de,free_play_E041]
 	jbsr	osd_read_in_0                       	| [$0414: ld   a,($D000)]
 	move.b	#0x00,d1                        	| [$0417: ld   bc,$0002] 2
 	move.b	#0x02,d2                        	| [$0417: ld   bc,$0002] 2
 	jbsr	l_0434                            	| [$041a: call $0434]
 	lea	unknown_E03F,a0                	| [$041d: ld   hl,unknown_E03F]
 	addq.w	#1,a1                           	| [$0420: inc  de]
-	jbsr	osd_read_in_1                       	| [$0421: ld   a,($D002)]
+	jbsr	osd_read_in_2                       	| [$0421: ld   a,($D002)]
 	ror.b	#1,d0                           	| [$0424: rra]
 	or.b	#0x04,d0                          	| [$0425: or   $04]
 	move.b	#0x20,d2                        	| [$0427: ld   c,$20]
@@ -890,10 +922,12 @@ l_0434:
 0:
 	jra	l_046a                             	| [$044f: jr   $046A]
 l_0451:
+	* protection against spurious credit insertion
+	* credit must remain active during 19 calls/frames
 	move.b	d1,d0                           	| [$0451: ld   a,b]
 	or.b	d2,d0                             	| [$0452: or   c]
 	move.b	d0,d1                           	| [$0453: ld   b,a]
-	move.b	#0x13,d0                        	| [$0454: ld   a,$13]
+	move.b	#0x13,d0                        	| [$0454: ld   a,$13]  19 frames to wait
 	jbsr	store_d0_in_revolving_E000_0d7d                            	| [$0456: call $0D7D]
 	move.b	(a1),d0                         	| [$0459: ld   a,(de)]
 	cmp.b	#0x01,d0                         	| [$045a: cp   $01]
@@ -918,6 +952,7 @@ l_046f:
 	move.b	(a0),d7                          	| [$0472: add  a,(hl)]
 	abcd	d7,d0						| [daa]
 	jcc	l_0478                             	| [$0474: jr   nc,$0478]
+	* max 99 credits
 	move.b	#0x99,d0                        	| [$0476: ld   a,$99]
 l_0478:
 	move.b	d0,(a0)                         	| [$0478: ld   (hl),a]
@@ -926,21 +961,33 @@ l_047a:
 	move.b	game_status_bits_E046,d0                 	| [$047a: ld   a,(game_status_bits_E046)]
 	rol.b	#1,d0                            	| [$047d: rlca]
 	jcc	l_04db                             	| [$047e: jr   nc,$04DB]
-	lea	osd_read_in_0,a1                      	| [$0480: ld   de,$D001]
+	move.w	#0xD001,a1                      	| [$0480: ld   de,$D001] fake signpost address
 	btst.b	#4,d0                           	| [$0483: bit  4,a]
 	jeq	l_048e                             	| [$0485: jr   z,$048E]
-	move.b	unknown_E043,d0                 	| [$0487: ld   a,(unknown_E043)]
+	move.b	cocktail_mode_E043,d0                 	| [$0487: ld   a,(cocktail_mode_E043)]
 	subq.b	#1,d0                           	| [$048a: dec  a]
 	jeq	l_048e                             	| [$048b: jr   z,$048E]
-	lea	osd_read_in_1,a1                           	| [$048d: inc  de]
+	* other port to read inputs
+	addq.w	#1,a1                           	| [$048d: inc  de]
 l_048e:
 	lea	unknown_E04A,a0                	| [$048e: ld   hl,unknown_E04A]
 	move.b	(a0)+,d0                         	| [$0491: ld   a,(hl)]
 	                           	| [$0492: inc  hl]
 	move.b	d0,(a0)                         	| [$0493: ld   (hl),a]
 	subq.w	#1,a0                           	| [$0494: dec  hl]
-	* read port
-	jsr		(a1)                         	| [$0495: ld   a,(de)]
+	* read port or demo input
+	cmp.w	#0xD001,a1
+	bne.b	0f
+	jbsr	osd_read_in_1
+	bra.b	1f
+0:
+	cmp.w	#0xD002,a1
+	bne.b	0f
+	jbsr	osd_read_in_2
+	bra.b	1f
+0:
+	move.b	(a1),d0                         	| [$0495: ld   a,(de)]
+1:
 	not.b	d0                               	| [$0496: cpl]
 	move.b	d0,(a0)                         	| [$0497: ld   (hl),a]
 	                           	| [$0498: dec  hl]
@@ -950,15 +997,15 @@ l_048e:
 	
 l_049d:
 	move.b	fine_position_on_track_E50B,d0                 	| [$049d: ld   a,(fine_position_on_track_E50B)]
-	move.l	unknown_pointer_E0F7,a0             	| [$04a0: ld   hl,(unknown_pointer_E0F7)]
+	move.l	demo_fake_inputs_pointer_E0F7,a0             	| [$04a0: ld   hl,(demo_fake_inputs_pointer_E0F7)]
 	cmp.b	(a0),d0                          	| [$04a3: cp   (hl)]
 	jne	l_04b9                             	| [$04a4: jr   nz,$04B9]
 	addq.w	#1,a0                           	| [$04a6: inc  hl]
-	move.b	(a0),d0                         	| [$04a7: ld   a,(hl)]
 	move.l	a0,a1                           	| [$04a8: ld   d,h]
+	move.b	(a0)+,d0                         	| [$04a7: ld   a,(hl)]
 	                           	| [$04a9: ld   e,l]
-	addq.w	#1,a0                           	| [$04aa: inc  hl]
-	move.l	a0,unknown_pointer_E0F7                 	| [$04ab: ld   (unknown_pointer_E0F7),hl]
+	                           	| [$04aa: inc  hl]
+	move.l	a0,demo_fake_inputs_pointer_E0F7                 	| [$04ab: ld   (demo_fake_inputs_pointer_E0F7),hl]
 	tst.b	d0                               	| [$04ae: and  a]
 	jeq	l_04b5                             	| [$04af: jr   z,$04B5]
 	cmp.b	#0xFF,d0                         	| [$04b1: cp   $FF]
@@ -1073,7 +1120,7 @@ l_0533:
 	lea	game_rom+0x2A97,a0                      	| [$0545: ld   hl,$2A97]
 l_0548:
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0548: call $0300]
-	move.b	unknown_E053,d0                 	| [$054b: ld   a,(unknown_E053)]
+	move.b	in0_copy_E053,d0                 	| [$054b: ld   a,(in0_copy_E053)]
 	and.b	#0x03,d0                         	| [$054e: and  $03]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$0550: ret  z] [...]
@@ -1522,7 +1569,7 @@ l_079f:
 	jbsr	ldir                              	| [$07a2: ldir]
 	lea	unknown_E057,a0                	| [$07a4: ld   hl,unknown_E057]
 l_07a7:
-	move.b	unknown_E041,d0                 	| [$07a7: ld   a,(unknown_E041)]
+	move.b	free_play_E041,d0                 	| [$07a7: ld   a,(free_play_E041)]
 l_07aa:
 	move.w	#0x0008,d3                      	| [$07aa: ld   de,$0008] 8
 	cmp.b	#0x08,d0                         	| [$07ad: cp   $08]
@@ -2107,7 +2154,7 @@ l_0b38:
 l_0b4a:
 	st.b	d0                                	| [$0b4a: ld   a,$FF]
 	move.b	d0,unknown_E051                 	| [$0b4c: ld   (unknown_E051),a]
-	lea	unknown_E053,a0                	| [$0b4f: ld   hl,unknown_E053]
+	lea	in0_copy_E053,a0                	| [$0b4f: ld   hl,in0_copy_E053]
 	move.b	(a0),d0                         	| [$0b52: ld   a,(hl)]
 l_0b53:
 	move.b	(a0),d2                         	| [$0b53: ld   c,(hl)]
@@ -2240,26 +2287,35 @@ l_0c3d:
 	add.b	#0x30,d0                         	| [$0c3d: add  a,$30]
 	move.w	#0x8156,d7
 	jbsr	osd_w_videoram                       	| [$0c3f: ld   ($8156),a]
-l_0c42:
+display_moon_base_0c42:
 	move.b	#0x1C,d0                        	| [$0c42: ld   a,$1C]
 	jbsr	l_0d6f                            	| [$0c44: call $0D6F]
 	move.b	#0x40,d0                        	| [$0c47: ld   a,$40]
 	move.b	d0,unknown_E30A                 	| [$0c49: ld   (unknown_E30A),a]
+	* moon base start character
+	jbsr	osd_break
 	move.b	#0x68,d2                        	| [$0c4c: ld   c,$68]
+	* kind of RLE encoded sequence: attribute,start address,end address
+	* here character increases each time
 	lea	game_rom+0x30B6,a0                      	| [$0c4e: ld   hl,$30B6]
 l_0c51:
+	* character attribute
 	move.b	(a0),d1                         	| [$0c51: ld   b,(hl)]
 	btst.b	#7,d1                           	| [$0c52: bit  7,b]
-	jne	l_0c6a                             	| [$0c54: jr   nz,$0C6A]
+	jne	l_0c6a                             	| [$0c54: jr   nz,$0C6A] end of sequence
 	addq.w	#1,a0                           	| [$0c56: inc  hl]
-	move.b	(a0)+,d4                         	| [$0c57: ld   e,(hl)]
+	* start address 
+	move.b	(a0)+,d7                         	| [$0c57: ld   e,(hl)]
 	                           	| [$0c58: inc  hl]
+	* end address LSB
 	move.b	(a0)+,d0                         	| [$0c59: ld   a,(hl)]
 	                           	| [$0c5a: inc  hl]
-	                              	| [$0c5b: ex   de,hl]
+	
+	* save HL in DE not needed                       	| [$0c5b: ex   de,hl]
 l_0c5c:
-	move.w	#0x8300,d7                        	| [$0c5c: ld   h,$83]
-	move.b	d4,d7
+	ror.w	#8,d7
+	move.b	#0x83,d7                        	| [$0c5f: ld   h,$87]
+	ror.w	#8,d7
 	move.w	d0,-(sp)
 	move.b	d2,d0                         	| [$0c5e: ld   (hl),c]
 	jbsr	osd_w_videoram
@@ -2271,11 +2327,11 @@ l_0c5c:
 	move.b	d1,d0                         	| [$0c61: ld   (hl),b]
 	jbsr	osd_w_colorram
 	move.w	(sp)+,d0
-	addq.b	#1,d2                           	| [$0c62: inc  c]
-	addq.b	#1,d4                           	| [$0c63: inc  l]
-	cmp.b	d4,d0                            	| [$0c64: cp   l]
+	addq.b	#1,d2                           	| [$0c62: inc  c] next moonbase character
+	addq.b	#1,d7                           	| [$0c63: inc  l]
+	cmp.b	d7,d0                            	| [$0c64: cp   l]
 	jne	l_0c5c                             	| [$0c65: jr   nz,$0C5C]
-	                              	| [$0c67: ex   de,hl]
+	* restore HL not needed                              	| [$0c67: ex   de,hl]
 	jra	l_0c51                             	| [$0c68: jr   $0C51]
 l_0c6a:
 	move.b	#0xD3,d0                        	| [$0c6a: ld   a,$D3]
@@ -2300,7 +2356,7 @@ l_0c7f:
 l_0c86:
 	lea	game_rom+0x2A47,a0                      	| [$0c86: ld   hl,$2A47]
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0c89: call $0300]
-	jra	l_0c42                             	| [$0c8c: jr   $0C42]
+	jra	display_moon_base_0c42                             	| [$0c8c: jr   $0C42]
 l_0c8e:
 	clr.b	d0                               	| [$0c8e: xor  a]
 	clr.b	title_display_timer_E04D                 	| [$0c8f: ld   (title_display_timer_E04D),a]
@@ -2319,7 +2375,7 @@ l_0c9e:
 	rts                                    	| [$0cb0: ret]
 l_0cb1:
 	lea	game_rom+0x26DE,a0                      	| [$0cb1: ld   hl,$26DE]
-	move.l	a0,unknown_pointer_E0F7                 	| [$0cb4: ld   (unknown_pointer_E0F7),hl]
+	move.l	a0,demo_fake_inputs_pointer_E0F7                 	| [$0cb4: ld   (demo_fake_inputs_pointer_E0F7),hl]
 	lea	unknown_E503,a0                	| [$0cb7: ld   hl,unknown_E503]
 	move.w	#0x11,d1                        	| [$0cba: ld   bc,$0011] 17
 	jra	l_0c9e                             	| [$0cbd: jr   $0C9E]
@@ -2410,7 +2466,7 @@ l_0d29:
 	move.w	#0xc6,d1                        	| [$0d35: ld   bc,$00C6] 198
 	jbsr	clear_area_05fa                   	| [$0d38: call clear_area_05fa] clear part of RAM
 l_0d3b:
-	move.b	unknown_E043,d0                 	| [$0d3b: ld   a,(unknown_E043)]
+	move.b	cocktail_mode_E043,d0                 	| [$0d3b: ld   a,(cocktail_mode_E043)]
 	subq.b	#1,d0                           	| [$0d3e: dec  a]
 	jeq	l_0d4a                             	| [$0d3f: jr   z,$0D4A]
 	lea	game_status_bits_E046,a0                	| [$0d41: ld   hl,game_status_bits_E046]
@@ -2733,6 +2789,7 @@ l_0ef0:
 	lea	game_rom+0x3000,a0
 	add.w	d6,a0
 l_0f0d:
+	* in game!
 	illegal		| not reached easily??
 	move.w	screen_address_E0E4,d7             	| [$0f0d: ld   iy,(screen_address_E0E4)]
 	move.w	#0x0020,d3                      	| [$0f11: ld   de,$0020] 32

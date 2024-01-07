@@ -8,9 +8,9 @@
 	.global	unknown_E03E
 	.global	unknown_E03F
 	.global	start_nb_lives_E040
-	.global	unknown_E041
+	.global	free_play_E041
 	.global	unknown_E042
-	.global	unknown_E043
+	.global	cocktail_mode_E043
 	.global	unknown_E044
 	.global	unknown_E045
 	.global	game_status_bits_E046
@@ -24,7 +24,7 @@
 	.global	sync_flag_E050
 	.global	unknown_E051
 	.global	unknown_E052
-	.global	unknown_E053
+	.global	in0_copy_E053
 	.global	unknown_16bit_E054
 	.global	unknown_E057
 	.global	unknown_E05B
@@ -159,7 +159,7 @@
 	.global	unknown_E711
 	.global	unknown_E712
 	.global	unknown_E800
-	.global	unknown_pointer_E0F7
+	.global	demo_fake_inputs_pointer_E0F7
 
 revolving_buffer_8_E000:
 	ds.b	8
@@ -181,11 +181,11 @@ unknown_E03F:
 	ds.b	1
 start_nb_lives_E040:
 	ds.b	1
-unknown_E041:
+free_play_E041:
 	ds.b	1
 unknown_E042:
 	ds.b	1
-unknown_E043:
+cocktail_mode_E043:
 	ds.b	1
 unknown_E044:
 	ds.b	1
@@ -215,7 +215,7 @@ unknown_E051:
 	ds.b	1
 unknown_E052:
 	ds.b	1
-unknown_E053:
+in0_copy_E053:
 	ds.b	1
 unknown_16bit_E054:
 	ds.b	3
@@ -277,7 +277,7 @@ unknown_pointer_E0F4:
 unknown_E0F6:
 	ds.b	1
 	.align	2
-unknown_pointer_E0F7:
+demo_fake_inputs_pointer_E0F7:
 	ds.l	1
 unknown_E0F9:
 	ds.b	0x10-0x9
