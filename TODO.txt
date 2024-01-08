@@ -1,15 +1,17 @@
+
 - wheels move but all wheels have the same Y
 - when "moon patrol" title is displayed, jeep is too low / jump looks bogus
-- 0f0d: implement (in-game)
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
 - write_to_screen_03c9: eats first character ("I" of "INSERT COIN"
 
 - (c) IREM not properly displayed
 - small transparency effect on the tip of the "l" of "Moon Patrol" => BOGUS TITLE NOW
-- ground scrolling is off, with holes
-- moonbase not properly displayed, completely trashed (colors probably
-  wrong too): display_moon_base_0c42
+- ground scrolling is off, with holes  moonbase not properly displayed
+
+- 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
+- re-set tiles palette at some low Y so letters have proper palettes
+
   
 low pri:  
   

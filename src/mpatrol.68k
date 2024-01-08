@@ -2655,7 +2655,7 @@ l_0e18:
 	subq.b	#0x06,d0                        	| [$0e29: sub  $06]
 	jmi	l_0e8a                             	| [$0e2b: jp   m,$0E8A]
 	subq.b	#0x07,d0                        	| [$0e2e: sub  $07]
-	jmi	l_0ef0                             	| [$0e30: jp   m,$0EF0]
+	jmi	draw_hole_on_right_0ef0                             	| [$0e30: jp   m,$0EF0]
 	add.b	d0,d0                            	| [$0e33: add  a,a]
 	add.b	d0,d0                            	| [$0e34: add  a,a]
 	add.b	d0,d0                            	| [$0e35: add  a,a]
@@ -2769,7 +2769,9 @@ l_0ec3:
 	move.b	(0x02,a3),d2                    	| [$0eec: ld   c,(iy+$02)]
 	rts                                    	| [$0eef: ret]
 
-l_0ef0:
+* responsible for drawing the holes that scroll to the player
+* (the holes caused by blue ship bombs are done somewhere else)
+draw_hole_on_right_0ef0:
 	addq.b	#1,d0                           	| [$0ef0: inc  a]
 	jeq	l_0f40                             	| [$0ef1: jp   z,$0F40]
 	move.w	d0,-(sp)                        	| [$0ef4: push af]
@@ -2790,7 +2792,6 @@ l_0ef0:
 	add.w	d6,a0
 l_0f0d:
 	* in game!
-	illegal		| not reached easily??
 	move.w	screen_address_E0E4,d7             	| [$0f0d: ld   iy,(screen_address_E0E4)]
 	move.w	#0x0020,d3                      	| [$0f11: ld   de,$0020] 32
 l_0f14:
@@ -3329,7 +3330,7 @@ l_1288:
 l_129f:
 	move.w	d0,-(a7)
 	move.b	d1,d0
-	jbsr	osd_w_videoram_no_update
+	jbsr	osd_w_videoram
 	move.w	(a7)+,d0
 	                         	| [$129f: ld   (hl),b]
 	                     	| [$12a0: ld   de,$0400]
@@ -4001,10 +4002,10 @@ l_16cb:
 	addq.w	#1,a0                           	| [$16d0: inc  hl]
 	move.b	jeep_x_E303,d0                 	| [$16d1: ld   a,(unknown_E303)]
 	sub.b	d2,d0                            	| [$16d4: sub  c]
-	add.b	(a0),d0                          	| [$16d5: add  a,(hl)]
-	addq.w	#1,a0                           	| [$16d6: inc  hl]
-	move.b	(a0),d1                         	| [$16d7: ld   b,(hl)]
-	addq.w	#1,a0                           	| [$16d8: inc  hl]
+	add.b	(a0)+,d0                          	| [$16d5: add  a,(hl)]
+												| [$16d6: inc  hl]
+	move.b	(a0)+,d1                         	| [$16d7: ld   b,(hl)]
+											| [$16d8: inc  hl]
 	cmp.b	d1,d0                            	| [$16d9: cp   b]
 	jcs	l_16e1                             	| [$16da: jr   c,$16E1]
 	sub.b	(a0),d0                          	| [$16dc: sub  (hl)]
@@ -4017,12 +4018,18 @@ l_16e1:
 	cmp.b	(a0),d0                          	| [$16e2: cp   (hl)]
 	jcc	l_17c4                             	| [$16e3: jp   nc,$17C4]
 	addq.w	#1,a0                           	| [$16e6: inc  hl]
-	move.b	(a0),d1                         	| [$16e7: ld   b,(hl)]
-	addq.w	#1,a0                           	| [$16e8: inc  hl]
+	move.b	(a0)+,d1                         	| [$16e7: ld   b,(hl)]
+	                           	| [$16e8: inc  hl]
 	add.b	(a0),d0                          	| [$16e9: add  a,(hl)]
-	illegal  | TODO fix a0/d6
-	move.b	d0,d6                           	| [$16ea: ld   l,a]
-	addq.b	#1,d5                           	| [$16eb: inc  h]
+	* a0 was pointing on ROM. Game changes lsb & adds 1 to msb
+	* we have to do that emulator-style
+	move.l	a0,d7
+	sub.l	#game_rom,d7			| d7: 16 bit address (HL)
+	move.b	d0,d7                           	| [$16ea: ld   l,a] change LSB
+	add.w	#0x100,d7                           	| [$16eb: inc  h] add 1 to MSB
+	add.l	#game_rom,d7			| recreate real address
+	move.l	d7,a0
+	
 	move.b	jeep_y_offset_E307,d0                 	| [$16ec: ld   a,(unknown_E307)]
 	add.b	(a0),d0                          	| [$16ef: add  a,(hl)]
 	sub.b	(0x07,a2),d0                     	| [$16f0: sub  (ix+$07)]

@@ -23,9 +23,10 @@ Y_MAX = 252
 BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x8000
 
+FIX_GROUND_SCROLL = 1
 
 PANEL_MAX_Y = 48
-DYNAMIC_COPPER_ROWS = 219-48
+DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y
 
 SPRITE_Y_CORRECTION = -24
 
@@ -763,11 +764,19 @@ osd_wait:
 	bne.b	2b
 	rts
 
-* < Z if title is displayed
+* < Z=1 if title is displayed
 is_title_displayed:
 	move.l	a1,-(a7)
 	lea		bg_videoram,A1
 	cmp.b	#0xB5,(0x149,a1)
+	movem.l	(a7)+,a1
+	rts
+	
+* < Z=1 if moonbase is displayed (rightmost tile still present)
+is_moonbase_displayed:
+	move.l	a1,-(a7)
+	lea		bg_videoram,A1
+	cmp.b	#0x8C,(0x373,a1)
 	movem.l	(a7)+,a1
 	rts
 	
@@ -1557,6 +1566,8 @@ blit_scrollable_layers:
 	
 	movem.l	(a7)+,d0-d5/a1
 	
+	.ifeq	FIX_GROUND_SCROLL
+	
 	* now blit the scrollable ground strip
 	move	d5,d0
 	
@@ -1623,6 +1634,10 @@ blit_scrollable_layers:
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	
+	*WAIT_BLIT
+	
+	.endif
 	
 	* hack: if title "moon patrol" is shown on screen, we have to redraw it
 	* as the mountains share the same layer and have clobbered it partially
@@ -2142,6 +2157,32 @@ load_bobs_palette_in_playfield_copperlist:
 	lea		playfield_colors,a1
 	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
+	
+	bsr		load_moonbase_palette	| TEMP
+	
+	rts
+	
+* moonbase is shown: set tiles palette low enough so it doesn't
+* interfere with mountains. Jeep is a sprite so it's not affected, and
+* no other bob is shown at this point. We keep being lucky :)
+
+load_moonbase_palette:
+	movem.l	d0-d1/a0-a1,-(a7)
+	move.w	#TOTAL_NB_COLORS-1,d0
+	lea		tiles_palette+2(pc),a0
+	lea		moonbase_colors,a1
+	bsr		load_palette
+	movem.l	(a7)+,d0-d1/a0-a1
+	rts
+	
+* moonbase isn't shown anymore: reset colors to bob palette
+reset_moonbase_palette:
+	movem.l	d0-d1/a0-a1,-(a7)
+	move.w	#TOTAL_NB_COLORS-1,d0
+	lea		bobs_palette+2(pc),a0
+	lea		moonbase_colors,a1
+	bsr		load_palette
+	movem.l	(a7)+,d0-d1/a0-a1
 	rts
 
 * when playfield isn't displayed, better use tiles palette
@@ -2331,8 +2372,6 @@ osd_w_colorram:
 * other rows use a X/Y transposed system like Galaxian or Xevious!
 *
 update_bg_tile:
-	* compute Y
-
 	and.w	#0xFF,d0	| mask up to 255
 	and.w	#0xFF,d1	| mask up to 255
 
@@ -2386,9 +2425,11 @@ update_bg_tile:
 	WAIT_BLIT
 23:
 
+	.ifeq	FIX_GROUND_SCROLL
 	cmp.w	#SCROLLABLE_TILE_Y_START,d3
 	bcc		update_scrollable_bottom
-
+	.endif
+	
 	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
 	move.l	bg_drawed_screen_ptr(pc),a1
@@ -3484,19 +3525,24 @@ color_line_copper:
 	.set    beampos,beampos+0x100
 	.word	beampos,0xFFFE
 	.endr
+	* right after that, we leave room to be able to set palette to tiles palette again
+	* (for moon base at start only)
+moonbase_colors:
+	DECL_COLORS	1,TOTAL_NB_COLORS-1	| 15 colors, no bg color change
 
-
+	* then we should wait a bit, and set palette to tiles palette definitely
+	* so scrolling letters have the proper colors TODO
 	
 	* pal limit
     .word  0xFFDF,0xFFFE       | PAL wait
 	.word	color,0
-    .word  0x0401,0xFFFE
+    .word	 intreq,0x8010	| no bobs from now on, get more drawing time
+    *.word  0x0401,0xFFFE
 	
-    .word   0x1C01,0xFFFE
+    *.word   0x1C01,0xFFFE
 	.set    beampos,0x1E01
 	
- 	.word	beampos,0xFFFE   | wait before interrupt, avoid losing last bobs lines
-    .word	 intreq,0x8010
+ 	.word	beampos,0xFFFE
     .long    -2					
 	.ascii	"ENDCPLST"
 
