@@ -196,9 +196,9 @@ assert_failed:
 	
 get_rom_address_d3_to_a1:
 	lea	game_rom,a1
-	cmp.w	#0x4000,d3
+	cmp.w	#0x4000,d3	| no_fail
 	bcc.b	0f
-	add.w	d3,a1
+	add.w	d3,a1		| no_fail
 	rts
 0:
 	jbsr	assert_failed
@@ -207,9 +207,9 @@ get_rom_address_d3_to_a1:
 	
 get_rom_address_d5_to_a0:
 	lea	game_rom,a0
-	cmp.w	#0x4000,d5
+	cmp.w	#0x4000,d5	| no_fail
 	bcc.b	0f
-	add.w	d5,a0
+	add.w	d5,a0		| no_fail
 	rts
 0:
 	jbsr	assert_failed
@@ -579,11 +579,11 @@ l_02ad:
 * called when score increases
 * stores values of d2,d0,d4,d3 in a revolving buffer in E600
 store_special_event_02c2:
-	moveq	#0,d6
-	move.b	event_buffer_index_E1D0,d6                	| [$02c2: ld   hl,event_buffer_index_E1D0]
+	moveq	#0,d7
+	move.b	event_buffer_index_E1D0,d7                	| [$02c2: ld   hl,event_buffer_index_E1D0]
 	                         	| [$02c5: ld   l,(hl)]
 	lea	unknown_E600,a0                        	| [$02c6: ld   h,$E6]
-	add.w	d6,a0
+	add.w	d7,a0
 	move.b	d2,(a0)+                         	| [$02c8: ld   (hl),c]
 	                           	| [$02c9: inc  hl]
 	move.b	d0,(a0)+                         	| [$02ca: ld   (hl),a]
@@ -592,8 +592,8 @@ store_special_event_02c2:
 	                           	| [$02cd: inc  hl]
 	move.b	d3,(a0)                         	| [$02ce: ld   (hl),d]
 	                           	| [$02cf: inc  l]
-	addq	#4,d6
-	move.b	d6,event_buffer_index_E1D0                           	| [$02d0: ld   a,l]
+	addq	#4,d7
+	move.b	d7,event_buffer_index_E1D0                           	| [$02d0: ld   a,l]
 	                 	| [$02d1: ld   (event_buffer_index_E1D0),a]
 	rts                                    	| [$02d4: ret]
 * the jump table
@@ -1630,12 +1630,15 @@ l_0802:
 	rts                                    	| [$0809: ret]
 
 l_080a:
-	lea	unknown_E261,a0                	| [$080a: ld   hl,unknown_E261]
+	* jotd: seems that L register is used to do stuff
+	* we have to emulate that
+	lea	unknown_E261-0x61,a0                	| [$080a: ld   hl,unknown_E261]
+	move.w	#0x0061,d7
 	move.b	#0x12,d1                        	| [$080d: ld   b,$12]
 	jra	l_0802                             	| [$080f: jr   $0802]
 l_0811:
-	addq.b	#1,(a0)                         	| [$0811: inc  (hl)]
-	move.b	d6,d0                           	| [$0812: ld   a,l]
+	addq.b	#1,(a0,d7.w)                         	| [$0811: inc  (hl)]
+	move.b	d7,d0                           	| [$0812: ld   a,l]
 	sub.b	#0x50,d0                         	| [$0813: sub  $50]
 	add.b	d0,d0                            	| [$0815: add  a,a]
 	add.b	d0,d0                            	| [$0816: add  a,a]
@@ -2238,8 +2241,8 @@ l_0bdf:
 	subq.b	#1,d1                           	| [...]
 	jne	l_0bdf                             	| [$0be6: djnz $0BDF]
 	jbsr	l_0b96                            	| [$0be8: call $0B96]
-	subq.w	#1,a0                           	| [$0beb: dec  hl]
-	move.b	(a0),d1                         	| [$0bec: ld   b,(hl)]
+									| [$0beb: dec  hl]
+	move.b	-(a0),d1                         	| [$0bec: ld   b,(hl)]
 	move.b	#0x04,d0                        	| [$0bed: ld   a,$04]
 	move.b	#0xC0,d5                      	| [$0bef: ld   hl,$C000]
 	move.b	#0x00,d6                      	| [$0bef: ld   hl,$C000]
@@ -2274,14 +2277,16 @@ l_0c16:
 	btst.b	#0,(a0)                         	| [$0c23: bit  0,(hl)]
 	jne	l_0c7f                             	| [$0c25: jr   nz,$0C7F]
 	addq.b	#1,(a0)                         	| [$0c27: inc  (hl)]
-	move.b	time_bcd_e510,d0                	| [$0c28: ld   a,(time_bcd_e510)]
+	move.b	current_level_E510,d0                	| [$0c28: ld   a,(current_level_E510)]
 	                               	| [$0c2b: and  a]
-	jeq	l_0c86                             	| [$0c2c: jr   z,$0C86]
+	jeq	l_0c86                             	| [$0c2c: jr   z,$0C86]  0: beginners course
+	* CHAMPION COURSE text followed by number
 	lea	game_rom+0x2A5F,a0                      	| [$0c2e: ld   hl,$2A5F]
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0c31: call $0300]
-	move.b	time_bcd_e510,d0                	| [$0c34: ld   a,(time_bcd_e510)]
+	move.b	current_level_E510,d0                	| [$0c34: ld   a,(current_level_E510)]
 	cmp.b	#0x04,d0                         	| [$0c37: cp   $04]
 	jcs	l_0c3d                             	| [$0c39: jr   c,$0C3D]
+	* max 3
 	move.b	#0x03,d0                        	| [$0c3b: ld   a,$03]
 l_0c3d:
 	add.b	#0x30,d0                         	| [$0c3d: add  a,$30]
@@ -2293,7 +2298,6 @@ display_moon_base_0c42:
 	move.b	#0x40,d0                        	| [$0c47: ld   a,$40]
 	move.b	d0,unknown_E30A                 	| [$0c49: ld   (unknown_E30A),a]
 	* moon base start character
-	jbsr	osd_break
 	move.b	#0x68,d2                        	| [$0c4c: ld   c,$68]
 	* kind of RLE encoded sequence: attribute,start address,end address
 	* here character increases each time
@@ -2524,11 +2528,11 @@ store_d0_in_revolving_E000_if_playing_0d75:
 store_d0_in_revolving_E000_0d7d:
 
 	move.l	a0,-(sp)                        	| [$0d7d: push hl]
-	moveq	#0,d6
-	move.b	offset_to_E000_E1DE,d6             	| [$0d7e: ld   hl,(offset_to_E000_E1DE)]
+	moveq	#0,d7
+	move.b	offset_to_E000_E1DE,d7             	| [$0d7e: ld   hl,(offset_to_E000_E1DE)]
 	lea		revolving_buffer_8_E000,a0                        	| [$0d81: ld   h,$E0]
-	move.b	d0,(a0,d6.w)                         	| [$0d83: ld   (hl),a]
-	move.b	d6,d0                           	| [$0d84: ld   a,l]
+	move.b	d0,(a0,d7.w)                         	| [$0d83: ld   (hl),a]
+	move.b	d7,d0                           	| [$0d84: ld   a,l]
 	addq.b	#1,d0                           	| [$0d85: inc  a]
 	and.b	#0x07,d0                         	| [$0d86: and  $07]
 	move.b	d0,offset_to_E000_E1DE                 	| [$0d88: ld   (offset_to_E000_E1DE),a]
@@ -2785,11 +2789,11 @@ draw_hole_on_right_0ef0:
 	and.w	#0xFF,d0                            	| [$0f08: add  a,l]
 	add.b	#0x80,d0                         	| [$0f09: add  a,$80]
 	add.w	d0,a0                           	| [$0f0b: ld   l,a]
-	moveq	#0,d6
-	move.b	(a0),d6                         	| [$0f0c: ld   l,(hl)]
+	moveq	#0,d7
+	move.b	(a0),d7                         	| [$0f0c: ld   l,(hl)]
 	* jotd: I have to emulate HL address lower nibble
 	lea	game_rom+0x3000,a0
-	add.w	d6,a0
+	add.w	d7,a0
 l_0f0d:
 	* in game!
 	move.w	screen_address_E0E4,d7             	| [$0f0d: ld   iy,(screen_address_E0E4)]
@@ -2922,14 +2926,6 @@ l_0fc5:
 	                               	| [$0fdc: and  a]
 	jeq	l_105d                             	| [$0fdd: jp   z,$105D]
 
-	* never reached!!
-	illegal
-	illegal
-	addq.b	#1,d1                           	| [$1030: inc  b]
-	move.b	d0,(a1)                         	| [$1031: ld   (de),a]
-	move.b	#0xF4,d3                        	| [$1032: ld   d,$F4]
-	*jra	l_1046                             	| [$1034: jr   $1046]
-
 
 
 l_105d:
@@ -3003,9 +2999,10 @@ l_10c3:
 	eor.b	#0x1F,d0                         	| [$10cf: xor  $1F]
 	sub.b	d3,d0                            	| [$10d1: sub  d]
 l_10d2:
+	and.w	#0xFF,d0
 	lea	game_rom+0x3100,a0                      	| [$10d2: ld   hl,$3100]
-	add.b	d6,d0                            	| [$10d5: add  a,l]
-	move.b	d0,d6                           	| [$10d6: ld   l,a]
+	add.w	d0,a0                            	| [$10d5: add  a,l]
+												| [$10d6: ld   l,a]
 	move.b	(a0),d3                         	| [$10d7: ld   d,(hl)]
 	move.b	(0x03,a3),d0                    	| [$10d8: ld   a,(iy+$03)]
 	move.b	d0,(0x03,a2)                    	| [$10db: ld   (ix+$03),a]
@@ -3043,23 +3040,25 @@ draw_ground_block_1106:
 	move.b	(a0),d0                         	| [$1109: ld   a,(hl)]
 	                               	| [$110a: and  a]
 	jne	l_119a                             	| [$110b: jp   nz,$119A]
+	moveq	#0,d0
 	move.b	terrain_slope_type_E508,d0                 	| [$110e: ld   a,(terrain_slope_type_E508)]
 	cmp.b	#0x03,d0                         	| [$1111: cp   $03]
 	jcc	is_slope_118e                             	| [$1113: jr   nc,$118E]
 	move.b	d0,d1                           	| [$1115: ld   b,a]
 	subq.b	#1,d1                           	| [$1116: dec  b]
 	lea	game_rom+0x2CB4,a0                      	| [$1117: ld   hl,$2CB4]
-	moveq	#0,d6
+	moveq	#0,d7		| offset
 	move.b	unknown_16bit_E1E1+1,d0                 	| [$111a: ld   a,(unknown_E1E2)]
 	ror.b	#3,d0                           	| [$111d: rra] * 3
 	and.b	#0x1F,d0                         	| [$1120: and  $1F]
-	add.b	d6,d0                            	| [$1122: add  a,l]
+	add.b	d7,d0                            	| [$1122: add  a,l]
 	subq.b	#1,d1                           	| [...]
 	jne	l_1127                             	| [$1123: djnz $1127]
-	add.b	#0x20,d0                         	| [$1125: add  a,$20]
+	* maybe can get past 0x100 offset??
+	add.w	#0x20,d0                         	| [$1125: add  a,$20]
 l_1127:
-	move.b	d0,d6                           	| [$1127: ld   l,a]
-	move.b	(a0,d6.w),d2                         	| [$1128: ld   c,(hl)]
+											| [$1127: ld   l,a]
+	move.b	(a0,d0.w),d2                         	| [$1128: ld   c,(hl)]
 l_1129:
 	move.b	unknown_16bit_E1E1+1,d0                 	| [$1129: ld   a,(unknown_E1E2)]
 	ror.b	#3,d0                           	| [$112c: rra] * 3
@@ -3109,10 +3108,10 @@ l_1155:
 	ror.b	#2,d0                           	| [$1163: rra] * 2
  	and.b	#0x3E,d0                         	| [$1165: and  $3E]
 	                        	| [$1167: add  a,$00]
-	moveq	#0,d6
-	move.b	d0,d6                           	| [$1169: ld   l,a]
+	moveq	#0,d7
+	move.b	d0,d7                           	| [$1169: ld   l,a]
 	lea 	ground_y_array_E200,a0                        	| [$116a: ld   h,$E2]
-	add.w	d6,a0
+	add.w	d7,a0
 	move.b	unknown_E514,d0                 	| [$116c: ld   a,(unknown_E514)]
 	eor.b	#0x1F,d0                         	| [$116f: xor  $1F]
 	move.b	d0,d3                           	| [$1171: ld   d,a]
@@ -3716,7 +3715,6 @@ l_14df:
 	STORE_LEW	d5,unknown_16bit_E302                 	| [$14f0: ld   (unknown_16bit_E302),hl]
 	rol.w	#8,d5
 	move.b	d5,d3                           	| [$14f3: ld   d,h]
-	rol.w	#8,d5
 	lea	unknown_E1DC,a0                	| [$14f4: ld   hl,unknown_E1DC]
 	move.b	(a0),d0                         	| [$14f7: ld   a,(hl)]
 	subq.b	#1,d0                           	| [$14f8: dec  a]
@@ -3768,10 +3766,10 @@ l_1538:
 l_153d:
 	addq.b	#0x06,d0                        	| [$153d: add  a,$06]
 	lsr.b	#2,d0                            	| [$153f: srl  a] * 2
-	moveq	#0,d6
-	move.b	d0,d6                           	| [$1543: ld   l,a]
+	moveq	#0,d7
+	move.b	d0,d7                           	| [$1543: ld   l,a]
 	lea		ground_y_array_E200,a0                        	| [$1544: ld   h,$E2]
-	add.w	d6,a0
+	add.w	d7,a0
 	move.b	(a0),d0                         	| [$1546: ld   a,(hl)]
 	rts                                    	| [$1547: ret]
 l_1548:
@@ -3811,6 +3809,7 @@ l_156d:
 	move.b	d2,d0                           	| [$1574: ld   a,c]
 	rts                                    	| [$1575: ret]
 l_1576:
+	jbsr	osd_break	| D5 is ROM/RAM address???
 	move.b	jeep_x_E303,d0                 	| [$1576: ld   a,(unknown_E303)]
 	move.b	d0,d2                           	| [$1579: ld   c,a]
 	addq.b	#0x04,d0                        	| [$157a: add  a,$04]
@@ -3828,10 +3827,11 @@ l_1576:
 l_1592:
 	add.b	d2,d0                            	| [$1592: add  a,c]
 	move.b	d0,d2                           	| [$1593: ld   c,a]
-	addq.b	#2,d6                           	| [$1594: inc  l] * 2
-	move.b	d6,d0                           	| [$1596: ld   a,l]
+	addq.b	#2,d5                           	| [$1594: inc  l] * 2
+	move.b	d5,d0                           	| [$1596: ld   a,l]
 	and.b	#0x3F,d0                         	| [$1597: and  $3F]
-	move.b	d0,d6                           	| [$1599: ld   l,a]
+	move.b	d0,d5                           	| [$1599: ld   l,a]
+	illegal	| fix this!!
 	move.b	(a0),d0                         	| [$159a: ld   a,(hl)]
 	sub.b	#0x09,d0                         	| [$159b: sub  $09]
 	jbsr	compute_jeep_y_08ed                            	| [$159d: call $08ED]
@@ -4675,10 +4675,10 @@ l_1b3a:
 	lea		unknown_E400,a0                        	| [$1b49: ld   h,$E4]
 	move.b	d2,d3                           	| [$1b4b: ld   d,c]
 	move.b	d2,d4                           	| [$1b4c: ld   e,c]
-	moveq	#0,d6
+	moveq	#0,d7
 l_1b4d:
-	move.b	d0,d6                           	| [$1b4d: ld   l,a]
-	move.b	(a0,d6.w),d0                         	| [$1b4e: ld   a,(hl)]
+	move.b	d0,d7                           	| [$1b4d: ld   l,a]
+	move.b	(a0,d7.w),d0                         	| [$1b4e: ld   a,(hl)]
 	sub.b	#0x1E,d0                         	| [$1b4f: sub  $1E]
 	cmp.b	#0x0A,d0                         	| [$1b51: cp   $0A]
 	jcc	l_1b5f                             	| [$1b53: jr   nc,$1B5F]
@@ -4687,9 +4687,9 @@ l_1b4d:
 	cmp.b	#0x04,d0                         	| [$1b59: cp   $04]
 	jcs	l_1bc0                             	| [$1b5b: jr   c,$1BC0]
 	addq.b	#1,d2                           	| [$1b5d: inc  c]
-	move.b	d6,d4                           	| [$1b5e: ld   e,l]
+	move.b	d7,d4                           	| [$1b5e: ld   e,l]
 l_1b5f:
-	move.b	d6,d0                           	| [$1b5f: ld   a,l]
+	move.b	d7,d0                           	| [$1b5f: ld   a,l]
 	add.b	#0x10,d0                         	| [$1b60: add  a,$10]
 	subq.b	#1,d1                           	| [...]
 	jne	l_1b4d                             	| [$1b62: djnz $1B4D]
@@ -4700,7 +4700,7 @@ l_1b5f:
 	bpl.b	0f                               	| [...]
 	rts                                    	| [$1b69: ret  m] [...]
 0:
-	move.b	time_bcd_e510,d0                	| [$1b6a: ld   a,(time_bcd_e510)]
+	move.b	current_level_E510,d0                	| [$1b6a: ld   a,(current_level_E510)]
 	and.b	#0x03,d0                         	| [$1b6d: and  $03]
 	cmp.b	#0x01,d0                         	| [$1b6f: cp   $01]
 	SET_X_FROM_C
@@ -5489,7 +5489,7 @@ handle_time_210d:
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$2118: ret  p] [...]
 0:
-	lea	time_bcd_e510+1,a0               	| [$2119: ld   hl,time_bcd_e510+1]
+	lea	time_bcd_E511,a0               	| [$2119: ld   hl,time_bcd_E511]
 	move.b	#0x01,d0                        	| [$211c: ld   a,$01]
 	CLEAR_XC_FLAGS
 	move.b	(a0),d7
@@ -5510,7 +5510,7 @@ l_212c:
 	jbsr	l_03e7                            	| [$2135: call $03E7]
 	move.b	unknown_E512,d0                 	| [$2138: ld   a,(unknown_E512)]
 	jbsr	l_03bd                            	| [$213b: call $03BD]
-	move.b	time_bcd_e510+1,d0                	| [$213e: ld   a,(time_bcd_e510+1)]
+	move.b	time_bcd_E511,d0                	| [$213e: ld   a,(time_bcd_E511)]
 	jra	set_character_at_address_03ae                             	| [$2141: jp   $03AE]
 
 l_27c0:
@@ -5555,7 +5555,7 @@ l_2805:
 	                           	| [$280f: dec  hl]
 	move.b	-(a0),d4                         	| [$2810: ld   e,(hl)]
 	LOAD_D3_16_FROM_D3D4
-	move.w	time_bcd_e510+1,d5            	| [$2811: ld   hl,(time_bcd_e510+1)]
+	move.w	time_bcd_E511,d5            	| [$2811: ld   hl,(time_bcd_E511)]
 	                               	| [$2814: and  a]
 	sub.w	d3,d5                            	| [$2815: sbc  hl,de]
 	jcc	l_2827                             	| [$2817: jr   nc,$2827]
@@ -5570,7 +5570,7 @@ l_2805:
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$2824: call $034E]
 l_2827:
 	LOAD_LEW	unknown_16bit_E094,d5             	| [$2827: ld   hl,(unknown_16bit_E094)]
-	move.w	time_bcd_e510+1,d3            	| [$282a: ld   de,(time_bcd_e510+1)]
+	move.w	time_bcd_E511,d3            	| [$282a: ld   de,(time_bcd_E511)]
 	CLEAR_XC_FLAGS
 	move.b	#1,d0                           	| [$282e: ld   a,l]
 	sbcd	d0,d5                        	| [$282f: sub  $01 + daa]
@@ -5627,7 +5627,7 @@ l_288e:
 	jbsr	l_0636                            	| [$2899: call $0636]
 l_289c:
 	move.w	#0x0000,d5                      	| [$289c: ld   hl,$0000] 0
-	move.w	d5,time_bcd_e510+1                	| [$289f: ld   (time_bcd_e510+1),hl]
+	move.w	d5,time_bcd_E511                	| [$289f: ld   (time_bcd_E511),hl]
 	lea	unknown_E513,a0                	| [$28a2: ld   hl,unknown_E513]
 	move.b	(a0),d0                         	| [$28a5: ld   a,(hl)]
 	                               	| [$28a6: and  a]
@@ -5641,7 +5641,7 @@ l_289c:
 l_28ba:
 	jbsr	l_05e8                            	| [$28ba: call $05E8]
 	jbsr	l_295a                            	| [$28bd: call $295A]
-	move.b	time_bcd_e510,d0                	| [$28c0: ld   a,(time_bcd_e510)]
+	move.b	current_level_E510,d0                	| [$28c0: ld   a,(current_level_E510)]
 	subq.b	#0x02,d0                        	| [$28c3: sub  $02]
 	jeq	l_28ce                             	| [$28c5: jr   z,$28CE]
 	jmi	l_28ce                             	| [$28c9: jp   m,$28CE]
@@ -5669,7 +5669,7 @@ l_28e2:
 	move.b	d0,d4                           	| [$28e8: ld   e,a]
 	cmp.b	#0x0A,d0                         	| [$28e9: cp   $0A]
 	jne	l_28f6                             	| [$28eb: jr   nz,$28F6]
-	move.b	time_bcd_e510,d0                	| [$28ed: ld   a,(time_bcd_e510)]
+	move.b	current_level_E510,d0                	| [$28ed: ld   a,(current_level_E510)]
 	cmp.b	#0x03,d0                         	| [$28f0: cp   $03]
 	jeq	l_28f6                             	| [$28f2: jr   z,$28F6]
 	move.b	#0x14,d4                        	| [$28f4: ld   e,$14]
@@ -5714,7 +5714,7 @@ l_2915:
 	addq.w	#1,a1                           	| [$2939: inc  de]
 	jbsr	l_039a                            	| [$293a: call $039A]
 	LOAD_LEW	unknown_16bit_E094,d5             	| [$293d: ld   hl,(unknown_16bit_E094)]
-	move.w	time_bcd_e510+1,d3            	| [$2940: ld   de,(time_bcd_e510+1)]
+	move.w	time_bcd_E511,d3            	| [$2940: ld   de,(time_bcd_E511)]
 	                              	| [$2944: and  a]
 	sub.w	d3,d5                            	| [$2945: sbc  hl,de]
 	rts                                    	| [$2947: ret]

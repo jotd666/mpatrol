@@ -23,7 +23,9 @@ Y_MAX = 252
 BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x8000
 
-FIX_GROUND_SCROLL = 1
+* set to 1 to block ground scrolling, see what's
+* going on with the game scrolling system
+FIX_GROUND_SCROLL = 0
 
 PANEL_MAX_Y = 48
 DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y
@@ -1473,7 +1475,7 @@ blit_scrollable_layers:
 	move.w	d4,d6
 	add.w	d3,d6			| Y pos to change color 0 for green
 	
-	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
+	move.w	(a0)+,d5		| number of bytes for the plane (height * 66)
 
 	
 	add.w	d2,d2
@@ -1571,7 +1573,7 @@ blit_scrollable_layers:
 	* now blit the scrollable ground strip
 	move	d5,d0
 	
-	lea		bg_scrollable_strip,a0		| source
+	lea		bg_scrollable_strip+2,a0		| source
 	move.l	bg_drawed_screen_ptr(pc),a1
 	add.w	#(SCROLLABLE_TILE_Y_START*8)*NB_BYTES_PER_ROW,a1	| dest: bottom of screen
 
@@ -2366,11 +2368,9 @@ osd_w_colorram:
 * d0: tile code
 * d1: attribute
 *
-* the layout is strange to say the least
-* first row (last row in memory) is shown "normally" (X is mirrored, but horizontal,
-* Y is at top of the screen)
-* other rows use a X/Y transposed system like Galaxian or Xevious!
-*
+* very straightforward linear tile layout 32v (30 visible) x 32h tiles
+* thanks to landscape unrotated display for once!
+
 update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 	and.w	#0xFF,d1	| mask up to 255
@@ -2532,6 +2532,7 @@ update_bg_tile:
 SCROLLABLE_PLANE_SIZE = SCROLLABLE_STRIP_NB_COLS*8*(32-SCROLLABLE_TILE_Y_START)
 
 update_scrollable_bottom:
+	lea		mulNB_BYTES_PER_SCROLLABLE_STRIP_ROW_table(pc),a0
 	lea		bg_scrollable_strip,a1		| backbuffer
 	* D3 = Y
 	move.w	#SCROLLABLE_PLANE_SIZE,d5
@@ -3201,7 +3202,8 @@ beamdelay:
 	rts
 
 	
-	MUL_TABLE	NB_BYTES_PER_ROW,288
+	MUL_TABLE	NB_BYTES_PER_ROW,256
+	MUL_TABLE	NB_BYTES_PER_SCROLLABLE_STRIP_ROW,256
 
 	.align	4		| leave this long word alignment
 program_args:	ds.l	64,0

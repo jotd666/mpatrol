@@ -135,7 +135,8 @@
 	.global	unknown_E50D
 	.global	unknown_E50E
 	.global	unknown_E50F
-	.global	time_bcd_e510
+	.global current_level_E510
+	.global	time_bcd_E511
 	.global	unknown_E512
 	.global	unknown_E513
 	.global	unknown_E514
@@ -446,8 +447,10 @@ unknown_E50E:
 	ds.b	1
 unknown_E50F:
 	ds.b	1
-time_bcd_e510:
-	ds.b	2
+current_level_E510:
+	ds.b	1
+time_bcd_E511:
+	ds.b	1
 unknown_E512:
 	ds.b	1
 unknown_E513:

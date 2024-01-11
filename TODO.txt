@@ -7,18 +7,18 @@
 
 - (c) IREM not properly displayed
 - small transparency effect on the tip of the "l" of "Moon Patrol" => BOGUS TITLE NOW
-- ground scrolling is off, with holes  moonbase not properly displayed
+- moonbase colors not properly displayed
 
 - 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
 - re-set tiles palette at some low Y so letters have proper palettes
 
-  
+- during demo, jeep is killed almost at once
+- demo: bogus blocks (big hole looks ok)
+- demo/start: moonbase not properly displayed
+- check various heights vs arcade (title and in-game)
+
 low pri:  
   
 - declare tiles & cluts manually (with playfield info) to save memory
-
-
-tricks:
-
-- use bobs palette for playfield (after status bar)
-- "moon patrol" title displayed: switch to tiles palette for 8 first colors
+- optim: maybe only 2 planes could be needed for uniform ground
+  or maybe even one (but there are letters...)
