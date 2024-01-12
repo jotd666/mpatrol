@@ -1,5 +1,4 @@
-
-- wheels move but all wheels have the same Y
+- during demo, jeep is killed almost at once (now crashes!)
 - when "moon patrol" title is displayed, jeep is too low / jump looks bogus
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
@@ -12,7 +11,6 @@
 - 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
 - re-set tiles palette at some low Y so letters have proper palettes
 
-- during demo, jeep is killed almost at once
 - demo: bogus blocks (big hole looks ok)
 - demo/start: moonbase not properly displayed
 - check various heights vs arcade (title and in-game)

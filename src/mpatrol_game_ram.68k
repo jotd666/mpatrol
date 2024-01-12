@@ -20,7 +20,7 @@
 	.global	unknown_E04A
 	.global	unknown_E04C
 	.global	title_display_timer_E04D
-	.global	unknown_E04E
+	.global	timer_8bit_E04E
 	.global	sync_flag_E050
 	.global	unknown_E051
 	.global	unknown_E052
@@ -57,7 +57,7 @@
 	.global	unknown_E172
 	.global	unknown_E174
 	.global	unknown_E1A2
-	.global	unknown_E1A4
+	.global	wheels_sprites_shadow_ram_E1A4
 	.global	unknown_E1A6
 	.global	unknown_E1AA
 	.global	unknown_E1AE
@@ -208,7 +208,7 @@ unknown_E04C:
 	* 0xB0: title screen stops, "insert coin" screen
 title_display_timer_E04D:
 	ds.b	1
-unknown_E04E:
+timer_8bit_E04E:
 	ds.b	2
 sync_flag_E050:
 	ds.b	1
@@ -290,7 +290,7 @@ unknown_E174:
 	ds.b	46
 unknown_E1A2:
 	ds.b	2
-unknown_E1A4:
+wheels_sprites_shadow_ram_E1A4:
 	ds.b	2
 unknown_E1A6:
 	ds.b	4
