@@ -48,6 +48,7 @@ TARGET_SPRITE_ATTRIBUTES = 1
 TARGET_SPRITE_CODE = 2
 TARGET_SPRITE_Y = 0
 TARGET_SPRITE_X = 3
+ACTIVE_BITPLANE_MASK = 4   | for optimized bitplane erase
 
 TITLE_NB_COLS = 20
 TITLE_NB_ROWS = 10
@@ -264,14 +265,6 @@ _user:
 	* cheat isn't used as long as no cheat key is used
 	or.l	#0x10,cheat_flags
 2:
-	move.l	(A0)+,D0	| HARDBAGS/S
-	beq.b	2f
-	or.l	#1,misc_options
-2:
-	move.l	(A0)+,D0	| FRENCH/S
-	beq.b	2f
-	or.l	#2,misc_options
-2:
 
 	move.l	(A0)+,D0	| SKILL/S
 	beq.b	2f
@@ -288,10 +281,6 @@ _user:
 2:
 	move.l	#2,dip_switch_start_lives		| 3 lives default
 3:
-	move.l	(A0)+,D0	| EXTRA40000/S
-	beq.b	2f
-	or.l	#4,misc_options
-2:
 	lea		_custom,a5
 	lea		debug_copperlist,a0
 	move.l	a0,cop1lc(a5)
@@ -359,7 +348,6 @@ _user:
 	subq.b	#1,d1
 	or.b	d1,d0
 
-	
 	move.l	misc_options,d1
 	btst	#0,d1
 	*sne		hard_bags_flag
@@ -1671,7 +1659,7 @@ blit_scrollable_layers:
 * < D0: sprite X
 * < D1: sprite Y
 * < D2: sprite code & flags
-* < D3: sprite color (clut index)
+* < D3: sprite color (clut index, no flip information)
 * > D6: allocated sprite index
 alloc_sprite:
 	* first pass: find a free sprite next to a sprite with
@@ -1698,7 +1686,7 @@ alloc_sprite:
 	move.b	d0,(a2)+		| X
 	move.b	d1,(a2)+		| Y
 	move.b	d2,(a2)+		| code
-	move.b	d3,(a2)+		| clut
+	move.b	d3,(a2)+		| clut (no flip information)
 	rts						| done
 1:
 	* even: check if next entry is free
@@ -1746,16 +1734,8 @@ alloc_sprite:
 	bne.b	11b
 	
 	* third pass: last chance/emergency: there ARE free slots
-	* (since only 6 sprites on the target) but maybe too many
-	* different cluts so we can't find a suitable slot. In that
-	* case, pick the first free slot, we'll handle the color changes
-	* with a dynamic copperlist, let's hope that it works out
-	* (only happens in demo screens)
-	*
-	* the strategy globally works because during game, all 4 enemies
-	* share the same palette. mpatrol uses another one, and ice block
-	* another one too. Blinking stunned enemies can be a problem
-	* because of the extra blue color
+	* but maybe too many different cluts so we can't find a suitable slot.
+	* In that case, pick the first free slot
 	*
 	lea		host_sprites(pc),a2
 	moveq	#0,d6
@@ -1771,11 +1751,13 @@ alloc_sprite:
 	cmp.w	#NB_HOST_SPRITES,d6
 	bne.b	21b
 	* just cannot happen
-	* if we reach that point there's a big problem
-	blitz
-	illegal
-	illegal
-	illegal
+	* if we reach that point there's a big problem, break if dev mode
+	* hopefully if we save buffer in A1 we can reproduce the issue at will!
+	.ifndef	RELEASE
+	lea			sprite_allocation_error,a0
+	jbsr	osd_break
+	.endif
+	* in release mode, just discard this sprite, maybe we'll get away with it!
 	rts
 	
 

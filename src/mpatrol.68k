@@ -256,7 +256,8 @@ mpatrol_reset:
 	tst.b	break_at_startup_flag
 	beq.b	0f
 	* put anything here that you need to track addresses
-	move.l	#jeep_params_E300,d7
+	move.l	#handle_vertical_shot_165d,d7
+
 	jbsr	osd_break
 0:
 	.endif
@@ -534,7 +535,7 @@ l_0200:
 
 jump_table_020C:
 	.long	l_1311,l_1331,l_1370,l_1388,l_13bc,l_13c2,l_13eb,l_1421
-	.long	l_1809,l_15e0,l_15fa,l_162d,l_162d,l_1649,l_165d,l_168f
+	.long	l_1809,l_15e0,l_15fa,l_162d,l_162d,l_1649,handle_vertical_shot_165d,l_168f
 	.long	l_193d,l_1957,l_195e,l_19d1,l_1a2f,l_1a44,l_1a92,l_1ab9
 	.long	l_1af0,l_1b01,l_1b27,l_1433,l_18e0,l_1eaa,l_1f28,l_20ac
 	.long	l_20c4,l_1eaa,l_1f28,l_2000,l_201a,l_1ea4,l_1f28,l_204d
@@ -1662,7 +1663,9 @@ l_0811:
 	add.b	d0,d0                            	| [$0816: add  a,a]
 	move.b	d0,(0x01,a2)                    	| [$0817: ld   (ix+$01),a]
 	rts                                    	| [$081a: ret]
-l_081b:
+	
+* > D7: screen address
+compute_screen_address_081b:
 	move.b	(0x07,a2),d0                    	| [$081b: ld   a,(ix+$07)]
 	and.b	#0xF8,d0                         	| [$081e: and  $F8]
 	move.w	#0x2000,d5                        	| [$0821: ld   h,$20]
@@ -1676,6 +1679,7 @@ l_081b:
 	and.b	#0x1F,d0                         	| [$082c: and  $1F]
 	add.b	d5,d0                            	| [$082e: add  a,l]
 	move.b	d0,d5                           	| [$082f: ld   l,a]
+	move.w	d5,d7
 	rts                                    	| [$0830: ret]
 l_0831:
 	move.b	jeep_params_E300,d0                 	| [$0831: ld   a,(jeep_params_E300)]
@@ -3978,7 +3982,7 @@ l_1649:
 	move.b	d0,(0x07,a2)                    	| [$1656: ld   (ix+$07),a]
 	addq.b	#1,(a2)                    	| [$1659: inc  (ix+$00)]
 	rts                                    	| [$165c: ret]
-l_165d:
+handle_vertical_shot_165d:
 	move.b	jeep_params_E300,d0                 	| [$165d: ld   a,(jeep_params_E300)]
 	cmp.b	#0x06,d0                         	| [$1660: cp   $06]
 	jcc	l_168f                             	| [$1662: jr   nc,$168F]
@@ -3987,28 +3991,34 @@ l_165d:
 	cmp.b	#0x3A,d0                         	| [$1669: cp   $3A]
 	jcs	l_168f                             	| [$166b: jr   c,$168F]
 	move.b	d0,(0x07,a2)                    	| [$166d: ld   (ix+$07),a]
-	jbsr	l_081b                            	| [$1670: call $081B]
+	jbsr	compute_screen_address_081b                            	| [$1670: call $081B]
 	move.b	(0x07,a2),d0                    	| [$1673: ld   a,(ix+$07)]
 	roxr.b	#3,d0                           	| [$1676: rra] * 3
 	move.b	d3,d0                           	| [$1679: ld   a,d]
 	roxl.b	#1,d0                           	| [$167a: rla]
 	and.b	#0x07,d0                         	| [$167b: and  $07]
+	* vertical shot is a character, not a sprite
 	or.b	#0x60,d0                          	| [$167d: or   $60]
-	move.b	d0,(a0)                         	| [$167f: ld   (hl),a]
+	jbsr	osd_w_videoram                         	| [$167f: ld   (hl),a]
 												| [$1680: ld   de,$0400]
-	add.w	#0x400,a0                            	| [$1683: add  hl,de]
-	clr.b	(a0)                             	| [$1684: ld   (hl),$00]
+	add.w	#0x400,d7                            	| [$1683: add  hl,de]
+	exg	d5,d0
+	moveq	#0,d0
+	jbsr	osd_w_colorram                             	| [$1684: ld   (hl),$00]
+	exg		d5,d0
 	ror.b	#1,d0                           	| [$1686: rra]
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1687: ret  nc] [...]
 0:
 													| [$1688: ld   de,-$3e0]
-	sub.w	#0x3e0,a0                            	| [$168b: add  hl,de]
-	clr.b	(a0)                             	| [$168c: ld   (hl),$00]
+	sub.w	#0x3e0,d7                            	| [$168b: add  hl,de]
+	moveq	#0,d0
+	jbsr	osd_w_videoram                             	| [$168c: ld   (hl),$00]
 	rts                                    	| [$168e: ret]
 l_168f:
-	jbsr	l_081b                            	| [$168f: call $081B]
-	clr.b	(a0)                             	| [$1692: ld   (hl),$00]
+	jbsr	compute_screen_address_081b                            	| [$168f: call $081B]
+	moveq	#0,d0
+	jbsr	osd_w_videoram                             	| [$1692: ld   (hl),$00]
 	clr.b	(a2)                        	| [$1694: ld   (ix+$00),$00]
 	rts                                    	| [$1698: ret]
 l_1699:
@@ -4772,9 +4782,9 @@ l_1b87:
 	jne	l_1b90                             	| [$1b8d: jr   nz,$1B90]
 	addq.b	#1,d3                           	| [$1b8f: inc  d]
 l_1b90:
-	move.b	d6,d0                           	| [$1b90: ld   a,l]
-	add.b	#0x10,d0                         	| [$1b91: add  a,$10]
-	move.b	d0,d6                           	| [$1b93: ld   l,a]
+												| [$1b90: ld   a,l]
+	add.w	#0x10,a0                         	| [$1b91: add  a,$10]
+												| [$1b93: ld   l,a]
 	subq.b	#1,d1                           	| [...]
 	jne	l_1b87                             	| [$1b94: djnz $1B87]
 	move.b	d3,d0                           	| [$1b96: ld   a,d]
@@ -4782,8 +4792,8 @@ l_1b90:
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1b98: ret  nc] [...]
 0:
-	addq.b	#1,d4                           	| [$1b99: inc  e]
-	subq.b	#1,d4                           	| [$1b9a: dec  e]
+	tst.b	d4                           	| [$1b99: inc  e]
+											| [$1b9a: dec  e]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1b9b: ret  z] [...]
 0:

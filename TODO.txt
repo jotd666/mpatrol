@@ -20,3 +20,16 @@ low pri:
 - declare tiles & cluts manually (with playfield info) to save memory
 - optim: maybe only 2 planes could be needed for uniform ground
   or maybe even one (but there are letters...)
+
+
+converter:
+
+inc l, inc e => a0,a1...
+
+recognize pattern (maybe 68k pattern)
+
+ld   a,l]
+add  a,$10]
+ld   l,a]
+
+=> add.w	#$10,a0
