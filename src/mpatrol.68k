@@ -98,6 +98,15 @@
 * 3: rising slope
 * >3: descending slope
 
+* jeep states
+STATE_NOTHING_00 = 0
+STATE_REPOSITION_DEFAULT_01 = 1
+STATE_NORMAL_02 = 2
+STATE_JUMP_START_03 = 3
+START_JUMPING_04 = 4
+STATE_FALL_IN_HOLE_06 = 6
+STATE_EXPLODING_07 = 7
+
     .global mpatrol_irq
     .global mpatrol_reset
 
@@ -515,6 +524,10 @@ l_01da:
 	jra	l_0603                             	| [$01e9: jp   $0603]
 
 l_01ec:
+	* jump according to jeep state
+	* 2: normal
+	* 6: falling in hole
+	* 7: exploding
 	lea	jeep_params_E300,a2                	| [$01ec: ld   ix,jeep_params_E300]
 	move.b	#0x20,d0                        	| [$01f0: ld   a,$20]
 	move.b	d0,unknown_E0E8                 	| [$01f2: ld   (unknown_E0E8),a]
@@ -534,7 +547,8 @@ l_0200:
 	rts                                    	| [$020b: ret]
 
 jump_table_020C:
-	.long	l_1311,l_1331,l_1370,l_1388,l_13bc,l_13c2,l_13eb,l_1421
+	.long	l_1311,l_1331,l_1370,l_1388,l_13bc,l_13c2
+	.long	handle_jeep_explosion_13eb,l_1421
 	.long	l_1809,l_15e0,l_15fa,l_162d,l_162d,l_1649,handle_vertical_shot_165d,l_168f
 	.long	l_193d,l_1957,l_195e,l_19d1,l_1a2f,l_1a44,l_1a92,l_1ab9
 	.long	l_1af0,l_1b01,l_1b27,l_1433,l_18e0,l_1eaa,l_1f28,l_20ac
@@ -1096,7 +1110,7 @@ l_04fd:
 jeep_jumps_and_title_shows_0507:
 	lea	jeep_params_E300,a0                	| [$0507: ld   hl,jeep_params_E300]
 	move.b	(a0),d0                         	| [$050a: ld   a,(hl)]
-	cmp.b	#0x04,d0                         	| [$050b: cp   $04]
+	cmp.b	#START_JUMPING_04,d0                         	| [$050b: cp   $04]
 	jne	l_051b                             	| [$050d: jr   nz,$051B]
 	jcc	1f
 	move.b	unknown_16bit_E308+1,d0                 	| [$050f: ld   a,(unknown_E309)]
@@ -1779,14 +1793,22 @@ l_08b2:
 l_08b4:
 	move.b	#0x01,(0x0b,a2)                 	| [$08b4: ld   (ix+$0b),$01]
 l_08b8:
+	* get jeep state?
+	* when game running, every second update, value is 0x80
+	* which makes game return immediately. Rest of the time it's 0
 	move.b	(0x0d,a2),d0                    	| [$08b8: ld   a,(ix+$0d)]
 	rol.b	#1,d0                            	| [$08bb: rlca]
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$08bc: ret  c] [...]
 0:
+	* A=0: normal
+	* A=4: falling
+	* A=6: exploding 1
+	* A=8: exploding 2
 	lea	game_rom+0x2E18,a0                      	| [$08be: ld   hl,$2E18]
 	rol.b	#1,d0                           	| [$08bd: rla]
 	jcc	l_08c4                             	| [$08c1: jr   nc,$08C4]
+	* change sprite sequence to ????
 	add.w	#0x100,a0                           	| [$08c3: inc  h]
 l_08c4:
 	clr.w	d3                               	| [$08c5: ld   d,$00]
@@ -1816,7 +1838,8 @@ l_08c4:
 	move.b	(0x07,a2),d0                    	| [$08e5: ld   a,(ix+$07)]
 	jbsr	compute_jeep_horizon_object_y_08ed                            	| [$08e8: call $08ED]
 	clr.b	d0                               	| [$08eb: xor  a]
-	* called with d1,d2 as Y,X
+	* called with d1,d2 as Y,X, d3,d4 as misc parameters
+	* update_exploding_jeep_0af5: d3: start of explosion sprite series, d4 = ?
 	jra	(a0)                               	| [$08ec: jp   (hl)]
 
 
@@ -1830,7 +1853,7 @@ compute_jeep_horizon_object_y_08ed:
 	rts                                    	| [$08f4: ret]
 
 jump_table_08F5:
-	.long	l_0969,l_095a,l_09cf,l_09cd,l_0af5,l_0943,l_0ae2,update_jeep_movement_0a90
+	.long	l_0969,l_095a,l_09cf,l_09cd,update_exploding_jeep_0af5,l_0943,l_0ae2,update_jeep_movement_0a90
 	.long	l_0a56,l_0ab7,update_jeep_position_0a52,l_0a9f,l_09c9,l_0b25,write_sprite_data_0976,l_0997
 	.long	l_09ba,l_0a1e,l_0a44,l_0934,l_0925,l_0b1d,l_09b0,l_0983
 
@@ -2051,14 +2074,16 @@ l_0a58:
 l_0a62:
 	* update jeep sprite
 	clr.b	d0                               	| [$0a62: xor  a]
-	jbsr	update_jeep_position_0a6f                            	| [$0a63: call $0A6F]
+	* first row
+	jbsr	update_jeep_sprite_row_0a6f                            	| [$0a63: call $0A6F]
 	
 	                   	| [$0a66: ex   de,hl]
 	                    	| [$0a67: ld   de,$0008] 8
+	* second row
 	addq.w	#8,a3                            	| [$0a6a: add  iy,de]
 	                              	| [$0a6c: ex   de,hl]
 	move.b	#0x10,d0                        	| [$0a6d: ld   a,$10]
-update_jeep_position_0a6f:
+update_jeep_sprite_row_0a6f:
 	add.b	d2,d0                            	| [$0a6f: add  a,c]
 	move.b	d0,d6                           	| [$0a70: ld   l,a]
 	* set sprite X for 2 first sprites (jeep rear)
@@ -2101,7 +2126,7 @@ l_0a9f:
 	add.b	d1,d0                            	| [$0aad: add  a,b]
 	move.b	d0,d1                           	| [$0aae: ld   b,a]
 	clr.b	d0                               	| [$0aaf: xor  a]
-	jbsr	update_jeep_position_0a6f                            	| [$0ab0: call $0A6F]
+	jbsr	update_jeep_sprite_row_0a6f                            	| [$0ab0: call $0A6F]
 	move.b	d3,(0x06,a3)                    	| [$0ab3: ld   (iy+$06),d]
 	rts                                    	| [$0ab6: ret]
 l_0ab7:
@@ -2117,7 +2142,7 @@ l_0ab7:
 	                              	| [$0aca: ex   de,hl]
 	move.b	#0x08,d0                        	| [$0acb: ld   a,$08]
 l_0acd:
-	jbsr	update_jeep_position_0a6f                            	| [$0acd: call $0A6F]
+	jbsr	update_jeep_sprite_row_0a6f                            	| [$0acd: call $0A6F]
 	move.b	d6,(0x0b,a3)                    	| [$0ad0: ld   (iy+$0b),l]
 	sub.b	#0x10,d0                         	| [$0ad3: sub  $10]
 	move.b	d0,(0x08,a3)                    	| [$0ad5: ld   (iy+$08),a]
@@ -2138,7 +2163,7 @@ l_0ae2:
 	LOAD_D1D2_FROM_D1_16                           	| [$0af1: ld   c,l]
 	jra	write_sprite_data_0976                             	| [$0af2: jp   $0976]
 
-l_0af5:
+update_exploding_jeep_0af5:
 	lea	wheels_sprites_shadow_ram_E1A4,a3                	| [$0af5: ld   iy,wheels_sprites_shadow_ram_E1A4]
 	clr.b	(0x1a,a3)                        	| [$0af9: ld   (iy+$1a),$00]
 	jbsr	l_0a95                            	| [$0afd: call $0A95]
@@ -2153,7 +2178,7 @@ l_0b0c:
 	addq.w	#8,a3                            	| [$0b10: add  iy,de]
 												| [$0b12: ex   de,hl]
 l_0b13:
-	jbsr	update_jeep_position_0a6f                            	| [$0b13: call $0A6F]
+	jbsr	update_jeep_sprite_row_0a6f                            	| [$0b13: call $0A6F]
 	move.b	d3,d0                           	| [$0b16: ld   a,d]
 	addq.b	#0x02,d0                        	| [$0b17: add  a,$02]
 	move.b	d0,(0x06,a3)                    	| [$0b19: ld   (iy+$06),a]
@@ -2257,7 +2282,7 @@ l_0bb7:
 	move.w	#0x400,d1                        	| [$0bba: ld   bc,$0400] 1024
 	jbsr	clear_area_05fa                   	| [$0bbd: call clear_area_05fa]
 	lea	jeep_params_E300,a2                	| [$0bc0: ld   ix,jeep_params_E300]
-	move.b	#0x01,(a2)                 	| [$0bc4: ld   (ix+$00),$01]
+	move.b	#STATE_REPOSITION_DEFAULT_01,(a2)                 	| [$0bc4: ld   (ix+$00),$01]
 	move.b	#0x09,(0x10,a2)                 	| [$0bc8: ld   (ix+$10),$09]
 	move.b	#0xB0,(0x01,a2)                 	| [$0bcc: ld   (ix+$01),$B0]
 	move.b	#0xA0,(0x21,a2)                 	| [$0bd0: ld   (ix+$21),$A0]
@@ -3507,6 +3532,7 @@ l_134a:
 	STORE_LEW	d5,unknown_16bit_E308                 	| [$1357: ld   (unknown_16bit_E308),hl]
 l_135a:
 	LOAD_D5D6_FROM_D5_16
+	* starts jumping: E300 from STATE_NORMAL_02 => STATE_JUMP_START_03
 	addq.b	#1,(a2)                    	| [$135a: inc  (ix+$00)]
 l_135d:
 	jbsr	compute_wheels_positions_1576                            	| [$135d: call $1576]
@@ -3577,7 +3603,7 @@ l_13c2:
 	move.b	#0x03,(0x0d,a2)                 	| [$13e2: ld   (ix+$0d),$03]
 	move.b	#0x1F,d0                        	| [$13e6: ld   a,$1F]
 	jra	store_d0_in_revolving_E000_if_playing_0d75                             	| [$13e8: jp   $0D75]
-l_13eb:
+handle_jeep_explosion_13eb:
 	clr.b	d0                               	| [$13eb: xor  a]
 	move.b	d0,unknown_E1A2                 	| [$13ec: ld   (unknown_E1A2),a]
 	subq.b	#1,(0x0a,a2)                    	| [$13ef: dec  (ix+$0a)]
@@ -4091,6 +4117,7 @@ l_16e1:
 	add.b	(a0),d0                          	| [$16ef: add  a,(hl)]
 	sub.b	(0x07,a2),d0                     	| [$16f0: sub  (ix+$07)]
 	subq.b	#1,d0                           	| [$16f3: dec  a]
+	* collision with object (rock,...) or hit by bomb
 	add.b	d1,d0                            	| [$16f4: add  a,b]
 	bpl.b	0f                               	| [...]
 	rts                                    	| [$16f5: ret  m] [...]
@@ -4098,11 +4125,12 @@ l_16e1:
 	jbsr	osd_read_dsw_2                       	| [$16f6: ld   a,($D004)]
 	btst.b	#6,d0                           	| [$16f9: bit  6,a]
 	bne.b	0f                               	| [...]
+	* cheat mode: don't die
 	rts                                    	| [$16fb: ret  z] [...]
 0:
 	move.l	(sp)+,a0                        	| [$16fc: pop  hl]
-l_16fd:
-	move.b	#0x07,d0                        	| [$16fd: ld   a,$07]
+jeep_killed_16fd:
+	move.b	#STATE_EXPLODING_07,d0                        	| [$16fd: ld   a,$07]
 	move.b	d0,jeep_params_E300                 	| [$16ff: ld   (jeep_params_E300),a]
 	move.b	#0x03,d0                        	| [$1702: ld   a,$03]
 	move.b	d0,unknown_E30D                 	| [$1704: ld   (unknown_E30D),a]
@@ -4469,17 +4497,21 @@ l_195e:
 	                           	| [$1979: inc  hl]
 	cmp.b	(a0),d0                          	| [$197a: cp   (hl)]
 	jcc	l_19c2                             	| [$197b: jr   nc,$19C2]
+	* reached when jeep is next to a hole
 	move.b	d0,d1                           	| [$197d: ld   b,a]
 	move.b	jeep_params_E300,d0                 	| [$197e: ld   a,(jeep_params_E300)]
 	cmp.b	#0x04,d0                         	| [$1981: cp   $04]
 	bne.b	0f                               	| [...]
+	* jeep was jumping: no problem!
 	rts                                    	| [$1983: ret  z] [...]
 0:
 	jbsr	osd_read_dsw_2                       	| [$1984: ld   a,($D004)]
 	btst.b	#6,d0                           	| [$1987: bit  6,a]
 	bne.b	0f                               	| [...]
+	* cheat mode activated: don't die!
 	rts                                    	| [$1989: ret  z] [...]
 0:
+	* jeep falls into hole
 	move.b	d1,d0                           	| [$198a: ld   a,b]
 	move.b	(a0),d1                         	| [$198b: ld   b,(hl)]
 	move.b	#0x02,d2                        	| [$198c: ld   c,$02]
@@ -4511,7 +4543,8 @@ l_199a:
 	move.w	#0x200,d5                      	| [$19b6: ld   hl,$0200]
 	
 	STORE_LEW	d5,unknown_16bit_E308                 	| [$19b9: ld   (unknown_16bit_E308),hl]
-	move.b	#0x06,d0                        	| [$19bc: ld   a,$06]
+	* change state to: fall in hole
+	move.b	#FALL_IN_HOLE_06,d0                        	| [$19bc: ld   a,$06]
 	move.b	d0,jeep_params_E300                 	| [$19be: ld   (jeep_params_E300),a]
 	rts                                    	| [$19c1: ret]
 l_19c2:
@@ -4570,7 +4603,7 @@ l_1a0d:
 	sub.b	(0x03,a2),d0                     	| [$1a18: sub  (ix+$03)]
 	add.b	#0x10,d0                         	| [$1a1b: add  a,$10]
 	cmp.b	#0x30,d0                         	| [$1a1d: cp   $30]
-	jcs	l_16fd                             	| [$1a1f: jp   c,$16FD]
+	jcs	jeep_killed_16fd                             	| [$1a1f: jp   c,$16FD]
 l_1a22:
 	jbsr	l_0838                            	| [$1a22: call $0838]
 	move.b	(0x0c,a2),d0                    	| [$1a25: ld   a,(ix+$0c)]
@@ -5081,7 +5114,7 @@ l_1d73:
 	btst.b	#6,d0                           	| [$1d93: bit  6,a]
 	jeq	l_08b8                             	| [$1d95: jp   z,$08B8]
 	jbsr	l_0852                            	| [$1d98: call $0852]
-	jra	l_16fd                             	| [$1d9b: jp   $16FD]
+	jra	jeep_killed_16fd                             	| [$1d9b: jp   $16FD]
 l_1d9e:
 	addq.b	#1,(a3)                    	| [$1d9e: inc  (iy+$00)]
 	move.b	(0x0d,a2),d0                    	| [$1da1: ld   a,(ix+$0d)]
