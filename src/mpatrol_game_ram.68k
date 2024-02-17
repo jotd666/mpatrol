@@ -1,28 +1,28 @@
 	.global	revolving_buffer_8_E000
-	.global	unknown_E008
-	.global	unknown_E00A
-	.global	unknown_E00B
+	.global	high_score_e008
+	.global	high_score2_e00a
+	.global	high_point_e00b
 	.global	unknown_E00C
 	.global	jeep_base_y_e03c
 	.global x_scroll_horizon_e03d
 	.global	unknown_E03E
 	.global	unknown_E03F
-	.global	start_nb_lives_E040
+	.global	per_credit_e040
 	.global	free_play_E041
-	.global	unknown_E042
+	.global	slot_modeB_e042
 	.global	cocktail_mode_E043
-	.global	unknown_E044
-	.global	unknown_E045
+	.global	slot_mode_e044
+	.global	ext_points_e045
 	.global	game_status_bits_E046
-	.global	unknown_E047
-	.global	nb_credits_e048
+	.global	cnt_till_cred_e047
+	.global	credits_e048
 	.global	unknown_E049
 	.global	unknown_E04A
-	.global	unknown_E04C
+	.global	flip_value_e04c
 	.global	title_display_timer_E04D
 	.global	timer_8bit_E04E
 	.global	sync_flag_E050
-	.global	unknown_E051
+	.global	isr_count4_e051
 	.global	unknown_E052
 	.global	in0_copy_E053
 	.global	unknown_16bit_E054
@@ -52,7 +52,7 @@
 	.global	unknown_E0F3
 	.global	unknown_pointer_E0F4
 	.global	unknown_E0F6
-	.global	unknown_E0F9
+	.global	champ_colors_e0f9
 	.global	sprite_shadow_E100
 	.global	unknown_E172
 	.global	unknown_E174
@@ -70,7 +70,7 @@
 	.global	unknown_E1C5
 	.global	unknown_E1C6
 	.global	unknown_E1C9
-	.global	unknown_E1CF
+	.global	com_list_head_e1cf
 	.global	event_buffer_index_E1D0
 	.global	unknown_E1D1
 	.global	unknown_E1D2
@@ -83,7 +83,7 @@
 	.global	unknown_E1D9
 	.global	screen_address_E1DA
 	.global	unknown_E1DC
-	.global	unknown_E1DD
+	.global	sndQ_front_e1dd
 	.global	offset_to_E000_E1DE
 	.global	unknown_E1DF
 	.global	unknown_E1E0
@@ -96,10 +96,10 @@
 	.global	unknown_E277
 	.global	jeep_params_E300
 	.global	unknown_16bit_E302
-	.global	unknown_E303
+	.global	buggy_x_e303
 	.global	unknown_16bit_E304
 	.global	unknown_16bit_E306
-	.global	unknown_E307
+	.global	buggy_y_e307
 	.global	unknown_16bit_E308
 	.global	unknown_E309
 	.global	unknown_E30A
@@ -116,16 +116,16 @@
 	.global	unknown_E32D
 	.global	unknown_E32F
 	.global	unknown_E330
-	.global	unknown_E370
+	.global	object7_e370
 	.global	unknown_16bit_E372
-	.global	unknown_E3B0
-	.global	unknown_E3C0
+	.global	objectB_e3b0
+	.global	objectC_e3c0
 	.global	unknown_E3FF
 	.global	unknown_E400
 	.global	unknown_E4F0
 	.global	player_score_E500
-	.global	unknown_E501
-	.global	unknown_E502
+	.global	cur_score1_e501
+	.global	cur_score2_e502
 	.global	unknown_E503
 	.global	fine_scroll_x_value_green_layer_E504
 	.global	fine_scroll_x_value_blue_layer_E506
@@ -133,7 +133,7 @@
 	.global	unknown_E509
 	.global	fine_position_on_track_E50B
 	.global	unknown_E50D
-	.global	unknown_E50E
+	.global	cur_point_e50e
 	.global	unknown_E50F
 	.global current_level_E510
 	.global	time_bcd_E511
@@ -164,11 +164,11 @@
 
 revolving_buffer_8_E000:
 	ds.b	8
-unknown_E008:
+high_score_e008:
 	ds.b	2
-unknown_E00A:
+high_score2_e00a:
 	ds.b	1
-unknown_E00B:
+high_point_e00b:
 	ds.b	1
 unknown_E00C:
 	ds.b	48
@@ -180,29 +180,29 @@ unknown_E03E:
 	ds.b	1
 unknown_E03F:
 	ds.b	1
-start_nb_lives_E040:
+per_credit_e040:
 	ds.b	1
 free_play_E041:
 	ds.b	1
-unknown_E042:
+slot_modeB_e042:
 	ds.b	1
 cocktail_mode_E043:
 	ds.b	1
-unknown_E044:
+slot_mode_e044:
 	ds.b	1
-unknown_E045:
+ext_points_e045:
 	ds.b	1
 game_status_bits_E046:
 	ds.b	1
-unknown_E047:
+cnt_till_cred_e047:
 	ds.b	1
-nb_credits_e048:
+credits_e048:
 	ds.b	1
 unknown_E049:
 	ds.b	1
 unknown_E04A:
 	ds.b	2
-unknown_E04C:
+flip_value_e04c:
 	ds.b	1
 	* 0x50: jeep jumps, title appears
 	* 0xB0: title screen stops, "insert coin" screen
@@ -212,7 +212,7 @@ timer_8bit_E04E:
 	ds.b	2
 sync_flag_E050:
 	ds.b	1
-unknown_E051:
+isr_count4_e051:
 	ds.b	1
 unknown_E052:
 	ds.b	1
@@ -280,7 +280,7 @@ unknown_E0F6:
 	.align	2
 demo_fake_inputs_pointer_E0F7:
 	ds.l	1
-unknown_E0F9:
+champ_colors_e0f9:
 	ds.b	0x10-0x9
 sprite_shadow_E100:
 	ds.b	0x72
@@ -314,7 +314,7 @@ unknown_E1C6:
 	ds.b	3
 unknown_E1C9:
 	ds.b	6
-unknown_E1CF:
+com_list_head_e1cf:
 	ds.b	1
 event_buffer_index_E1D0:
 	ds.b	1
@@ -341,7 +341,7 @@ screen_address_E1DA:
 	ds.l	1
 unknown_E1DC:
 	ds.b	1
-unknown_E1DD:
+sndQ_front_e1dd:
 	ds.b	1
 offset_to_E000_E1DE:
 	ds.b	1
@@ -409,13 +409,13 @@ unknown_E32F:
 	ds.b	1
 unknown_E330:
 	ds.b	64
-unknown_E370:
+object7_e370:
 	ds.b	2
 unknown_16bit_E372:
 	ds.b	62
-unknown_E3B0:
+objectB_e3b0:
 	ds.b	16
-unknown_E3C0:
+objectC_e3c0:
 	ds.b	63
 unknown_E3FF:
 	ds.b	1
@@ -425,9 +425,9 @@ unknown_E4F0:
 	ds.b	16
 player_score_E500:
 	ds.b	1
-unknown_E501:
+cur_score1_e501:
 	ds.b	1
-unknown_E502:
+cur_score2_e502:
 	ds.b	1
 unknown_E503:
 	ds.b	1
@@ -443,7 +443,7 @@ fine_position_on_track_E50B:
 	ds.b	2
 unknown_E50D:
 	ds.b	1
-unknown_E50E:
+cur_point_e50e:
 	ds.b	1
 unknown_E50F:
 	ds.b	1
