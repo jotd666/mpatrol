@@ -33,3 +33,6 @@ add  a,$10]
 ld   l,a]
 
 => add.w	#$10,a0
+
+merge comments from z80 source of http://www.computerarcheology.com/Arcade/MoonPatrol/
+rename variables too!
