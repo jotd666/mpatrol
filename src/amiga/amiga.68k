@@ -193,7 +193,8 @@ start:
 		.global	osd_get_random
 		.global	osd_wait
 		.global	osd_set_ground_scroll_value
-
+		.global	osd_clear_background
+		
 	
 	.include	"ReadJoypad.i"
 	.include	"whdload_funcs.i"
@@ -774,8 +775,26 @@ is_moonbase_displayed:
 	movem.l	(a7)+,a1
 	rts
 	
+osd_clear_background:
+	movem.l	d0-d7/A0-A6,-(a7)
+	lea		_custom,a5
+	* compute height
+	moveq	#0,d1
+	move.b	previous_blue_layer_y,d1
+	move.w	#Y_MAX-32,d4
+	sub.w	d1,d4
+	* now D4 is the full height to clear
+	move	#NB_PLAYFIELD_PLANES,d3
+	moveq	#34,d2			| width = 32 (all screen width)
+	moveq	#0,d0			| X=0 (all screen)
+	move.l	bg_drawed_screen_ptr(pc),a1
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-d7/A0-A6
+	rts
+	
 * < A0: 
 update_background:
+	
 	move.l	a0,a2
 	* don't update scroll if title displayed and the values are the same as before
 	jbsr	is_title_displayed
@@ -824,19 +843,11 @@ update_background:
 	move.b	d2,previous_blue_layer_y
 	* Y just went 0: no more mountains or game playfield (only status text)
 	* set tiles palette for all screen
-	bsr		load_tiles_palette_in_playfield_copperlist
-	lea		_custom,a5
-	* compute height
-	moveq	#0,d1
-	move.b	previous_blue_layer_y,d1
-	move.w	#Y_MAX-32,d4
-	sub.w	d1,d4
-	* now D4 is the full height to clear
-	move	#NB_PLAYFIELD_PLANES,d3
-	moveq	#34,d2			| width = 32 (all screen width)
-	moveq	#0,d0			| X=0 (all screen)
-	move.l	bg_drawed_screen_ptr(pc),a1
-	jra		clear_planes_any_blitter_internal
+	* well, we used to do that here, but it conflicts with the "insert coin"
+	* message because it's cleared while tiles are updating from non-interrupt
+	* so we "help" the game erase properly by adding a osd_clear_background call
+	* which is called in the proper context (not interrupts!)
+	rts
 0:
 	tst.b	previous_blue_layer_y
 	bne.b	2f
@@ -2369,7 +2380,7 @@ update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 	and.w	#0xFF,d1	| mask up to 255
 
-	
+
 	.ifne	OPT_ENABLE_LOGGING
 	* when logging is enabled, play a while
 	* and break. Get the address in 0x100 then do
@@ -2505,6 +2516,7 @@ update_bg_tile:
 	* clear tile
 
 11:
+
 	tst.b	d6
 	bne.b	2f		| cookie cut of empty char => do nothing
 111:
@@ -3510,12 +3522,11 @@ moonbase_colors:
 	
 	* pal limit
     .word  0xFFDF,0xFFFE       | PAL wait
+    .word  0x1001,0xFFFE
 	.word	color,0
     .word	 intreq,0x8010	| no bobs from now on, get more drawing time
-    *.word  0x0401,0xFFFE
 	
     *.word   0x1C01,0xFFFE
-	.set    beampos,0x1E01
 	
  	.word	beampos,0xFFFE
     .long    -2					

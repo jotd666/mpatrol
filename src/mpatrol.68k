@@ -740,6 +740,8 @@ l_0359:
 	                               	| [$035c: and  a] -  ... this down to zero?
 	jne	l_0359                             	| [$035d: jr   nz,$0359] -  No ... wait for zero
 	jra	l_0351                             	| [$035f: jr   $0351] -  Keep processing script
+	
+	
 l_0361:
 	move.b	sync_flag_E050,d0                 	| [$0361: ld   a,(sync_flag_E050)] -  Count-down timer ...
 	                               	| [$0364: and  a] -  ... reached zero?
@@ -773,7 +775,7 @@ l_037e:
 	jbsr	osd_w_videoram		| [$038c: ld   (de),a] -  ... screen character
 	exg		d7,a1
 	                         	
-	                           	| [$038d: inc  de] -  Back up one
+	addq	#1,a1                           	| [$038d: inc  de] -  Back up one
 	jra	l_037e                             	| [$038e: jr   $037E] -  Keep processing
 l_0390:
 	addq.w	#1,a0                           	| [$0390: inc  hl] -  Next in script * J0385
@@ -819,8 +821,8 @@ print_digit_03bd:
 	and.b	#0x0F,d0                         	| [$03bd: and  $0F] -  ... BDC digit * C0166,C03B9,C213B
 	add.b	#0x30,d0                         	| [$03bf: add  a,$30] -  Convert to number (ASCII)
 	
-* < A1: videoram address
-* < A3: colorram address
+* < A1: videoram address (updated)
+* < A3: colorram address (updated)
 * < D0: character code
 * < D2: attribute
 write_to_screen_and_move_cursor_03c1:
@@ -926,6 +928,7 @@ l_0408:
 	subq.b	#1,d1                           	| [...]
 	jne	l_0408                             	| [$040b: djnz $0408] -  Do all loops
 	rts                                    	| [$040d: ret] -  Done
+	
 coins_and_credits_040e:
 	lea	unknown_E03E,a0                	| [$040e: ld   hl,unknown_E03E] -  Coin and service-credit signal history for slot A * C00C7
 	lea	free_play_E041,a1                	| [$0411: ld   de,free_play_E041] -  Slot A coin mode
@@ -2536,7 +2539,9 @@ l_0d29:
 	                   	| [$0d2f: call clear_area_05fa] clear screen
 	lea	sprite_shadow_E100,a0          	| [$0d32: ld   hl,sprite_shadow_E100]
 	move.w	#0xc6,d1                        	| [$0d35: ld   bc,$00C6] 198
+	jbsr	osd_clear_background
 	jbsr	clear_area_05fa                   	| [$0d38: call clear_area_05fa] clear part of RAM
+
 l_0d3b:
 	move.b	cocktail_mode_E043,d0                 	| [$0d3b: ld   a,(cocktail_mode_E043)] -  Cabinet mode * J0DA3
 	subq.b	#1,d0                           	| [$0d3e: dec  a]
