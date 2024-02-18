@@ -26,9 +26,13 @@ with open(uncommented_file) as f, open(mixed_file,"w") as fw:
         m = instruction_re.match(line)
         if m:
             key = m.group(1)
-            comment = d.get(key,"")
+
+            comment = d.get(key.upper()) or d.get(key.lower(),"")
+
             if comment.strip():
                 start = line.rstrip()
-
-                line = start +" - "+comment+"\n"
+                if comment in start:
+                    pass
+                else:
+                    line = start +" - "+comment+"\n"
         fw.write(line)

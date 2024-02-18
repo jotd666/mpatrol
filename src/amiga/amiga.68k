@@ -30,7 +30,9 @@ FIX_GROUND_SCROLL = 0
 PANEL_MAX_Y = 48
 DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y
 
-SPRITE_Y_CORRECTION = -24
+* with those, buggy wheels match perfectly the ground!
+SPRITE_Y_CORRECTION = -16
+SPRITE_X_CORRECTION = 16
 
 SCROLLABLE_TILE_Y_START = 24
 SCROLLABLE_STRIP_NB_COLS = 66
@@ -371,7 +373,9 @@ _user:
 
 	move.l	cheat_flags,d0
 	btst	#0,d0
-	sne		invincible_flag
+	beq.b	0f
+	bset	#6,dip_switches
+0:
 	btst	#1,d0
 	sne		infinite_lives_flag
 	btst	#2,d0
@@ -928,13 +932,18 @@ update_hardware_sprites:
 	beq.b	2f			| Y set to 0: not shown
 	not.b	d1
 	
-	.ifne	SPRITE_Y_CORRECTION
-	add.w	#SPRITE_Y_CORRECTION,d1
-	.endif
 	
 *	cmp.b	#255,d1
 *	beq.b	2f			| Y set to 255: not shown	
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
+
+	.ifne	SPRITE_Y_CORRECTION
+	add.w	#SPRITE_Y_CORRECTION,d1
+	.endif
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif
+
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
 	and.b	#0xF,d3	| get attributes
@@ -1095,11 +1104,14 @@ update_bobs:
 	beq.b	2f			| Y set to 0: not shown
 	not.b	d1
 	
+	
+	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
 	.endif
-	
-	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
 	and.b	#0xF,d3	| get attributes
@@ -3332,27 +3344,6 @@ bg_displayed_screen_ptr:
 
 
 	.include	"sound_entries.68k"
-	* continuing on sound table for guard step/climb sounds
-	* which are the same as the player, only less loud
-	.word	1,0
-	.long	guard_climb_sound | 15
-
-	.word	1,0
-	.long	guard_walk_sound | 16
-
-guard_climb_sound:
-    .long    player_climb_raw
-    .word   5136    | copied from player climb
-    .word   FXFREQBASE/HQ_SOUNDFREQ,8
-    .byte    2
-    .byte    2		| priority
-
-guard_walk_sound:
-    .long    player_walk_raw
-    .word   4467   | copied from player walk
-    .word   FXFREQBASE/HQ_SOUNDFREQ,8
-    .byte    2
-    .byte    2		| priority
 
 	
 _keyexit:

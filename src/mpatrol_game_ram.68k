@@ -24,7 +24,7 @@
 	.global	sync_flag_E050
 	.global	isr_count4_e051
 	.global	unknown_E052
-	.global	in0_copy_E053
+	.global	coin_start_e053
 	.global	unknown_16bit_E054
 	.global	unknown_E057
 	.global	unknown_E05B
@@ -216,7 +216,7 @@ isr_count4_e051:
 	ds.b	1
 unknown_E052:
 	ds.b	1
-in0_copy_E053:
+coin_start_e053:
 	ds.b	1
 unknown_16bit_E054:
 	ds.b	3

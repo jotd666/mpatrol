@@ -1,10 +1,6 @@
-- DONE! merge comments from z80 source of http://www.computerarcheology.com/Arcade/MoonPatrol/
-- improve merge comments to issue replacement dict if instruction diff
-  with variable insertion
-- diff z80 codes and compute variable & function name replacement dict 
-- rename variables too!
-- during demo, jeep is killed almost at once (now crashes!)
-- when "moon patrol" title is displayed, jeep is too low / jump looks bogus
+- when "moon patrol" title is displayed, jeep is too low / jump looks bogus: debug MAME state 3 & 4 monitor jeep_y_offset_E307
+
+- during demo, jeep is killed almost at once
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
 - write_to_screen_03c9: eats first character ("I" of "INSERT COIN"
