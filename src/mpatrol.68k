@@ -2,6 +2,10 @@
 *
 * Moon Patrol 68k conversion by JOTD
 *
+* Reverse-engineered by JOTD
+* with the help of comments & variable names found later on
+* http://www.computerarcheology.com/Arcade/MoonPatrol/ big thanks/timesaver!
+*
 */***************************************************************************
 *
 *    Irem M52 hardware
@@ -106,6 +110,7 @@ STATE_JUMP_START_03 = 3
 START_JUMPING_04 = 4
 STATE_FALL_IN_HOLE_06 = 6
 STATE_EXPLODING_07 = 7
+STATE_HOLD_IN_AIR = 8
 
     .global mpatrol_irq
     .global mpatrol_reset
@@ -537,6 +542,7 @@ l_01da:
 run_objects_01ec:
 	* jump according to jeep state
 	* 2: normal
+	* 4: jumping
 	* 6: falling in hole
 	* 7: exploding
 	lea	jeep_params_E300,a2                	| [$01ec: ld   ix,jeep_params_E300] -  Pointer to command buffer (32 slots of 16 bytes) * C00F9
@@ -558,7 +564,7 @@ l_0200:
 	rts                                    	| [$020b: ret] -  Done
 
 jump_table_020C:
-	.long	l_1311,l_1331,l_1370,l_1388,l_13bc,l_13c2
+	.long	l_1311,l_1331,l_1370,jeep_jumping_1388,l_13bc,l_13c2
 	.long	handle_jeep_explosion_13eb,l_1421
 	.long	l_1809,l_15e0,l_15fa,l_162d,l_162d,l_1649,handle_vertical_shot_165d,isrobj_run_10_168f
 	.long	l_193d,l_1957,l_195e,l_19d1,l_1a2f,l_1a44,l_1a92,l_1ab9
@@ -1088,21 +1094,21 @@ l_04db:
 	jeq	l_049d                             	| [$04e4: jr   z,$049D]
 	* we're in title sequence
 	* jeep rolls, no obstacles
-	CLEAR_XC_FLAGS
 	cmp.b	#0x50,d0                         	| [$04e6: cp   $50]
 	jeq	jeep_jumps_and_title_shows_0507                             	| [$04e8: jr   z,$0507]
 	jcc	1f
 	* jotd: handle C flag manually
 	roxr.b	#1,d1                           	| [$04ea: rr   b]
-	bset	#7,d1
+	bset	#7,d1		| C flag means we have to set d1 bit 0
 	bra.b	2f
 1:
-	roxr.b	#1,d1                           	| [$04ea: rr   b]
+	roxr.b	#1,d1                           	| [$04ea: rr   b] 
+	bclr	#7,d1		| we don't have to set d1 bit
 2:
 	jcs	l_04f3                             	| [$04ec: jr   c,$04F3]
 	roxr.b	#1,d1                           	| [$04ee: rr   b]
 	jcs	l_04f3                             	| [$04f0: jr   c,$04F3]
-	addq.b	#1,(a0)                         	| [$04f2: inc  (hl)]
+	addq.b	#1,(a0)                         	| [$04f2: inc  (hl)] increase title display timer
 l_04f3:
 	move.b	#0x02,d2                        	| [$04f3: ld   c,$02] -  Value for "left button" * J04EC,J04F0
 	lea	unknown_E049,a0                	| [$04f5: ld   hl,unknown_E049] -  Current button value spot
@@ -1123,21 +1129,18 @@ jeep_jumps_and_title_shows_0507:
 	move.b	(a0),d0                         	| [$050a: ld   a,(hl)] -  Get the current command
 	cmp.b	#START_JUMPING_04,d0                         	| [$050b: cp   $04] -  Is the buggy in the air?
 	jne	l_051b                             	| [$050d: jr   nz,$051B] -  No ... move on
+	CLEAR_XC_FLAGS
+	* check if apex of jump
 	move.b	unknown_16bit_E308+1,d0                 	| [$050f: ld   a,(unknown_E309)]
-	rol.b	#1,d0                           	| [$0512: rla]
-	bra.b	2f
-1:
-	move.b	unknown_16bit_E308+1,d0                 	| [$050f: ld   a,(unknown_E309)]
-	rol.b	#1,d0                           	| [$0512: rla]  carry clear!
-2:
+	roxl.b	#1,d0                           	| [$0512: rla]
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$0513: ret  c] [...] -  ?? falls through when jump buggy is at apex
 0:
-	move.b	#0x08,(a0)                      	| [$0514: ld   (hl),$08] -  Transition to "hold buggy in air" sequence
-	move.b	#0x0A,d2                        	| [$0516: ld   c,$0A] -  Init "MOOD PATROL" splash sequence
+	move.b	#STATE_HOLD_IN_AIR,(a0)                      	| [$0514: ld   (hl),$08] -  Transition to "hold buggy in air" sequence
+	move.b	#0x0A,d2                        	| [$0516: ld   c,$0A] -  Init "MOON PATROL" splash sequence
 	jra	store_special_event_02c2                             	| [$0518: jp   $02C2] -  Add the text-command and out
 l_051b:
-	cmp.b	#0x08,d0                         	| [$051b: cp   $08] -  Buggy-held-in-air sequence? * J050D
+	cmp.b	#STATE_HOLD_IN_AIR,d0                         	| [$051b: cp   $08] -  Buggy-held-in-air sequence? * J050D
 	bne.b	0f                               	| [...]
 	rts                                    	| [$051d: ret  z] [...] -  Yes ... no inputs
 0:
@@ -3565,7 +3568,8 @@ l_1378:
 	jbsr	compute_jeep_y_1533                            	| [$1381: call $1533]
 	sub.b	#0x1E,d0                         	| [$1384: sub  $1E] -  Initial Y offset to start jump
 	jra	l_136b                             	| [$1386: jr   $136B] -  Set Y and draw buggy
-l_1388:
+jeep_jumping_1388:
+	
 	jbsr	player_shot_1548                            	| [$1388: call $1548] -  Check starting player shot
 	LOAD_LEW	unknown_16bit_E30E,d5             	| [$138b: ld   hl,(unknown_16bit_E30E)]
 	jbsr	l_14a4                            	| [$138e: call $14A4]
@@ -3573,9 +3577,7 @@ l_1388:
 	LOAD_LEW	unknown_16bit_E308,d3             	| [$1394: ld   de,(unknown_16bit_E308)]
  	add.w	d3,d5                            	| [$1398: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E306                 	| [$1399: ld   (unknown_16bit_E306),hl]
-	rol.w	#8,d5
-	move.b	#0xC,d5                      	| [$139c: ld   hl,$000C] 12
-	rol.w	#8,d5
+	move.w	#0xC,d5                      	| [$139c: ld   hl,$000C] 12	
 	add.w	d3,d5                            	| [$139f: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E308                 	| [$13a0: ld   (unknown_16bit_E308),hl]
 	rol.b	#8,d5
