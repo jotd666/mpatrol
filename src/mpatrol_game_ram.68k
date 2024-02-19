@@ -88,6 +88,7 @@
 	.global	unknown_E1DF
 	.global	unknown_E1E0
 	.global	unknown_16bit_E1E1
+	.global	scroll_logical_delta_x_E1E2
 	.global	ground_y_array_E200
 	.global	unknown_E210
 	.global	unknown_E23F
@@ -338,7 +339,7 @@ unknown_E1D9:
 	ds.b	1
 	.align	2
 screen_address_E1DA:
-	ds.l	1
+	ds.w	1
 unknown_E1DC:
 	ds.b	1
 sndQ_front_e1dd:
@@ -351,7 +352,9 @@ unknown_E1E0:
 	ds.b	1
 	ds.b	1	| align
 unknown_16bit_E1E1:
-	ds.w	1
+	ds.b	1
+scroll_logical_delta_x_E1E2:
+	ds.b	1
 	ds.b	28
 ground_y_array_E200:
 	ds.b	0x10

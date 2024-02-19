@@ -1710,47 +1710,66 @@ compute_screen_address_081b:
 	move.b	d0,d5                           	| [$082f: ld   l,a] -  Back to L
 	move.w	d5,d7
 	rts                                    	| [$0830: ret] -  Return pointer in HL
-l_0831:
+	
+* < A2: object structure
+update_surface_object_0831:
+	* set sprite coords & type for above ground objects & move them
+	* rocks
+	* tanks
+	* mines
+	*
+	* also check for falls in holes
+	* with this routine disabled:
+	* - surface objects sprites don't appear (holes still appear)
+	* - no collision with objects or falling in holes
+	*
 	move.b	jeep_params_E300,d0                 	| [$0831: ld   a,(jeep_params_E300)] -  * C162D,C18E0,C1957,C195E,C1A2F,C1E25
-	cmp.b	#0x06,d0                         	| [$0834: cp   $06]
+	cmp.b	#STATE_FALL_IN_HOLE_06,d0                         	| [$0834: cp   $06]
 	jcc	l_08b2                             	| [$0836: jr   nc,$08B2]
-l_0838:
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$0838: ld   a,(unknown_E1E2)] -  * C1950,C1A22,C1A73
-	sub.b	(0x0f,a2),d0                     	| [$083b: sub  (ix+$0f)]
+update_surface_object_0838:
+	
+	* not falling (or called without the check to save cpu time? or to update no matter what?)
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$0838: ld   a,(unknown_E1E2)] -  * C1950,C1A22,C1A73
+	sub.b	(0x0f,a2),d0                     	| [$083b: sub  (ix+$0f)] object "absolute" X
 	neg.b	d0                               	| [$083e: neg]
-	move.b	d0,(0x03,a2)                    	| [$0840: ld   (ix+$03),a]
+	move.b	d0,(0x03,a2)                    	| [$0840: ld   (ix+$03),a] update object screen X
 	cmp.b	#0xE0,d0                         	| [$0843: cp   $E0]
 	jcs	l_08b4                             	| [$0845: jr   c,$08B4]
+	* possibly out of screen?
 	move.b	(0x0b,a2),d2                    	| [$0847: ld   c,(ix+$0b)]
 	subq.b	#1,d2                           	| [$084a: dec  c]
 	jne	draw_object_08b8                             	| [$084b: jr   nz,$08B8]
 	cmp.b	#0xE8,d0                         	| [$084d: cp   $E8]
 	jcc	draw_object_08b8                             	| [$084f: jr   nc,$08B8]
-	move.l	(sp)+,a0                        	| [$0851: pop  hl]
+	move.l	(sp)+,a0                        	| [$0851: pop  hl] we'll skip the caller
 l_0852:
 	clr.b	(a2)                        	| [$0852: ld   (ix+$00),$00] -  * J143E,J1639,J163E,C1711,J177C,J1B13,J1CE0,C1D98,J1E11,J1E30,J1E38,J1E45,J1E55,J1E9E,J2028,J2039,J20BB,J20CF
 l_0856:
 	move.b	(0x0d,a2),d0                    	| [$0856: ld   a,(ix+$0d)] -  A = object.layoutIndex * C1794,J17C1,J1D20,C1E8B
 	SET_XC_FLAGS                           	| [$0859: scf] -  A = 2 * object.layoutIndex ...
-	roxl.b	#1,d0                           	| [$085a: rla] -  ... + 1
+	lsl.b	#1,d0                           	| [$085a: rla] -  ... + 1
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$085b: ret  c] [...] -  A was >= 0x80 ... not valid
 0:
-	SET_XC_FLAGS                           	| [$085c: scf] -  A = 4 * object.layoutIndex ...
+	addq.b	#1,d0                           	| [$085c: scf] -  A = 4 * object.layoutIndex ...
 	lea	game_rom+0x2E18,a0                      	| [$085e: ld   hl,$2E18]
-	roxl.b	#1,d0                           	| [$085d: rla] -  ... + 3
+	lsl.b	#1,d0                           	| [$085d: rla] -  ... + 3
 	jcc	l_0864                             	| [$0861: jr   nc,$0864]
+	addq.b	#1,d0
 	add.w	#0x100,a0                           	| [$0863: inc  h]
+	jra		0f
 l_0864:
+	addq.b	#1,d0
+0:
 	clr.w	d3                               	| [$0865: ld   d,$00] -  ... 4 * object.layoutIndex + 3
 	move.b	d0,d3                           	| [$0864: ld   e,a] -  DE = ... * J0861
 	add.w	d3,a0                            	| [$0867: add  hl,de]
-	move.b	(a0),d1                         	| [$0868: ld   b,(hl)] -  B = ObjectLaout[object.layoutIndex].numberOfTiles
+	move.b	(a0),d1                         	| [$0868: ld   b,(hl)] -  B = ObjectLayout[object.layoutIndex].numberOfTiles
 l_0869:
 	moveq	#0,d3                        	| [$086c: ld   d,$E1]
 	move.b	(0x01,a2),d3                    	| [$0869: ld   e,(ix+$01)] -  * J20D8
 	move.b	d1,d0                           	| [$086e: ld   a,b]
-	rol.b	#1,d0                           	| [$086f: rla]
+	roxl.b	#1,d0                           	| [$086f: rla]
 	jcc	l_0882                             	| [$0870: jr   nc,$0882]
 	move.b	#0x01,d1                        	| [$0872: ld   b,$01]
 	roxl.b	#1,d0                           	| [$0874: rla]
@@ -1778,11 +1797,11 @@ l_0882:
 	                        	
 	move.w	#0x0004,d3                      	| [$0892: ld   de,$0004] 4
 l_0895:
-	move.b	d3,(0x02,a3)                    	| [$0895: ld   (iy+$02),d] -  * J089A
+	clr.b	(0x02,a3)                    	| [$0895: ld   (iy+$02),d] -  * J089A d contains 0: clear
 	add.w	d3,a3                            	| [$0898: add  iy,de]
 	subq.b	#1,d1                           	| [...]
 	jne	l_0895                             	| [$089a: djnz $0895]
-	move.b	d3,(a0)                         	| [$089c: ld   (hl),d]
+	clr.b	(a0)                         	| [$089c: ld   (hl),d]	d contains 0: clear
 	rts                                    	| [$089d: ret]
 l_089e:
 	jbsr	l_0882                            	| [$089e: call $0882] -  * J0875
@@ -1791,8 +1810,8 @@ l_08a1:
 	move.b	#0x18,d1                        	| [$08a4: ld   bc,$1800] 6144
 	move.b	#0x00,d2                        	| [$08a4: ld   bc,$1800] 6144
 l_08a7:
-	move.b	d2,(a0)                         	| [$08a7: ld   (hl),c] -  * J08A9
-	addq.w	#1,a0                           	| [$08a8: inc  hl]
+	move.b	d2,(a0)+                         	| [$08a7: ld   (hl),c] -  * J08A9
+											| [$08a8: inc  hl]
 	subq.b	#1,d1                           	| [...]
 	jne	l_08a7                             	| [$08a9: djnz $08A7]
 	lea	unknown_E1D1,a0                	| [$08ab: ld   hl,unknown_E1D1]
@@ -1804,24 +1823,19 @@ l_08b2:
 	move.l	(sp)+,a0                        	| [$08b2: pop  hl] -  * J0836
 	rts                                    	| [$08b3: ret]
 	
-	* a2: jeep params E300
+	* a2: object params (ex: jeep E300)
 l_08b4:
 	move.b	#0x01,(0x0b,a2)                 	| [$08b4: ld   (ix+$0b),$01] -  * J0845
 draw_object_08b8:
-	* get jeep state?
 	* when game running, every second update, value is 0x80
 	* which makes game return immediately. Rest of the time it's 0
 	move.b	(0x0d,a2),d0                    	| [$08b8: ld   a,(ix+$0d)] -  Object number * J084B,J084F,J1360,J13B9,C13D8,C13FF,J1419,C1484,J1615,J1AED,J1D3F,J1D7F,J1D8D,J1D95,J1EA1,J20AF,J20C1,J20C7
-	rol.b	#1,d0                            	| [$08bb: rlca] -  Was upper bit set (Thus A*4>=512)?
+	lsl.b	#1,d0                            	| [$08bb: rlca] -  Was upper bit set (Thus A*4>=512)?
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$08bc: ret  c] [...] -  Yes ... skip
 0:
-	* A=0: normal
-	* A=4: falling
-	* A=6: exploding 1
-	* A=8: exploding 2
 	lea	game_rom+0x2E18,a0                      	| [$08be: ld   hl,$2E18] -  Base pointer
-	rol.b	#1,d0                           	| [$08bd: rla] -  Now *4
+	lsl.b	#1,d0                           	| [$08bd: rla] -  Now *4
 	jcc	l_08c4                             	| [$08c1: jr   nc,$08C4] -  The *4 was all within LSB ... skip
 	* change sprite sequence to ????
 	add.w	#0x100,a0                           	| [$08c3: inc  h] -  The *4 overflowed ... bump MSB (there is no shift-left-into-H)
@@ -1927,6 +1941,20 @@ obj_draw_00_0969:
 * < D4: sprite attributes
 
 write_sprite_data_0976:
+	.ifndef		RELEASE
+	* sanity check, make sure that A3 is within bounds
+	cmp.l	#sprite_shadow_E100,a3
+	bcc.b	0f
+	* A3 is too low
+	jbsr	osd_break
+0:
+	cmp.l	#scroll_x_value_ground_layer_E1C0,a3
+	bcs.b	0f
+	* A3 is too high
+	jbsr	osd_break
+0:
+	.endif
+	
 	move.b	d1,(a3)                    	| [$0976: ld   (iy+$00),b] -  Set Y coordinate * J0995,J09A3,J09A9,J09B5,J09B8,J0AF2,C0B25,J0B35,J15A9,J15DD
 	move.b	d4,(0x01,a3)                    	| [$0979: ld   (iy+$01),e] -  Set tile flips/color
 	move.b	d3,(0x02,a3)                    	| [$097c: ld   (iy+$02),d] -  Set tile number
@@ -2619,7 +2647,7 @@ draw_ground_0d8d:
 l_0d95:
 	movem.w	d1/d2,-(sp)                    	| [$0d95: push bc] -  * J0DA1
 	jbsr	draw_ground_block_1106                            	| [$0d96: call $1106]
-	lea	unknown_16bit_E1E1+1,a0                	| [$0d99: ld   hl,unknown_E1E2]
+	lea	scroll_logical_delta_x_E1E2,a0                	| [$0d99: ld   hl,unknown_E1E2]
 	move.b	(a0),d0                         	| [$0d9c: ld   a,(hl)]
 	add.b	#0x08,d0                         	| [$0d9d: add  a,$08]
 	move.b	d0,(a0)                         	| [$0d9f: ld   (hl),a]
@@ -2678,7 +2706,7 @@ l_0dcd:
 * is never updated: it scrolls in loop without advancing
 handle_path_advance_0ddc:
 	jbsr	l_125b                            	| [$0ddc: call $125B] -  * C026E,C0280
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$0ddf: ld   a,(unknown_E1E2)]
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$0ddf: ld   a,(unknown_E1E2)]
 	lea	unknown_E509,a0                	| [$0de2: ld   hl,unknown_E509]
 	move.b	d0,d1                           	| [$0de5: ld   b,a]
 	move.b	(a0),d7
@@ -2765,10 +2793,10 @@ l_0e55:
 	                           	| [$0e62: ld   l,a]
 	move.b	#0x0A,d0
 	jbsr	osd_w_videoram                      	| [$0e63: ld   (hl),$0A]
-												| [$0e65: ld   bc,$0020] 32
+	move.w	#0x20,d1											| [$0e65: ld   bc,$0020] 32
 												| [$0e65: ld   bc,$0020] 32
 	move.b	d7,d4                           	| [$0e68: ld   e,l]
-	add.w	#0x20,d7                            	| [$0e69: add  hl,bc]
+	add.w	d1,d7                            	| [$0e69: add  hl,bc]
 	
 	move.b	#0x0B,d0
 	jbsr	osd_w_videoram                      	| [$0e6a: ld   (hl),$0B]
@@ -3121,7 +3149,7 @@ draw_ground_block_1106:
 	subq.b	#1,d1                           	| [$1116: dec  b]
 	lea	game_rom+0x2CB4,a0                      	| [$1117: ld   hl,$2CB4]
 	moveq	#0,d7		| offset
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$111a: ld   a,(unknown_E1E2)]
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$111a: ld   a,(unknown_E1E2)]
 	ror.b	#3,d0                           	| [$111d: rra] * 3
 	and.b	#0x1F,d0                         	| [$1120: and  $1F]
 	add.b	d7,d0                            	| [$1122: add  a,l]
@@ -3133,7 +3161,7 @@ l_1127:
 											| [$1127: ld   l,a] -  * J1123
 	move.b	(a0,d0.w),d2                         	| [$1128: ld   c,(hl)]
 l_1129:
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$1129: ld   a,(unknown_E1E2)] -  * J11CE,J11D5,J11E7
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1129: ld   a,(unknown_E1E2)] -  * J11CE,J11D5,J11E7
 	ror.b	#3,d0                           	| [$112c: rra] * 3
 	and.b	#0x1F,d0                         	| [$112f: and  $1F]
 	                           	| [$1131: ld   e,a]
@@ -3177,7 +3205,7 @@ l_1155:
 	exg		d7,a3
 	subq.b	#1,d1                           	| [...]
 	jne	l_1155                             	| [$115e: djnz $1155]
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$1160: ld   a,(unknown_E1E2)]
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1160: ld   a,(unknown_E1E2)]
 	ror.b	#2,d0                           	| [$1163: rra] * 2
  	and.b	#0x3E,d0                         	| [$1165: and  $3E]
 	                        	| [$1167: add  a,$00]
@@ -3838,7 +3866,7 @@ compute_jeep_y_1533:
 * < d0: object X
 compute_object_y_1538:
 	move.b	d0,d1                           	| [$1538: ld   b,a] -  * C10B1,C1467,C157C,C1A83,C1AE5,C1CFA
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$1539: ld   a,(unknown_E1E2)]
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1539: ld   a,(unknown_E1E2)]
 	add.b	d1,d0                            	| [$153c: add  a,b]
 l_153d:
 	addq.b	#0x06,d0                        	| [$153d: add  a,$06] -  * C0ED7
@@ -3853,6 +3881,11 @@ l_153d:
 	sub.l	#ground_y_array_E200-0xE200,d5
 	LOAD_D5D6_FROM_D5_16
 	rts                                    	| [$1547: ret]
+	
+* Check the fire button and initiate a player shot if
+* there is room (only 1 forward shot and 4 air shots at
+* a time).
+*
 	
 player_shot_1548:
 	move.b	unknown_E04A,d6             	| [$1548: ld   hl,(unknown_E04A)] -  Current inputs to L, last inputs to H * C1331,C1378,C1388
@@ -3954,7 +3987,7 @@ update_leftmost_jeep_wheel_15c9:
 	jbsr	compute_jeep_horizon_object_y_08ed                            	| [$15ca: call $08ED]
 	move.b	d0,d1                           	| [$15cd: ld   b,a]
 	move.w	#0x0500,d3                      	| [$15ce: ld   de,$0500]
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$15d1: ld   a,(unknown_E1E2)]
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$15d1: ld   a,(unknown_E1E2)]
 	btst.b	#4,d0                           	| [$15d4: bit  4,a]
 	jne	l_15d9                             	| [$15d6: jr   nz,$15D9]
 	* change wheel angle
@@ -3997,12 +4030,12 @@ l_1618:
 	move.b	#0x03,(0x0a,a2)                 	| [$161b: ld   (ix+$0a),$03] -  Three runs before changing sprite image
 	move.b	#0x0B,(0x0d,a2)                 	| [$161f: ld   (ix+$0d),$0B] -  Start with first explosion Object_0B
 l_1623:
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$1623: ld   a,(unknown_E1E2)] -  * C1DF7,C1E18
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1623: ld   a,(unknown_E1E2)] -  * C1DF7,C1E18
 	add.b	(0x03,a2),d0                     	| [$1626: add  a,(ix+$03)]
 	move.b	d0,(0x0f,a2)                    	| [$1629: ld   (ix+$0f),a] -  ?? X offset accounting for speed ??
 	rts                                    	| [$162c: ret]
 l_162d:
-	jbsr	l_0831                            	| [$162d: call $0831] -  ?? changing X based on speed
+	jbsr	update_surface_object_0831                            	| [$162d: call $0831] -  ?? changing X based on speed
 	subq.b	#1,(0x0a,a2)                    	| [$1630: dec  (ix+$0a)] -  Count down delay between image changes
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$1633: ret  p] [...] -  Return ... not time to change image
@@ -4026,7 +4059,7 @@ l_1649:
 	rts                                    	| [$165c: ret] -  Done
 handle_vertical_shot_165d:
 	move.b	jeep_params_E300,d0                 	| [$165d: ld   a,(jeep_params_E300)] -  Moon buggy command
-	cmp.b	#0x06,d0                         	| [$1660: cp   $06] -  Is buggy crashing?
+	cmp.b	#STATE_FALL_IN_HOLE_06,d0                         	| [$1660: cp   $06] -  Is buggy crashing?
 	jcc	isrobj_run_10_168f                             	| [$1662: jr   nc,$168F] -  Yes ... command 6 or greater ... remove shot from active duty
 	move.b	(0x07,a2),d0                    	| [$1664: ld   a,(ix+$07)] -  Get shot Y coordinate
 	subq.b	#0x03,d0                        	| [$1667: sub  $03] -  Move it up
@@ -4035,7 +4068,7 @@ handle_vertical_shot_165d:
 	move.b	d0,(0x07,a2)                    	| [$166d: ld   (ix+$07),a] -  New shot Y coordinate
 	jbsr	compute_screen_address_081b                            	| [$1670: call $081B] -  Get text screen pointer for X,Y coordinates
 	move.b	(0x07,a2),d0                    	| [$1673: ld   a,(ix+$07)] -  Get Y coordinate
-	roxr.b	#3,d0                           	| [$1676: rra] * 3 -  Rotate ...
+	roxr.b	#3,d0                           	| [$1676: rra] * 3 -  Rotate ... (well, rather *8)
 	move.b	d3,d0                           	| [$1679: ld   a,d] -  X coordinate divided by 2
 	roxl.b	#1,d0                           	| [$167a: rla] -  Pull in Y bit to select top (0) or bottom (1) for shot's position in tile
 	and.b	#0x07,d0                         	| [$167b: and  $07] -  Select picture tile 60..67 to match x remainder and y
@@ -4063,23 +4096,35 @@ isrobj_run_10_168f:
 	jbsr	osd_w_videoram                             	| [$1692: ld   (hl),$00] -  Clear the shot from the screen
 	clr.b	(a2)                        	| [$1694: ld   (ix+$00),$00] -  Remove the shot object from active duty
 	rts                                    	| [$1698: ret] -  Done
-l_1699:
+	
+* this routine seems to handle:
+* - jeep horizontal shots colliding with rocks, tanks... (destroys object)
+* - jeep colliding with rock, tanks... (kills jeep)
+* this routine doesn't handle vertical shot collision or ship bomb vs jeep
+* (disabling it only confers partial invulnerability, and less points)
+*
+* only called when a rock or other similar object is in the screen
+*
+* < A2: 
+ground_objects_collision_checks_1699:
+	moveq	#0,d0
+	* load object screen X in D2
 	move.b	(0x03,a2),d2                    	| [$1699: ld   c,(ix+$03)] -  * C18E3,C1953,C195A,C1A2B,C1A8A,C1B16,C1B27
+	
 	move.b	(0x0c,a2),d0                    	| [$169c: ld   a,(ix+$0c)]
-	add.b	d0,d0                            	| [$169f: add  a,a]
-	add.b	d0,d0                            	| [$16a0: add  a,a]
-	add.b	d0,d0                            	| [$16a1: add  a,a]
+	lsl.b	#3,d0                            	| [$169f: add  a,a]
+												| [$16a0: add  a,a]
+												| [$16a1: add  a,a]  times 8
 	lea	game_rom+0x311C,a0                      	| [$16a2: ld   hl,$311C]
-	and.w	#0xFF,d0
 	                            	| [$16a5: add  a,l]
 	add.w	d0,a0                           	| [$16a6: ld   l,a]
 	move.b	unknown_E320,d0                 	| [$16a7: ld   a,(unknown_E320)]
-	move.w	#0x7fc,d3                      	| [$16aa: ld   de,-$7fc]
+	move.w	#0xF804,d3                      	| [$16aa: ld   de,-$7fc]
 	sub.b	#0x0B,d0                         	| [$16ad: sub  $0B]
 	jeq	l_16b7                             	| [$16af: jr   z,$16B7]
 	subq.b	#1,d0                           	| [$16b1: dec  a]
 	jne	l_16cb                             	| [$16b2: jr   nz,$16CB]
-	move.w	#0xff6,d3                      	| [$16b4: ld   de,-$ff6]
+	move.w	#0xF00A,d3                      	| [$16b4: ld   de,-$ff6]
 l_16b7:
 	LOAD_D3D4_FROM_D3_16
 	move.b	unknown_16bit_E322+1,d0                 	| [$16b7: ld   a,(unknown_E323)] -  * J16AF
@@ -4099,8 +4144,12 @@ l_16cb:
 	rts                                    	| [$16cf: ret  m] [...]
 0:
 	addq.w	#1,a0                           	| [$16d0: inc  hl]
+	
+	* probably bounding box intersection algorithm with X and Y
 	move.b	jeep_x_E303,d0                 	| [$16d1: ld   a,(buggy_x_e303)]
-	sub.b	d2,d0                            	| [$16d4: sub  c]
+	sub.b	d2,d0                            	| [$16d4: sub  c] sub object X with jeep X
+
+	* object dimensions?
 	add.b	(a0)+,d0                          	| [$16d5: add  a,(hl)]
 												| [$16d6: inc  hl]
 	move.b	(a0)+,d1                         	| [$16d7: ld   b,(hl)]
@@ -4128,6 +4177,7 @@ l_16e1:
 	add.w	#0x100,d7                           	| [$16eb: inc  h] add 1 to MSB
 	add.l	#game_rom,d7			| recreate real address
 	move.l	d7,a0
+	
 	
 	move.b	jeep_y_offset_E307,d0                 	| [$16ec: ld   a,(buggy_y_e307)]
 	add.b	(a0),d0                          	| [$16ef: add  a,(hl)]
@@ -4183,7 +4233,7 @@ l_172a:
 	move.b	#0x1F,d0                        	| [$1749: ld   a,$1F] -  Play ...
 	jra	store_d0_in_revolving_E000_if_playing_0d75                             	| [$174b: jp   $0D75] -  ... car explosion
 l_174e:
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$174e: ld   a,(unknown_E1E2)] -  * J16C8
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$174e: ld   a,(unknown_E1E2)] -  * J16C8
 	add.b	(0x03,a2),d0                     	| [$1751: add  a,(ix+$03)]
 	move.b	d0,unknown_E32F                 	| [$1754: ld   (unknown_E32F),a]
 	move.b	#0x0D,d0                        	| [$1757: ld   a,$0D]
@@ -4356,7 +4406,7 @@ l_1870:
 	move.b	terrain_slope_type_E508,d0                 	| [$1878: ld   a,(terrain_slope_type_E508)]
 	cmp.b	#0x03,d0                         	| [$187b: cp   $03]
 	jcc	l_188b                             	| [$187d: jr   nc,$188B]
-	move.b	unknown_16bit_E1E1+1,d0                 	| [$187f: ld   a,(unknown_E1E2)]
+	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$187f: ld   a,(unknown_E1E2)]
 	rol.w	#8,d5
 	sub.b	d5,d0                            	| [$1882: sub  h]
 	rol.w	#8,d5
@@ -4421,8 +4471,8 @@ l_18d1:
 	move.b	d0,blue_layer_y_pos_E1C4                 	| [$18dc: ld   (blue_layer_y_pos_E1C4),a]
 	rts                                    	| [$18df: ret]
 l_18e0:
-	jbsr	l_0831                            	| [$18e0: call $0831]
-	jbsr	l_1699                            	| [$18e3: call $1699]
+	jbsr	update_surface_object_0831                            	| [$18e0: call $0831]
+	jbsr	ground_objects_collision_checks_1699                            	| [$18e3: call $1699]
 	subq.b	#1,(0x0a,a2)                    	| [$18e6: dec  (ix+$0a)]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$18e9: ret  p] [...]
@@ -4438,6 +4488,7 @@ l_18e0:
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$18f7: ret  c] [...]
 0:
+	* yellow tank starts shooting
 	move.b	objectC_e3c0,d0                 	| [$18f8: ld   a,(objectC_e3c0)]
 	                               	| [$18fb: and  a]
 	beq.b	0f                               	| [...]
@@ -4485,15 +4536,15 @@ l_193d:
  	subq.b	#1,(0x0f,a2)                    	| [$194d: dec  (ix+$0f)]
 l_1950:
 	move.b	d0,(0x04,a2)                    	| [$1948: ld   (ix+$04),a]
-	jbsr	l_0838                            	| [$1950: call $0838] -  * J194B
-	jbsr	l_1699                            	| [$1953: call $1699]
+	jbsr	update_surface_object_0838                            	| [$1950: call $0838] -  * J194B
+	jbsr	ground_objects_collision_checks_1699                            	| [$1953: call $1699]
 	rts                                    	| [$1956: ret]
 l_1957:
-	jbsr	l_0831                            	| [$1957: call $0831]
-	jbsr	l_1699                            	| [$195a: call $1699]
+	jbsr	update_surface_object_0831                            	| [$1957: call $0831]
+	jbsr	ground_objects_collision_checks_1699                            	| [$195a: call $1699]
 	rts                                    	| [$195d: ret]
 l_195e:
-	jbsr	l_0831                            	| [$195e: call $0831]
+	jbsr	update_surface_object_0831                            	| [$195e: call $0831]
 	move.b	(0x0c,a2),d0                    	| [$1961: ld   a,(ix+$0c)]
 	                               	| [$1964: and  a]
 	beq.b	0f                               	| [...]
@@ -4516,7 +4567,7 @@ l_195e:
 	* reached when jeep is next to a hole
 	move.b	d0,d1                           	| [$197d: ld   b,a]
 	move.b	jeep_params_E300,d0                 	| [$197e: ld   a,(jeep_params_E300)]
-	cmp.b	#0x04,d0                         	| [$1981: cp   $04]
+	cmp.b	#START_JUMPING_04,d0                         	| [$1981: cp   $04]
 	bne.b	0f                               	| [...]
 	* jeep was jumping: no problem!
 	rts                                    	| [$1983: ret  z] [...]
@@ -4621,16 +4672,16 @@ l_1a0d:
 	cmp.b	#0x30,d0                         	| [$1a1d: cp   $30]
 	jcs	jeep_killed_16fd                             	| [$1a1f: jp   c,$16FD]
 l_1a22:
-	jbsr	l_0838                            	| [$1a22: call $0838] -  * J1A12
+	jbsr	update_surface_object_0838                            	| [$1a22: call $0838] -  * J1A12
 	move.b	(0x0c,a2),d0                    	| [$1a25: ld   a,(ix+$0c)]
 	cmp.b	#0x06,d0                         	| [$1a28: cp   $06]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1a2a: ret  z] [...]
 0:
-	jbsr	l_1699                            	| [$1a2b: call $1699]
+	jbsr	ground_objects_collision_checks_1699                            	| [$1a2b: call $1699]
 	rts                                    	| [$1a2e: ret]
 l_1a2f:
-	jbsr	l_0831                            	| [$1a2f: call $0831]
+	jbsr	update_surface_object_0831                            	| [$1a2f: call $0831]
 	subq.b	#1,(0x0a,a2)                    	| [$1a32: dec  (ix+$0a)]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$1a35: ret  p] [...]
@@ -4669,7 +4720,7 @@ l_1a70:
 	subq.b	#1,(0x0f,a2)                    	| [$1a70: dec  (ix+$0f)] -  * J1A91
 l_1a73:
 	move.b	d0,(0x04,a2)                    	| [$1a6b: ld   (ix+$04),a]
-	jbsr	l_0838                            	| [$1a73: call $0838] -  * J1A6E
+	jbsr	update_surface_object_0838                            	| [$1a73: call $0838] -  * J1A6E
 	move.b	(0x0c,a2),d0                    	| [$1a76: ld   a,(ix+$0c)]
 	subq.b	#0x04,d0                        	| [$1a79: sub  $04]
 	asl.b	#1,d0                            	| [$1a7b: sla  a]
@@ -4679,7 +4730,7 @@ l_1a73:
 	jbsr	compute_object_y_1538                            	| [$1a83: call $1538]
 	sub.b	d2,d0                            	| [$1a86: sub  c]
 	move.b	d0,(0x07,a2)                    	| [$1a87: ld   (ix+$07),a]
-	jbsr	l_1699                            	| [$1a8a: call $1699]
+	jbsr	ground_objects_collision_checks_1699                            	| [$1a8a: call $1699]
 	rts                                    	| [$1a8d: ret]
 	
 l_1a92:
@@ -4752,7 +4803,7 @@ l_1b01:
 	lsr.w	#8,d0
 	cmp.b	#0xF0,d0                         	| [$1b11: cp   $F0]
 	jcc	l_0852                             	| [$1b13: jp   nc,$0852]
-	jbsr	l_1699                            	| [$1b16: call $1699]
+	jbsr	ground_objects_collision_checks_1699                            	| [$1b16: call $1699]
 	jra	l_1ad9                             	| [$1b19: jr   $1AD9]
 l_1b1b:
 	addq.b	#1,(a2)                    	| [$1b1b: inc  (ix+$00)] -  * J1B04
@@ -4760,7 +4811,7 @@ l_1b1b:
 	move.b	#0x23,(0x0d,a2)                 	| [$1b22: ld   (ix+$0d),$23]
 	rts                                    	| [$1b26: ret]
 l_1b27:
-	jbsr	l_1699                            	| [$1b27: call $1699]
+	jbsr	ground_objects_collision_checks_1699                            	| [$1b27: call $1699]
 	subq.b	#1,(0x0a,a2)                    	| [$1b2a: dec  (ix+$0a)]
 	jne	l_1ac4                             	| [$1b2d: jr   nz,$1AC4]
 	subq.b	#1,(a2)                    	| [$1b2f: dec  (ix+$00)]
@@ -5202,7 +5253,7 @@ l_1e1d:
 	addq.b	#1,(a2)                    	| [$1e1e: inc  (ix+$00)]
 	move.b	#0x04,(0x0a,a2)                 	| [$1e21: ld   (ix+$0a),$04]
 l_1e25:
-	jbsr	l_0831                            	| [$1e25: call $0831] -  * J1E3E,J1E4F,J1E5B,J1E81
+	jbsr	update_surface_object_0831                            	| [$1e25: call $0831] -  * J1E3E,J1E4F,J1E5B,J1E81
 	rts                                    	| [$1e28: ret]
 l_1e29:
 	lea	unknown_E1D2,a0                	| [$1e29: ld   hl,unknown_E1D2]
@@ -5857,7 +5908,7 @@ l_2971:
 	rts                                    	| [$2980: ret]
 l_2981:
 	move.b	cur_point_e50e,d0                 	| [$2981: ld   a,(cur_point_e50e)] -  * C0C1A,C0E73,C290D,C29AB
-	cmp.b	#0x1A,d0                         	| [$2984: cp   $1A]
+	cmp.b	#0x1A,d0                         	| [$2984: cp   $1A] point 26 aka Z ?
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$2986: ret  c] [...]
 0:

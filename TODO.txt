@@ -1,18 +1,22 @@
+- jeep killed as soon as rock appears (debug ground_objects_collision_checks_1699???)
+  => compare behaviour of original / 68k routine when rock appears!
+- rogue writes outside sprite registers (related to above?)
 - during demo, jeep is killed almost at once
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
-- write_to_screen_03c9: eats first character ("I" of "INSERT COIN", A of A - 1 player, B of 2 player
+- continue screen timer doesn't work properly
+- horizontal shots not registering/displayed
+
+graphical issues:
 
 - (c) IREM not properly displayed
 - small transparency effect on the tip of the "l" of "Moon Patrol" => BOGUS TITLE NOW
 - moonbase colors not properly displayed
-
 - 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
 - re-set tiles palette at some low Y so letters have proper palettes
-
 - demo: bogus blocks (big hole looks ok)
-- demo/start: moonbase not properly displayed
-- check various heights vs arcade (title and in-game)
+- demo: moonbase displayed with trashed colors
+- vertical shot: tile, not sprite, conflicts with background
 
 low pri:  
   
@@ -23,7 +27,6 @@ low pri:
 
 converter:
 
-inc l, inc e => a0,a1...
 
 recognize pattern (maybe 68k pattern)
 
