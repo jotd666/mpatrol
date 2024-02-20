@@ -421,6 +421,17 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tblue_mountains\n")
     f.write("\t.global\tgreen_mountains\n")
     f.write("\t.global\tgreen_city\n")
+    f.write("\t.global\thardware_sprite_flag_table\n")
+
+    hw_sprite_flag = [0]*256
+    for k,v in sprite_config.items():
+        sprite_type = v["is_sprite"]
+        if sprite_type:
+            hw_sprite_flag[k] = 1
+
+
+    f.write("\nhardware_sprite_flag_table:")
+    bitplanelib.dump_asm_bytes(hw_sprite_flag,f,mit_format=True)
 
     f.write("character_table:\n")
     for i,c in enumerate(character_codes_list):

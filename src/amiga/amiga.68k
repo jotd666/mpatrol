@@ -875,7 +875,7 @@ previous_green_layer_y:
 	.align	2
 	
 * < A0: pointer on sprite shadow zone E100
-* length: 256 bytes for 64 max sprites on screen
+* length: 256 bytes for 64 max sprites on screen (48 for this game!)
 * there seem to be 4 sprite blocks of 0x40 bytes
 * in each block, first sprites have priority
 * so top priority sprite is the one with offset 0xF0
@@ -888,12 +888,12 @@ osd_update_sprites:
 	
 	*lea		test_sprites,a0
 	movem.l	a0-a6/d0-d7,-(a7)
-	move.l	a0,a6
+	move.l	a0,-(a7)
 	lea		(0xC0,a0),a0		| shadow for x,y background pos
 	bsr		update_background
-	move.l	a6,a0
+	move.l	(a7),a0
 	bsr		update_hardware_sprites
-	move.l	a6,a0
+	move.l	(a7)+,a0
 	bsr		update_bobs
 	
 	movem.l	(a7)+,a0-a6/d0-d7
@@ -1082,17 +1082,29 @@ update_hardware_sprites:
 	rts
 
 update_bobs:
+
 	lea		bob_previous_positions(pc),a4
+	*lea		hardware_sprite_flag_table,a6
+	lea		_custom,a5
+	
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	move.w	(2,a4),d1
 	beq.b	11f		| y=0: inactive
 	move.w	(a4),d0
+	and.w	#0x1F0,d0		| align on 16 lower bound
 	* clear 16x16 area where the sprite was TODO
+	move.l	bg_drawed_screen_ptr(pc),a1
+	move.w	#4,d2
+	moveq	#NB_PLAYFIELD_PLANES,d3
+	move.w	#16,d4
+	bsr		clear_planes_any_blitter_internal
 11:
 	addq	#4,a4
 	dbf		d7,1b
+	
+	
 	lea		bob_table,a4
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
@@ -1100,7 +1112,9 @@ update_bobs:
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	beq.b	2f
-
+	
+	move.b	#1,0x200
+	
 	moveq	#0,d1
 	moveq	#0,d3
 

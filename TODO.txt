@@ -1,9 +1,10 @@
-- rock is not displayed
+- rock is displayed completely trashed: write in 0x200 if sprite is active, debug this
+- alien ships appear, but coords completely bogus!
 - during demo, jeep is killed almost at once: to retest
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
 - continue screen timer doesn't work properly
-- horizontal shots not registering/displayed
+- horizontal shots not registering/displayed: probably not registered properly watch DFF000 red/yellow
 - test sector selection cheat
 
 graphical issues:
