@@ -1,11 +1,10 @@
-- jeep killed as soon as rock appears (debug ground_objects_collision_checks_1699???)
-  => compare behaviour of original / 68k routine when rock appears!
-- rogue writes outside sprite registers (related to above?)
-- during demo, jeep is killed almost at once
+- rock is not displayed
+- during demo, jeep is killed almost at once: to retest
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
 - continue screen timer doesn't work properly
 - horizontal shots not registering/displayed
+- test sector selection cheat
 
 graphical issues:
 

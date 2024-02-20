@@ -258,7 +258,7 @@ _user:
 	or.l	#4,cheat_flags
 	st.b	cheat_used
 2:
-	move.l	(A0)+,D0	| INFPICK/S
+	move.l	(A0)+,D0	| SECTORSELECT/S
 	beq.b	2f
 	or.l	#8,cheat_flags
 	st.b	cheat_used
@@ -381,8 +381,12 @@ _user:
 	sne		infinite_lives_flag
 	btst	#2,d0
 	sne		infinite_time_flag
+
+	move.l	cheat_flags,d0
 	btst	#3,d0
-	*sne		infinite_pickaxe_time_flag
+	beq.b	0f
+	bset	#5,dip_switches
+0:
 	
 	jsr	 _detect_controller_types 
 	clr.b	controller_joypad_0
@@ -2860,7 +2864,7 @@ osd_read_in_1:
 	beq.b	0f
 	bclr	#7,d0
 0:
-	tst.b	(0x40,a0)		| "alt" key
+	tst.b	(0x64,a0)		| left "alt" key
 	beq.b	0f
 	bclr	#5,d0
 0:
@@ -3259,7 +3263,7 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,"
+	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,SECTORSELECT/S,"
 	.ascii	"CHEATKEYS/S,SKILL/K/N,STARTLIVES/K/N"
 read_args_string_end:
 	.align	2

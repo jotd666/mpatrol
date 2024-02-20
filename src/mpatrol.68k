@@ -1680,16 +1680,18 @@ l_0802:
 l_080a:
 	* jotd: seems that L register is used to do stuff
 	* we have to emulate that
-	lea	unknown_E261-0x61,a0                	| [$080a: ld   hl,unknown_E261] -  * C1C54
-	move.w	#0x0061,d7
+	lea	unknown_E261,a0                	| [$080a: ld   hl,unknown_E261] -  * C1C54
 	move.b	#0x12,d1                        	| [$080d: ld   b,$12]
 	jra	l_0802                             	| [$080f: jr   $0802]
 l_0811:
-	addq.b	#1,(a0,d7.w)                         	| [$0811: inc  (hl)] -  * J0804
+	addq.b	#1,(a0)                         	| [$0811: inc  (hl)] -  * J0804
+	move.l	a0,d7
+	sub.l	#ground_y_array_E200,d7				| compute "L" in D7
 	move.b	d7,d0                           	| [$0812: ld   a,l]
 	sub.b	#0x50,d0                         	| [$0813: sub  $50]
 	add.b	d0,d0                            	| [$0815: add  a,a]
 	add.b	d0,d0                            	| [$0816: add  a,a]
+	* d0 is the sprite slot offset
 	move.b	d0,(0x01,a2)                    	| [$0817: ld   (ix+$01),a]
 	rts                                    	| [$081a: ret]
 	
@@ -1727,7 +1729,6 @@ update_surface_object_0831:
 	cmp.b	#STATE_FALL_IN_HOLE_06,d0                         	| [$0834: cp   $06]
 	jcc	l_08b2                             	| [$0836: jr   nc,$08B2]
 update_surface_object_0838:
-	
 	* not falling (or called without the check to save cpu time? or to update no matter what?)
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$0838: ld   a,(unknown_E1E2)] -  * C1950,C1A22,C1A73
 	sub.b	(0x0f,a2),d0                     	| [$083b: sub  (ix+$0f)] object "absolute" X
@@ -1735,7 +1736,7 @@ update_surface_object_0838:
 	move.b	d0,(0x03,a2)                    	| [$0840: ld   (ix+$03),a] update object screen X
 	cmp.b	#0xE0,d0                         	| [$0843: cp   $E0]
 	jcs	l_08b4                             	| [$0845: jr   c,$08B4]
-	* possibly out of screen?
+	* hole/rock disappearing/appearing in screen
 	move.b	(0x0b,a2),d2                    	| [$0847: ld   c,(ix+$0b)]
 	subq.b	#1,d2                           	| [$084a: dec  c]
 	jne	draw_object_08b8                             	| [$084b: jr   nz,$08B8]
@@ -1746,7 +1747,7 @@ l_0852:
 	clr.b	(a2)                        	| [$0852: ld   (ix+$00),$00] -  * J143E,J1639,J163E,C1711,J177C,J1B13,J1CE0,C1D98,J1E11,J1E30,J1E38,J1E45,J1E55,J1E9E,J2028,J2039,J20BB,J20CF
 l_0856:
 	move.b	(0x0d,a2),d0                    	| [$0856: ld   a,(ix+$0d)] -  A = object.layoutIndex * C1794,J17C1,J1D20,C1E8B
-	SET_XC_FLAGS                           	| [$0859: scf] -  A = 2 * object.layoutIndex ...
+												| [$0859: scf] -  A = 2 * object.layoutIndex ...
 	lsl.b	#1,d0                           	| [$085a: rla] -  ... + 1
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$085b: ret  c] [...] -  A was >= 0x80 ... not valid
@@ -1822,7 +1823,6 @@ l_08a7:
 l_08b2:
 	move.l	(sp)+,a0                        	| [$08b2: pop  hl] -  * J0836
 	rts                                    	| [$08b3: ret]
-	
 	* a2: object params (ex: jeep E300)
 l_08b4:
 	move.b	#0x01,(0x0b,a2)                 	| [$08b4: ld   (ix+$0b),$01] -  * J0845
@@ -1830,7 +1830,7 @@ draw_object_08b8:
 	* when game running, every second update, value is 0x80
 	* which makes game return immediately. Rest of the time it's 0
 	move.b	(0x0d,a2),d0                    	| [$08b8: ld   a,(ix+$0d)] -  Object number * J084B,J084F,J1360,J13B9,C13D8,C13FF,J1419,C1484,J1615,J1AED,J1D3F,J1D7F,J1D8D,J1D95,J1EA1,J20AF,J20C1,J20C7
-	lsl.b	#1,d0                            	| [$08bb: rlca] -  Was upper bit set (Thus A*4>=512)?
+	rol.b	#1,d0                            	| [$08bb: rlca] -  Was upper bit set (Thus A*4>=512)?
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$08bc: ret  c] [...] -  Yes ... skip
 0:
@@ -1946,11 +1946,13 @@ write_sprite_data_0976:
 	cmp.l	#sprite_shadow_E100,a3
 	bcc.b	0f
 	* A3 is too low
+	illegal
 	jbsr	osd_break
 0:
 	cmp.l	#scroll_x_value_ground_layer_E1C0,a3
 	bcs.b	0f
 	* A3 is too high
+	illegal
 	jbsr	osd_break
 0:
 	.endif
@@ -2231,6 +2233,7 @@ l_0b1d:
 	btst.b	#1,d0                           	| [$0b20: bit  1,a]
 	jeq	obj_draw_0D_0b25                             	| [$0b22: jr   z,$0B25]
 	addq.b	#1,d4                           	| [$0b24: inc  e]
+	* used to draw UFOs and UFO bombs
 obj_draw_0D_0b25:
 	jbsr	write_sprite_data_0976                            	| [$0b25: call $0976] -  * J0992,J0B22
 	move.b	(0x01,a2),d0                    	| [$0b28: ld   a,(ix+$01)] -  LSB of object pointer
@@ -3003,10 +3006,10 @@ l_0fb7:
 	cmp.b	#0x04,d0                         	| [$0fb9: cp   $04]
 	jcc	l_0fc5                             	| [$0fbb: jr   nc,$0FC5]
 	lea	fine_position_on_track_E50B,a0                	| [$0fbd: ld   hl,fine_position_on_track_E50B]
-	move.b	(a0),d1                         	| [$0fc0: ld   b,(hl)]
-	addq.w	#1,a0                           	| [$0fc1: inc  hl]
-	move.b	d1,(a0)                         	| [$0fc2: ld   (hl),b]
-	addq.w	#1,a0                           	| [$0fc3: inc  hl]
+	move.b	(a0)+,d1                         	| [$0fc0: ld   b,(hl)]
+												| [$0fc1: inc  hl]
+	move.b	d1,(a0)+                         	| [$0fc2: ld   (hl),b]
+												| [$0fc3: inc  hl]
 	move.b	d0,(a0)                         	| [$0fc4: ld   (hl),a]
 l_0fc5:
 	move.b	unknown_E1D5,d0                 	| [$0fc5: ld   a,(unknown_E1D5)] -  * J0FBB
@@ -3019,16 +3022,19 @@ l_0fc5:
 	lea	unknown_E3FF,a3                	| [$0fcd: ld   iy,unknown_E3FF]
 	add.w	d3,a3                            	| [$0fd1: add  iy,de]
 	lea	object7_e370,a0                	| [$0fd3: ld   hl,object7_e370]
-	move.w	#0x1000,d3                        	| [$0fd6: ld   e,$10]
-	move.b	d0,d3
+	move.b	#0x10,d3                        	| [$0fd6: ld   e,$10]
 	move.b	#0x05,d1                        	| [$0fd8: ld   bc,$053A] 1338
 	move.b	#0x3a,d2                        	| [$0fd8: ld   bc,$053A] 1338
+	* look for free slot?
+l_0fdb:
 	move.b	(a0),d0                         	| [$0fdb: ld   a,(hl)] -  * J0FE1
 	                               	| [$0fdc: and  a]
 	jeq	l_105d                             	| [$0fdd: jp   z,$105D]
-
-
-
+	add.w	d3,a0					| [$0FE0:  add  hl,de]
+	subq.b	#1,d1					| [...]
+	bne.b	l_0fdb					| [$0FE1: djnz $0FDB]
+	rts								| [$0FE3: ret]
+	
 l_105d:
 	                              	| [$105d: ex   de,hl] -  * J0FDD
 	                      	| [$105e: ld   ix,$0000] 0
@@ -3309,8 +3315,8 @@ l_11f0:
 	addq.b	#1,(a0)                         	| [$11f3: inc  (hl)]
 	LOAD_LEW	unknown_16bit_E1E1,d5             	| [$11f4: ld   hl,(unknown_16bit_E1E1)]
 	STORE_LEW	d5,unknown_16bit_E0F1                 	| [$11f7: ld   (unknown_16bit_E0F1),hl]
-	move.w	#0x0000,d5                      	| [$11fa: ld   hl,$0000] 0
-	STORE_LEW	d5,unknown_16bit_E0EF                 	| [$11fd: ld   (unknown_16bit_E0EF),hl]
+	clr.b	unknown_16bit_E0EF                 	| [$11fd: ld   (unknown_16bit_E0EF),hl]
+	clr.b	unknown_16bit_E0EF+1                 	| [$11fd: ld   (unknown_16bit_E0EF),hl]
 	rts                                    	| [$1200: ret]
 
 l_1201:
@@ -4372,6 +4378,7 @@ l_1832:
 	sub.w	d3,d5                            	| [$183b: sbc  hl,de]
 	move.w	d5,jeep_x_speed_E314                 	| [$183d: ld   (jeep_x_speed_E314),hl]
 	exg	d5,d3                              	| [$1840: ex   de,hl]
+	* increase E1E1 counter faster if jeep is faster
 	LOAD_LEW	unknown_16bit_E1E1,d5             	| [$1841: ld   hl,(unknown_16bit_E1E1)]
 	add.w	d3,d5                            	| [$1844: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E1E1                 	| [$1845: ld   (unknown_16bit_E1E1),hl]
@@ -4540,6 +4547,7 @@ l_1950:
 	jbsr	ground_objects_collision_checks_1699                            	| [$1953: call $1699]
 	rts                                    	| [$1956: ret]
 l_1957:
+	* reaches here when needs to display surface objects like rocks
 	jbsr	update_surface_object_0831                            	| [$1957: call $0831]
 	jbsr	ground_objects_collision_checks_1699                            	| [$195a: call $1699]
 	rts                                    	| [$195d: ret]
