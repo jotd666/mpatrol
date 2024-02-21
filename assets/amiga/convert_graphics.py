@@ -165,10 +165,11 @@ add_sprite_block(0x61,0x6F,"ground_explosion",3,False)
 add_sprite_block(0x4B,0x4D,"ship_bomb",1,False)
 add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},True)
 add_sprite_block(0x3D,0x3D,"mine",{3,10},False)
-add_sprite_block(0x39,0x39,"tank_shot",4,True)   # maybe wrong clut
+add_sprite_block(0x39,0x39,"tank_shot",4,True)
+add_sprite_block(0x73,0x75,"trap",2,False)
 add_sprite_block(0x3C,0x3C,"missile_shot",4,False)   # maybe wrong clut
 add_sprite_block(0,0,"blank",0,False)   # maybe wrong clut
-add_sprite_block(0x28,0x28,"jeep_shot",14,False)   # maybe wrong clut
+add_sprite_block(0x28,0x29,"jeep_shot",14,False)   # maybe wrong clut
 add_sprite_block(0x35,0x35,"ground_digging_bomb",14,False)   # maybe wrong clut
 
 # group jeep sprites to save sprites

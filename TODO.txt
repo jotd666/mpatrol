@@ -1,14 +1,21 @@
-- rock is displayed completely trashed: write in 0x200 if sprite is active, debug this
-- alien ships appear, but coords completely bogus!
-- during demo, jeep is killed almost at once: to retest
+- sprite code & clut of jeep front shot is 0!
+- alien ships: no bombs
+- UFOs movements erratic after a while and end up crashing the game!
+- insert coin needs 5 coins change DSW!!!
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
+  (which is cool to test!!) continue flag must be tested wrong
 - continue screen timer doesn't work properly
 - horizontal shots not registering/displayed: probably not registered properly watch DFF000 red/yellow
 - test sector selection cheat
+- slope sections probably don't work properly: scrolling stutters, no slope tiles appear
 
 graphical issues:
 
+- remaining color bands (from start platform)
+- optimize bob erase below a given Y or within a given Y range
+  (mountains erase, scrolling gound erases)
+- rock colors are wrong
 - (c) IREM not properly displayed
 - small transparency effect on the tip of the "l" of "Moon Patrol" => BOGUS TITLE NOW
 - moonbase colors not properly displayed

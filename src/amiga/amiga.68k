@@ -26,6 +26,8 @@ SCREEN_ADDRESS = 0x8000
 * set to 1 to block ground scrolling, see what's
 * going on with the game scrolling system
 FIX_GROUND_SCROLL = 0
+* don't display mountains
+NO_BACKGROUND_MOUNTAINS = 0
 
 PANEL_MAX_Y = 48
 DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y
@@ -367,7 +369,7 @@ _user:
 	sne		break_at_startup_flag
 	.endif
 	
-	move.b	d0,dip_switches
+	move.b	d0,dip_switches_2
 
 
 	
@@ -375,7 +377,7 @@ _user:
 	move.l	cheat_flags,d0
 	btst	#0,d0
 	beq.b	0f
-	bset	#6,dip_switches
+	bset	#6,dip_switches_2
 0:
 	btst	#1,d0
 	sne		infinite_lives_flag
@@ -385,7 +387,7 @@ _user:
 	move.l	cheat_flags,d0
 	btst	#3,d0
 	beq.b	0f
-	bset	#5,dip_switches
+	bset	#5,dip_switches_2
 0:
 	
 	jsr	 _detect_controller_types 
@@ -889,9 +891,6 @@ osd_update_sprites:
 	*lea		test_sprites,a0
 	movem.l	a0-a6/d0-d7,-(a7)
 	move.l	a0,-(a7)
-	lea		(0xC0,a0),a0		| shadow for x,y background pos
-	bsr		update_background
-	move.l	(a7),a0
 	bsr		update_hardware_sprites
 	move.l	(a7)+,a0
 	bsr		update_bobs
@@ -1084,7 +1083,7 @@ update_hardware_sprites:
 update_bobs:
 
 	lea		bob_previous_positions(pc),a4
-	*lea		hardware_sprite_flag_table,a6
+	lea		hardware_sprite_flag_table,a6
 	lea		_custom,a5
 	
 	* clear previous positions
@@ -1094,45 +1093,60 @@ update_bobs:
 	beq.b	11f		| y=0: inactive
 	move.w	(a4),d0
 	and.w	#0x1F0,d0		| align on 16 lower bound
-	* clear 16x16 area where the sprite was TODO
+	* clear 16x16 area where the sprite was
 	move.l	bg_drawed_screen_ptr(pc),a1
 	move.w	#4,d2
 	moveq	#NB_PLAYFIELD_PLANES,d3
 	move.w	#16,d4
+	clr.l	(a4)+ 			| ack deletion
 	bsr		clear_planes_any_blitter_internal
+	bra.b	12f
 11:
 	addq	#4,a4
+12:
 	dbf		d7,1b
 	
+	* now that we have deleted the bobs, we can update the backgrounds
+	move.l	a0,-(a7)
+	lea		(0xC0,a0),a0		| shadow for x,y background pos
+	bsr		update_background
+	move.l	(a7)+,a0
 	
+	
+	lea		hardware_sprite_flag_table,a2
+	lea		bob_previous_positions(pc),a6
 	lea		bob_table,a4
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	* code = 0 and clut = 0 => disabled
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
-	beq.b	2f
+	jeq	2f
+	tst.b	(a2,d2.w)		| is that a hardware sprite?
+	jne	2f					| yes: don't bother!s
 	
-	move.b	#1,0x200
 	
 	moveq	#0,d1
 	moveq	#0,d3
+	moveq	#0,d0
 
 	move.w	d2,d4
 	add.w	d4,d4
 	add.w	d4,d4
 	move.l	(a4,d4.w),d4	| test pointer
-	bmi.b	2f			| hardware sprite: skip
+	*bmi.b	2f			| hardware sprite: skip (should not happen, pre filtered)
 	bne.b	11f
+	.ifndef	RELEASE
 	* not known/registered: we should log that!
+	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
+	and.b	#0xF,d3	| get attributes
 	move.w	#0xF00,0xDFF180
-	move.b	d2,d2
+	.endif
 	bra.b	2f
 11:
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	2f			| Y set to 0: not shown
 	not.b	d1
-	
 	
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
 	.ifne	SPRITE_Y_CORRECTION
@@ -1155,22 +1169,36 @@ update_bobs:
 	move.l	(a0,d3.w),d4
 	bne.b	12f
 	* bob is valid but wrong clut
+	.ifndef	RELEASE
+	* not known/registered: we should log that!
+	move.b	(TARGET_SPRITE_CODE,a0),d2
+	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
+	and.b	#0xF,d3	| get attributes
 	move.w	#0xFF0,0xDFF180
-	lsr		#2,d3
+	.endif
 	move.l	(a7)+,a0
 	bra.b	2f
 12:
 	move.l		bg_drawed_screen_ptr(pc),a1
 	* D0 and D1 are already set
 	move.l	d4,a0	| plane list (+ mask)
-	move.l	(16,a0),d2
+	move.l	(NB_PLAYFIELD_PLANES*4,a0),d2
 	beq.b	2f		| mask is zero: blank tile => skip
 	move.l	d2,a3
 	moveq	#0,d2	| no y-clip
 	move.w	#16,d3	| height = 16 for all bobs
+	* note down that this bob will have to be erased
+	* TODO: optimize as background usually erases bobs that are
+	* below some point
+	move.w	d0,(a6)+			| store current sprite attributes to previous ones
+	move.w	d1,(a6)+			| store current sprite attributes to previous ones
+	
 	bsr		blit_planes_cookie_cut_16x
 	move.l	(a7)+,a0
+	bra.b	3f
 2:
+	addq.w	#4,a6
+3:
 	addq.w	#4,a0
 	dbf		d7,1b
 	
@@ -1268,7 +1296,6 @@ clear_planes_any_blitter_internal:
 * args:
 * < A0: pointers on 16x? data
 * < A1: plane  (40 rows)
-* < A2: background (40 rows) to mix with cookie cut
 * < A3: source mask for cookie cut (16x16)
 * < D0: X
 * < D1: Y
@@ -1279,7 +1306,7 @@ blit_planes_cookie_cut_16x:
     lea _custom,A5
 	move.w	d2,d5
 	move.w	d3,d4
-	moveq	#4,d3		| 4 planes
+	moveq	#NB_PLAYFIELD_PLANES,d3		| 4 planes
     moveq  #4,d2       | 16 pixels + 2 shift bytes
 * < A5: custom
 * < D0.W,D1.W: x,y
@@ -1295,7 +1322,7 @@ blit_planes_cookie_cut_16x:
 * returns: start of destination in A1 (computed from old A1+X,Y)
 * trashes: a1
 blit_planes_any_internal_cookie_cut:
-    movem.l d0-d7/a2/a4,-(a7)
+    movem.l d0-d7/a4,-(a7)
     * pre-compute the maximum of shit here
 	tst.w	d4
 	bpl.b	1f
@@ -1382,7 +1409,7 @@ blit_planes_any_internal_cookie_cut:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
     
-    movem.l (a7)+,d0-d7/a2/a4
+    movem.l (a7)+,d0-d7/a4
     rts
 	
 start_process_1_plane:
@@ -1423,6 +1450,7 @@ blit_scrollable_layers:
 	* systematically reset dynamic colors as heights can change
 	bsr		reset_background_dynamic_colors
 
+	.ifeq	NO_BACKGROUND_MOUNTAINS
 	sub.w	#PANEL_MAX_Y+8,d2
 	sub.w	#PANEL_MAX_Y+8,d3
 	lea		_custom,A5
@@ -1596,6 +1624,7 @@ blit_scrollable_layers:
 	move.w	(6,a1),(2,a0,d7.w)
 	
 	movem.l	(a7)+,d0-d5/a1
+	.endif
 	
 	.ifeq	FIX_GROUND_SCROLL
 	
@@ -2938,14 +2967,14 @@ osd_read_in_0:
 	
 osd_read_dsw_1:
 	* actual dipswitches
-	move.b	dip_switches(pc),d0
+	move.b	dip_switches_1(pc),d0
 	not.b	d0		| active low
 	
 
 	rts
 osd_read_dsw_2:
 	* actual dipswitches
-	move.b	dip_switches(pc),d0
+	move.b	dip_switches_2(pc),d0
 	not.b	d0		| active low
 	
 
@@ -3345,8 +3374,9 @@ dip_switch_difficulty:
 dip_switch_start_lives:
 		.long	0
 	.long	0
-dip_switches:
-		.byte	0x20	| default english
+dip_switches_1:
+		.byte	0
+dip_switches_2:
 		.byte	0
 
 system_vbr:

@@ -110,7 +110,7 @@ STATE_JUMP_START_03 = 3
 START_JUMPING_04 = 4
 STATE_FALL_IN_HOLE_06 = 6
 STATE_EXPLODING_07 = 7
-STATE_HOLD_IN_AIR = 8
+STATE_HOLD_IN_AIR_08 = 8
 
     .global mpatrol_irq
     .global mpatrol_reset
@@ -1139,11 +1139,11 @@ jeep_jumps_and_title_shows_0507:
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$0513: ret  c] [...] -  ?? falls through when jump buggy is at apex
 0:
-	move.b	#STATE_HOLD_IN_AIR,(a0)                      	| [$0514: ld   (hl),$08] -  Transition to "hold buggy in air" sequence
+	move.b	#STATE_HOLD_IN_AIR_08,(a0)                      	| [$0514: ld   (hl),$08] -  Transition to "hold buggy in air" sequence
 	move.b	#0x0A,d2                        	| [$0516: ld   c,$0A] -  Init "MOON PATROL" splash sequence
 	jra	store_special_event_02c2                             	| [$0518: jp   $02C2] -  Add the text-command and out
 l_051b:
-	cmp.b	#STATE_HOLD_IN_AIR,d0                         	| [$051b: cp   $08] -  Buggy-held-in-air sequence? * J050D
+	cmp.b	#STATE_HOLD_IN_AIR_08,d0                         	| [$051b: cp   $08] -  Buggy-held-in-air sequence? * J050D
 	bne.b	0f                               	| [...]
 	rts                                    	| [$051d: ret  z] [...] -  Yes ... no inputs
 0:
