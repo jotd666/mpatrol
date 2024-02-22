@@ -17,7 +17,7 @@
 	.global	cnt_till_cred_e047
 	.global	credits_e048
 	.global	unknown_E049
-	.global	unknown_E04A
+	.global	current_input_E04A
 	.global	flip_value_e04c
 	.global	title_display_timer_E04D
 	.global	timer_8bit_E04E
@@ -42,7 +42,7 @@
 	.global	unknown_16bit_E0DC
 	.global	screen_address_E0E4
 	.global	unknown_pointer_E0E6
-	.global	unknown_E0E8
+	.global	command_number_of_slots_E0E8
 	.global	pointer_on_title_char_data_E0E9
 	.global	title_screen_address_E0EB
 	.global	unknown_E0ED
@@ -109,10 +109,10 @@
 	.global	jeep_x_speed_E314
 	.global	unknown_16bit_E31A
 	.global	unknown_16bit_E31C
-	.global	unknown_E320
+	.global	forward_shot_indicator_E320
 	.global	unknown_16bit_E322
 
-	.global	unknown_E327
+	.global	forward_shot_y_E327
 	.global	unknown_E32A
 	.global	unknown_E32D
 	.global	unknown_E32F
@@ -201,8 +201,10 @@ credits_e048:
 	ds.b	1
 unknown_E049:
 	ds.b	1
-unknown_E04A:
-	ds.b	2
+current_input_E04A:
+	ds.b	1
+previous_input_E04B:
+	ds.b	1
 flip_value_e04c:
 	ds.b	1
 	* 0x50: jeep jumps, title appears
@@ -255,7 +257,7 @@ screen_address_E0E4:
 	ds.w	1
 unknown_pointer_E0E6:
 	ds.l	1
-unknown_E0E8:
+command_number_of_slots_E0E8:
 	ds.b	1
 	.align	2
 pointer_on_title_char_data_E0E9:
@@ -397,12 +399,12 @@ unknown_16bit_E31A:
 	ds.b	2
 unknown_16bit_E31C:
 	ds.b	4
-unknown_E320:
+forward_shot_indicator_E320:
 	ds.b	2
 unknown_16bit_E322:
 	ds.w	1
 	ds.b	3
-unknown_E327:
+forward_shot_y_E327:
 	ds.b	3
 unknown_E32A:
 	ds.b	3

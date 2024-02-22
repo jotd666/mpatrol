@@ -1,7 +1,5 @@
-- sprite code & clut of jeep front shot is 0!
 - alien ships: no bombs
 - UFOs movements erratic after a while and end up crashing the game!
-- insert coin needs 5 coins change DSW!!!
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
   (which is cool to test!!) continue flag must be tested wrong
@@ -12,6 +10,8 @@
 
 graphical issues:
 
+- maybe use DPF for AGA and only one layer of monchrome mountain for ECS
+  if not fast enough
 - remaining color bands (from start platform)
 - optimize bob erase below a given Y or within a given Y range
   (mountains erase, scrolling gound erases)
