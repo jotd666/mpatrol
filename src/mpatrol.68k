@@ -596,17 +596,17 @@ jump_table_020C:
 	.long	rear_missile_sitting_duck_1b27   | 26
 	.long	jeep_bombed_1433                 | 27
 	.long	update_yellow_tank_18e0          | 28
-	.long	isrobj_run_22_1eaa               | 29 blue ufo appearing, transitions to 30
-	.long	animate_object_1f28              | 30 blue ufo update
+	.long	ufo_appearing_1eaa               | 29 blue ufo appearing, transitions to 30
+	.long	animate_ufo_1f28              | 30 blue ufo update
 	.long	ufo_shot_20ac                    | 31
 	.long	show_kill_score_20c4             | 32
-	.long	isrobj_run_22_1eaa               | 33 ufo appearing, transitions to 34
-	.long	animate_object_1f28              | 34 ufo flying
+	.long	ufo_appearing_1eaa               | 33 ufo appearing, transitions to 34
+	.long	animate_ufo_1f28              | 34 ufo flying
 	.long	ufo_appearing_2000               | 35
 	.long	animate_ufo_201a                 | 36
 	.long	ufo_appearing_1ea4               | 37 ufo appearing, transitions to 38
-	.long	animate_object_1f28              | 38 ufo transition??? then 34
-	.long	isrobj_run_28_204d               | 39
+	.long	animate_ufo_1f28              | 38 ufo transition??? then 34
+	.long	ufo_appearing_204d               | 39
 	.long	ufo_crashing_on_player_209c      | 40
 	.long	handle_hole_making_bombs_1d23    | 41
 	.long	hole_making_bomb_explodes_1df3   | 42
@@ -3761,7 +3761,7 @@ display_moon_patrol_title_1421:
 	move.b	#0x04,(a2)                 	| [$142e: ld   (ix+$00),$04] -  Transition to handling buggy jumping
 	rts                                    	| [$1432: ret] -  Done
 jeep_bombed_1433:
-	jbsr	l_20db                            	| [$1433: call $20DB]
+	jbsr	load_d5_16_20db                            	| [$1433: call $20DB]
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1436: ld   (unknown_16bit_E0D6),hl]
 	move.w	d5,d0                           	| [$1439: ld   a,h]
 	lsr.w	#8,d0
@@ -5161,7 +5161,7 @@ l_1ccf:
 	addq.b	#1,d2                           	| [$1cd6: inc  c]
 l_1cd7:
 	move.b	d2,(0x0d,a2)                    	| [$1cd7: ld   (ix+$0d),c] -  * J1CC2,J1CD4
-	jbsr	l_20fb                            	| [$1cda: call $20FB]
+	jbsr	load_d5_16_20fb                            	| [$1cda: call $20FB]
 	move.w	d5,d0                           	| [$1cdd: ld   a,h]
 	lsr.w	#8,d0
 	cmp.b	#0x06,d0                         	| [$1cde: cp   $06]
@@ -5204,7 +5204,7 @@ l_1d1d_2:
 	jra	l_0856                             	| [$1d20: jp   $0856]
 	* handle the shots of the blue UFOs that create holes
 handle_hole_making_bombs_1d23:
-	jbsr	l_20db                            	| [$1d23: call $20DB]
+	jbsr	load_d5_16_20db                            	| [$1d23: call $20DB]
 	move.w	jeep_x_speed_E314,d3             	| [$1d26: ld   de,(jeep_x_speed_E314)]
 	* divide value by 2
 	asr.w	#1,d3                            	| [$1d2a: sra  d]
@@ -5394,9 +5394,9 @@ bomb_shot_1e9b:
 	
 ufo_appearing_1ea4:
 	subq.b	#1,(0x0f,a2)                    	| [$1ea4: dec  (ix+$0f)]
-	jeq	isrobj_run_28_204d                             	| [$1ea7: jp   z,$204D]
+	jeq	ufo_appearing_204d                             	| [$1ea7: jp   z,$204D]
 	
-isrobj_run_22_1eaa:
+ufo_appearing_1eaa:
 	addq.b	#1,(a2)                    	| [$1eaa: inc  (ix+$00)] -  * J2016
 	move.b	(0x0c,a2),d0                    	| [$1ead: ld   a,(ix+$0c)]
 	asl.b	#1,d0                            	| [$1eb0: sla  a]
@@ -5415,12 +5415,12 @@ isrobj_run_22_1eaa:
 	add.w	d3,d5                            	| [$1ec6: add  hl,de]
 	addq.b	#1,d2                           	| [$1ec7: inc  c]
 	jpl	l_1ed2                             	| [$1ec8: jp   p,$1ED2]
-	exg	d3,d5                              	| [$1ecb: ex   de,hl]
-	tst.b	d0                               	| [$1ecc: and  a]
-	moveq	#0,d5                      	| [$1ecd: ld   hl,$0000] 0
-	sub.w	d3,d5                            	| [$1ed0: sbc  hl,de]
-    LOAD_D5D6_FROM_D5_16
+												| [$1ecb: ex   de,hl]
+										| [$1ecc: and  a]
+											| [$1ecd: ld   hl,$0000] 0
+	neg.w	d5                            	| [$1ed0: sbc  hl,de]
 l_1ed2:
+    LOAD_D5D6_FROM_D5_16
 	move.b	d5,(0x05,a2)                    	| [$1ed2: ld   (ix+$05),h] -  * J1EC8
 	move.b	d6,(0x04,a2)                    	| [$1ed5: ld   (ix+$04),l]
 	eor.b	#0x3F,d0                         	| [$1ed8: xor  $3F]
@@ -5463,9 +5463,9 @@ l_1f06:
 	rts                                    	| [$1f27: ret]
 	
 * used for UFOs (any kind) when attacking player
-animate_object_1f28:
+animate_ufo_1f28:
 	jbsr	l_1c63                            	| [$1f28: call $1C63] -  * C2009
-	jbsr	l_20db                            	| [$1f2b: call $20DB]
+	jbsr	load_d5_16_20db                            	| [$1f2b: call $20DB]
 	move.b	(0x0c,a2),d0                    	| [$1f2e: ld   a,(ix+$0c)]
 	asl.b	#1,d0                            	| [$1f31: sla  a]
 	jne	l_1f87                             	| [$1f33: jr   nz,$1F87]
@@ -5509,7 +5509,8 @@ l_1f78:
 	jbsr	l_20ef                            	| [$1f78: call $20EF] -  * J1FE8,J203E,J204A
 	jra	l_1d4c                             	| [$1f7b: jp   $1D4C]
 l_1f7e:
-	move.b	d5,d0                           	| [$1f7e: ld   a,h] -  * J1F4D
+	move.w	d5,d0                           	| [$1f7e: ld   a,h] -  * J1F4D
+	lsr.w	#8,d0
 	cmp.b	#0x16,d0                         	| [$1f7f: cp   $16]
 	jcc	l_1f64                             	| [$1f81: jr   nc,$1F64]
 l_1f83:
@@ -5558,7 +5559,7 @@ l_1fbb:
 	subq.b	#1,d0                           	| [$1fcd: dec  a]
 	ror.b	#1,d0                            	| [$1fce: rrca]
 	jcc	l_1feb                             	| [$1fcf: jr   nc,$1FEB]
-	tst.b	d0                               	| [$1fd1: and  a]
+											| [$1fd1: and  a]
 	sub.w	d3,d5                            	| [$1fd2: sbc  hl,de]
 	jcs	l_1f83                             	| [$1fd4: jr   c,$1F83]
 l_1fd6:
@@ -5585,16 +5586,16 @@ ufo_appearing_2000:
 	bne.b	0f                               	| [...]
 	rts                                    	| [$2008: ret  z] [...]
 0:
-	jbsr	animate_object_1f28                            	| [$2009: call $1F28]
+	jbsr	animate_ufo_1f28                            	| [$2009: call $1F28]
 	move.b	(a2),d0                    	| [$200c: ld   a,(ix+$00)]
 	cmp.b	#0x25,d0                         	| [$200f: cp   $25]
 	jeq	l_1f83                             	| [$2011: jp   z,$1F83]
 	cmp.b	#0x24,d0                         	| [$2014: cp   $24]
-	jeq	isrobj_run_22_1eaa                             	| [$2016: jp   z,$1EAA]
+	jeq	ufo_appearing_1eaa                             	| [$2016: jp   z,$1EAA]
 	rts                                    	| [$2019: ret]
 animate_ufo_201a:
 	jbsr	l_1c63                            	| [$201a: call $1C63]
-	jbsr	l_20db                            	| [$201d: call $20DB]
+	jbsr	load_d5_16_20db                            	| [$201d: call $20DB]
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$2020: ld   (unknown_16bit_E0D6),hl]
 	move.w	d5,d0                           	| [$2023: ld   a,h]
 	sub.w	#0x0800,d0                         	| [$2024: sub  $08]
@@ -5615,7 +5616,8 @@ animate_ufo_201a:
 	sub.w	d3,d5                            	| [$2045: sbc  hl,de]
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$2047: ld   (unknown_16bit_E0DC),hl]
 	jra	l_1f78                             	| [$204a: jp   $1F78]
-isrobj_run_28_204d:
+	
+ufo_appearing_204d:
 	move.b	jeep_x_E303,d0                 	| [$204d: ld   a,(buggy_x_e303)] -  * J1EA7
 	clr.b	d3                               	| [$2050: ld   d,$00]
 	add.b	#0x10,d0                         	| [$2052: add  a,$10]
@@ -5625,7 +5627,7 @@ isrobj_run_28_204d:
 	subq.b	#1,d3                           	| [$205b: dec  d]
 l_205c:
 	ror.b	#3,d0                           	| [$205c: rra] -  * J2057
-	                           	| [$205d: rra] * 2
+												| [$205d: rra] * 2
 	and.b	#0x1E,d0                         	| [$205f: and  $1E]
 	clr.w	d1                               	| [$2062: ld   b,$00]
 	move.b	d0,d1                           	| [$2061: ld   c,a]
@@ -5665,9 +5667,10 @@ l_2092:
 	move.b	d6,(0x0b,a2)                    	| [$2095: ld   (ix+$0b),l]
 	move.b	d5,(0x0f,a2)                    	| [$2098: ld   (ix+$0f),h]
 	rts                                    	| [$209b: ret]
+	
 ufo_crashing_on_player_209c:
 	jbsr	l_1c63                            	| [$209c: call $1C63]
-	jbsr	l_20fb                            	| [$209f: call $20FB]
+	jbsr	load_d5_16_20fb                            	| [$209f: call $20FB]
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$20a2: ld   (unknown_16bit_E0D6),hl]
 	move.w	d5,d0                           	| [$20a5: ld   a,h]
 	lsr.w	#8,d0
@@ -5691,7 +5694,9 @@ show_kill_score_20c4:
 	move.b	#0x80,d1                        	| [$20d2: ld   b,$80]
 	clr.b	(a2)                        	| [$20d4: ld   (ix+$00),$00]
 	jra	l_0869                             	| [$20d8: jp   $0869]
-l_20db:
+	
+* > D5: 16 bit value of ??
+load_d5_16_20db:
 	move.l	a2,a0                        	| [$20db: push ix] -  * C1433,C1D23,C1F2B,C201D,C20FB
 											| [$20dd: pop  hl]
 	lea	unknown_E0D4,a1                	| [$20de: ld   de,unknown_E0D4]
@@ -5709,8 +5714,8 @@ l_20ef:
 	move.w	#0x0a,d1                        	| [$20f5: ld   bc,$000A] 10
 	jbsr	ldir                              	| [$20f8: ldir]
 	rts                                    	| [$20fa: ret]
-l_20fb:
-	jbsr	l_20db                            	| [$20fb: call $20DB] -  * C1CDA,C209F
+load_d5_16_20fb:
+	jbsr	load_d5_16_20db                            	| [$20fb: call $20DB] -  * C1CDA,C209F
 	exg	d3,d5                              	| [$20fe: ex   de,hl]
 	* recompose 2 value nibbles
 	move.b	(0x0f,a2),d5                    	| [$2102: ld   h,(ix+$0f)]

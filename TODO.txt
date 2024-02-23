@@ -1,12 +1,14 @@
+- as soon as UFOs appear (or shoot???), scrolling speed is completely crazy and it ends up crashing
+  UFO bombs are greatly suspected: turn them off to test
 - alien ships: no bombs
-- UFOs movements erratic after a while and end up crashing the game!
+- jeep explosion: using too many HW sprites, maybe hack to display wheels as bobs if too many of them
+  then missing attack on rightmost explosion sprite band
 - insert coin screen: color bands not removed
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
   (which is cool to test!!) continue flag must be tested wrong
 - continue screen timer doesn't work properly
-- horizontal shots not registering/displayed: probably not registered properly watch DFF000 red/yellow
 - test sector selection cheat
-- slope sections probably don't work properly: scrolling stutters, no slope tiles appear
+- slope sections don't work properly: scrolling stutters, no slope tiles appear
 
 graphical issues:
 
