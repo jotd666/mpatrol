@@ -10,7 +10,7 @@
 
 graphical issues:
 
-- maybe use DPF for AGA and only one layer of monchrome mountain for ECS
+- maybe use DPF for AGA and only one layer of monchrome mountain for ECS or two with black outlines...
   if not fast enough
 - remaining color bands (from start platform)
 - optimize bob erase below a given Y or within a given Y range
