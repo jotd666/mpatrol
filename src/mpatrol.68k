@@ -270,7 +270,7 @@ mpatrol_reset:
 	tst.b	break_at_startup_flag
 	beq.b	0f
 	* put anything here that you need to track addresses
-	move.l	#handle_vertical_shot_165d,d7
+	move.l	#unknown_16bit_E304,d7
 
 	jbsr	osd_break
 0:
@@ -555,6 +555,17 @@ l_01f5:
 	move.b	(a2),d0                    	| [$01f5: ld   a,(ix+$00)] -  Get the command number * J0209
 	subq.b	#1,d0                           	| [$01f8: dec  a] -  0 means "invalid"
 	jmi	l_0200                             	| [$01f9: jp   m,$0200] -  Not a valid command. Skip it
+	.ifndef	RELEASE
+	* check that command is within range
+	cmp.b	#49,d0
+	bcs.b	0f
+	* > 48: there's a problem: which object is at fault?
+	sub.l	#jeep_params_E300-0xE300,a2
+	jbsr	osd_break
+	illegal
+0:
+	.endif
+	
 	lea	jump_table_020C,a0             	| [$01fc: ld   hl,jump_table_020C] -  Routine jump table table
 	jbsr	rst_28                            	| [$01ff: rst  $28] use jump table -  Call the routine by index number
 
@@ -4952,20 +4963,24 @@ l_1b7a:
 	move.b	(a0),d2                         	| [$1b7e: ld   c,(hl)]
 	move.b	#0x05,d1                        	| [$1b7f: ld   b,$05]
 	lea	object7_e370,a0                	| [$1b81: ld   hl,object7_e370]
-	move.w	#0x0000,d3                      	| [$1b84: ld   de,$0000] 0
+	moveq	#0,d3                      	| [$1b84: ld   de,$0000] 0
+	* d4 is used as an index which links data from E370 to E300 (jeep params)
+	moveq	#0,d4                      	| [$1b84: ld   de,$0000] 0
+	* search of a "slot" of some kind
 l_1b87:
 	move.b	(a0),d0                         	| [$1b87: ld   a,(hl)] -  * J1B94
 	                               	| [$1b88: and  a]
-	jeq	l_1bc4                             	| [$1b89: jr   z,$1BC4]
+	jeq	store_e370_offset_1bc4                             	| [$1b89: jr   z,$1BC4] zero? store offset vs object7_e370
 	sub.b	#0x2F,d0                         	| [$1b8b: sub  $2F]
-	jne	l_1b90                             	| [$1b8d: jr   nz,$1B90]
+	jne	l_1b90                             	| [$1b8d: jr   nz,$1B90] 
 	addq.b	#1,d3                           	| [$1b8f: inc  d]
 l_1b90:
 												| [$1b90: ld   a,l] -  * J1B8D,J1BC5
-	add.w	#0x10,a0                         	| [$1b91: add  a,$10]
+	add.w	#0x10,a0                         	| [$1b91: add  a,$10] next object
 												| [$1b93: ld   l,a]
 	subq.b	#1,d1                           	| [...]
 	jne	l_1b87                             	| [$1b94: djnz $1B87]
+	
 	move.b	d3,d0                           	| [$1b96: ld   a,d]
 	cmp.b	d2,d0                            	| [$1b97: cp   c]
 	bcs.b	0f                               	| [...]
@@ -4994,12 +5009,15 @@ l_1b90:
 	move.b	#0x3B,d2                        	| [$1bbb: ld   c,$3B]
 	jra	l_1064                             	| [$1bbd: jp   $1064]
 l_1bc0:
-	move.b	d6,d3                           	| [$1bc0: ld   d,l] -  * J1B5B
+	move.b	d7,d3                           	| [$1bc0: ld   d,l] -  * J1B5B
 	addq.b	#1,d3                           	| [$1bc1: inc  d]
 	jra	l_1b5f                             	| [$1bc2: jr   $1B5F]
-l_1bc4:
-	move.b	d6,d4                           	| [$1bc4: ld   e,l] -  * J1B89
-	jra	l_1b90                             	| [$1bc5: jr   $1B90]
+store_e370_offset_1bc4:
+	* store object7_e370+index lsb!
+	move.l	a0,d4
+	sub.l	#object7_e370,d4
+	* and return to loop (spaghetti code!) | [$1bc4: ld   e,l] -  * J1B89
+	jra	l_1b90                             		  | [$1bc5: jr   $1B90]
 handle_flying_enemies_1bc7:
 	move.b	timer_8bit_E04E,d0                 	| [$1bc7: ld   a,(timer_8bit_E04E)] -  * C0277
 	lea	unknown_E052,a0                	| [$1bca: ld   hl,unknown_E052]
@@ -5598,8 +5616,9 @@ animate_ufo_201a:
 	jbsr	load_d5_16_20db                            	| [$201d: call $20DB]
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$2020: ld   (unknown_16bit_E0D6),hl]
 	move.w	d5,d0                           	| [$2023: ld   a,h]
-	sub.w	#0x0800,d0                         	| [$2024: sub  $08]
-	cmp.w	#0xF000,d0                         	| [$2026: cp   $F0]
+	lsr.w	#8,d0
+	sub.w	#0x08,d0                         	| [$2024: sub  $08]
+	cmp.w	#0xF0,d0                         	| [$2026: cp   $F0]
 	jcc	l_0852                             	| [$2028: jp   nc,$0852]
 	LOAD_LEW	unknown_16bit_E0DC,d3             	| [$202b: ld   de,(unknown_16bit_E0DC)]
 	LOAD_LEW	unknown_16bit_E0DA,d5             	| [$202f: ld   hl,(unknown_16bit_E0DA)]

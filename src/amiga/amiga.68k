@@ -975,7 +975,7 @@ update_hardware_sprites:
 	
 	* all sprites are allocated: now display them
 	lea		host_sprites(pc),a2		| input structure
-	lea		sprites,a3				| copperlist
+	lea		sprites_upper_part,a3				| copperlist
 	moveq	#0,d6
 10:
 	move.b	(SPRITE_X,a2),d0
@@ -2102,6 +2102,26 @@ quit_to_os:
 	addq.l	#resload_Abort,(a7)
 	rts
 
+* set sprite pointers on chipmem zone, with sprites all
+* pointing to blank
+
+init_sprite_bank:
+	move.l	#blank_sprite,d1
+	move.w	#sprpt,d0
+	move.w	#NB_HOST_SPRITES-1,d2		| 7
+0:
+	move.w	d0,(a0)+
+	swap	d1
+	move.w	d1,(a0)+
+	swap	d1
+	addq	#2,d0
+	move.w	d0,(a0)+
+	move.w	d1,(a0)+
+	
+	addq	#2,d0
+	dbf		d2,0b
+	rts
+	
 platform_init:
 	bsr		store_system
 	
@@ -2130,22 +2150,19 @@ platform_init:
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
 
-	* set other sprites to blank
-	move.l		#blank_sprite,d0
+	* set sprite registers in copperlist for the upper part
+	lea		sprites_upper_part,a0
+	bsr		init_sprite_bank
+	* temp lower part!
+	lea		sprites_lower_part,a0
+	bsr		init_sprite_bank
 
-	moveq	#7,d1
-	lea		sprites,a1
-0:
-    move.w	d0,(6,a1)
-	swap	d0
-    move.w	d0,(2,a1)
-	swap	d0
-	addq.w	#8,a1
-	dbf		d1,0b
-	
 	bsr		set_bitplanes
 	
 	bsr		load_palette_in_copperlist
+	
+	
+
 	
 	* set copperlist
 	move.l	#copperlist,cop1lc(a5)
@@ -3525,6 +3542,12 @@ tile_log_table:
 	.endr
 	.endm
 
+.macro	DECL_SPRITES
+	.rept	16
+	* 2 slots
+	.word	0x1FE,0
+    .endr
+	.endm
 
 blank_sound:
 	ds.l	4
@@ -3540,6 +3563,9 @@ blank_sprite:
 	.long	0
 	.endr
 	
+* store there ATM, we'll multiplex sprites at some point
+sprites_lower_part:
+	DECL_SPRITES
 	
 	* main copperlist
 copperlist:
@@ -3552,31 +3578,8 @@ panel_tiles_colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
 sprite_cols:
 	DECL_COLORS	16,16
-sprites:
-    * #0
-    .word    sprpt+0,0
-    .word    sprpt+2,0
-    * #1
-    .word    sprpt+4,0
-    .word    sprpt+6,0
-    * #2
-    .word    sprpt+8,0
-    .word    sprpt+10,0
-    * #3
-    .word    sprpt+12,0
-    .word    sprpt+14,0   
-    * #4
-    .word    sprpt+16,0
-    .word    sprpt+18,0
-    * #5
-    .word    sprpt+20,0
-    .word    sprpt+22,0
-    * #6
-    .word    sprpt+24,0
-    .word    sprpt+26,0
-    * #7
-    .word    sprpt+28,0
-    .word    sprpt+30,0
+sprites_upper_part:
+	DECL_SPRITES
 
 	* wait until line 48, just after the status panel is displayed
 	* to change palette
@@ -3592,6 +3595,8 @@ playfield_colors:
 	* Commodore design unable to reproduce a 1982 game easily :)
 	* AGA could do this game in a breeze but with ECS we need to use our
 	* imagination...
+	
+	
 color_line_copper:
 	.rept	DYNAMIC_COPPER_ROWS
 	* room for 3 color registers to change dynamically each line

@@ -1,6 +1,6 @@
-- as soon as UFOs appear (or shoot???), scrolling speed is completely crazy and it ends up crashing
-  UFO bombs are greatly suspected: turn them off to test
-- alien ships: no bombs
+- write videoram out of range when reaching point E
+- UFO bombs fall straight and too fast
+- a lot of wrong clut yellow flashes
 - jeep explosion: using too many HW sprites, maybe hack to display wheels as bobs if too many of them
   then missing attack on rightmost explosion sprite band
 - insert coin screen: color bands not removed
@@ -12,6 +12,9 @@
 
 graphical issues:
 
+- multiplex sprites with 2 sprite control copperlist zones (materialize it
+  to debug): lower zone already busy with jeep+wheels, upper zone
+  would contain ufos
 - maybe use DPF for AGA and only one layer of monchrome mountain for ECS or two with black outlines...
   if not fast enough
 - remaining color bands (from start platform)
