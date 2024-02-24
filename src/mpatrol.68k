@@ -1908,7 +1908,7 @@ l_08c4:
 	move.b	(a0)+,d4                         	| [$08d5: ld   e,(hl)] -  Get flips/color
 	                           	| [$08d6: inc  hl] -  Next
 	clr.w	d1                               	| [$08d8: ld   b,$00] -  Now in BC
-	move.b	(a0),d1                         	| [$08d7: ld   c,(hl)] -  Get draw routine
+	move.b	(a0),d1                         	| [$08d7: ld   c,(hl)] -  Get draw routine, d1 is even!
 	lea	jump_table_08F5,a0             	| [$08da: ld   hl,jump_table_08F5] -  Offset into table
 	add.w	d1,a0                            	| [$08dd: add  hl,bc] -  Point to jump address
 	add.w	d1,a0			| 32 bit: add once more
@@ -1924,7 +1924,7 @@ l_08c4:
 	jbsr	compute_jeep_horizon_object_y_08ed                            	| [$08e8: call $08ED] -  ?? adjusted Y coordinate to B
 	clr.b	d0                               	| [$08eb: xor  a] -  Clear A ... many handlers need a zero
 	* called with d1,d2 as Y,X, d3,d4 as misc parameters
-	* update_exploding_jeep_0af5: d3: start of explosion sprite series, d4 = ?
+	* draw_exploding_jeep_0af5: d3: start of explosion sprite series, d4 = ?
 	jra	(a0)                               	| [$08ec: jp   (hl)] -  Jump to the draw routine
 
 
@@ -1938,50 +1938,50 @@ compute_jeep_horizon_object_y_08ed:
 	rts                                    	| [$08f4: ret]
 
 jump_table_08F5:
-	.long	obj_draw_00_0969                   | 0
-	.long	l_095a                             | 1
-	.long	obj_draw_02_09cf                   | 2
-	.long	l_09cd                             | 3
-	.long	update_exploding_jeep_0af5         | 4
-	.long	l_0943                             | 5
-	.long	l_0ae2                             | 6
-	.long	update_jeep_movement_0a90          | 7
-	.long	l_0a56                             | 8
-	.long	l_0ab7                             | 9
-	.long	update_jeep_position_0a52          | 10
-	.long	l_0a9f                             | 11
-	.long	l_09c9                             | 12
-	.long	obj_draw_0D_0b25                   | 13
-	.long	write_sprite_data_0976             | 14
-	.long	l_0997                             | 15
-	.long	l_09ba                             | 16
-	.long	l_0a1e                             | 17
-	.long	l_0a44                             | 18
-	.long	l_0934                             | 19
-	.long	l_0925                             | 20
-	.long	l_0b1d                             | 21
-	.long	l_09b0                             | 22
-	.long	obj_draw_17_0983                   | 23
+	.long	draw_rock_0969                        | 00
+	.long	draw_rear_missile_095a                | 02
+	.long	draw_volcano_flat_09cf                | 04
+	.long	draw_volcano_low_09cd                 | 06
+	.long	draw_exploding_jeep_0af5              | 08
+	.long	update_jeep_explosion_0943            | 10
+	.long	update_jeep_explosion_0ae2            | 12  disappearing explosion
+	.long	update_jeep_movement_0a90             | 14
+	.long	draw_hole_making_explosion_0a56       | 16
+	.long	draw_hole_making_explosion_end_0ab7   | 18
+	.long	draw_bomb_smoke_0a52                  | 20
+	.long	draw_explosion_smoke_0a9f             | 22
+	.long	draw_volcano_medium_09c9              | 24
+	.long	draw_ufo_0b25                         | 26
+	.long	write_sprite_data_0976                | 28 when shooting
+	.long	draw_bomb_explosion_0997 		      | 30
+	.long	draw_volcano_high_09ba                | 32
+	.long	draw_volcano_kill_score_0a1e          | 34
+	.long	draw_jeep_falling_in_hole_0a44        | 36
+	.long	draw_rear_missile_attacking_0934      | 38
+	.long	draw_mine_0925                        | 40
+	.long	draw_hole_making_bomb_0b1d            | 42
+	.long	update_exploding_wheels_09b0          | 44 not sure, but it occurs when jeep explodes
+	.long	draw_enemy_kill_score_0983            | 46
 
 
-l_0925:
+draw_mine_0925:
 	addq.b	#1,(0x0a,a2)                    	| [$0925: inc  (ix+$0a)]
 	move.b	(0x0a,a2),d0                    	| [$0928: ld   a,(ix+$0a)]
 	and.b	#0x1F,d0                         	| [$092b: and  $1F]
 	cmp.b	#0x0B,d0                         	| [$092d: cp   $0B]
-	jcs	obj_draw_00_0969                             	| [$092f: jr   c,$0969]
+	jcs	draw_rock_0969                             	| [$092f: jr   c,$0969]
 	addq.b	#1,d4                           	| [$0931: inc  e] -  Next color set
-	jra	obj_draw_00_0969                             	| [$0932: jr   $0969]
-l_0934:
+	jra	draw_rock_0969                             	| [$0932: jr   $0969]
+draw_rear_missile_attacking_0934:
 	move.b	timer_8bit_E04E,d0                 	| [$0934: ld   a,(timer_8bit_E04E)]
 	and.b	#0x03,d0                         	| [$0937: and  $03]
 	jeq	l_093c                             	| [$0939: jr   z,$093C]
 	addq.b	#1,d3                           	| [$093b: inc  d]
 l_093c:
-	jbsr	obj_draw_00_0969                            	| [$093c: call $0969] -  * J0939
+	jbsr	draw_rock_0969                            	| [$093c: call $0969] -  * J0939
 	move.b	#0x3B,d3                        	| [$093f: ld   d,$3B]
 	jra	l_095e                             	| [$0941: jr   $095E]
-l_0943:
+update_jeep_explosion_0943:
 	lea	wheels_sprites_shadow_ram_E1A4,a3                	| [$0943: ld   iy,wheels_sprites_shadow_ram_E1A4]
 	move.b	d0,(0x0a,a3)                    	| [$0947: ld   (iy+$0a),a]
 	move.b	d0,(0x0e,a3)                    	| [$094a: ld   (iy+$0e),a]
@@ -1991,8 +1991,8 @@ l_0943:
 	move.b	#0xF8,d0                        	| [$0956: ld   a,$F8]
 	add.b	d1,d0                            	| [$0958: add  a,b]
 	move.b	d0,d1                           	| [$0959: ld   b,a]
-l_095a:
-	jbsr	obj_draw_00_0969                            	| [$095a: call $0969]
+draw_rear_missile_095a:
+	jbsr	draw_rock_0969                            	| [$095a: call $0969]
 	addq.b	#1,d3                           	| [$095d: inc  d]
 l_095e:
 	move.b	#0x10,d0                        	| [$095e: ld   a,$10] -  * J0941
@@ -2002,7 +2002,7 @@ l_095e:
 	                              	| [$0965: ex   de,hl]
 	addq.w	#4,a3                            	| [$0966: add  iy,de]
 	                              	| [$0968: ex   de,hl]
-obj_draw_00_0969:
+draw_rock_0969:
 	                               	| [$096c: and  a]
 	move.b	d2,d0                           	| [$096d: ld   a,c]
 	tst.b	(0x0b,a2)                    	| [$0969: ld   a,(ix+$0b)] -  * J092F,J0932,C093C,C095A,C09E4
@@ -2040,7 +2040,7 @@ write_sprite_data_0976:
 	move.b	d2,(0x03,a3)                    	| [$097f: ld   (iy+$03),c] -  Set X coordinate
 	rts                                    	| [$0982: ret] -  Done
 	
-obj_draw_17_0983:
+draw_enemy_kill_score_0983:
 	move.b	(0x08,a2),d0                    	| [$0983: ld   a,(ix+$08)] -  3->300 5->500 8->800, 10->1000 * C0A2D
 	move.b	#0x07,d4                        	| [$0986: ld   e,$07] -  Color set (will be 14)
 	lsr.b	#1,d0                            	| [$0988: srl  a] -  Lower bit to C
@@ -2049,9 +2049,9 @@ obj_draw_17_0983:
 	move.b	d0,d3                           	| [$098e: ld   d,a] -  Tile number
 	move.b	d1,d0                           	| [$098f: ld   a,b] -  Y coordinate
 	cmp.b	#0x80,d0                         	| [$0990: cp   $80] -  ?? Duplicate if on lower half of screen ??
-	jcc	obj_draw_0D_0b25                             	| [$0992: jp   nc,$0B25]
+	jcc	draw_ufo_0b25                             	| [$0992: jp   nc,$0B25]
 	jra	write_sprite_data_0976                             	| [$0995: jr   $0976] -  Store the image
-l_0997:
+draw_bomb_explosion_0997:
 	move.b	#0x08,d0                        	| [$0997: ld   a,$08]
 	add.b	d1,d0                            	| [$0999: add  a,b]
 	move.b	d0,d1                           	| [$099a: ld   b,a]
@@ -2069,14 +2069,14 @@ l_09a5:
 l_09ab:
 	clr.b	(0x02,a3)                        	| [$09ab: ld   (iy+$02),$00] -  Blank the tile number * J0974
 	rts                                    	| [$09af: ret]
-l_09b0:
+update_exploding_wheels_09b0:
 	move.b	timer_8bit_E04E,d0                 	| [$09b0: ld   a,(timer_8bit_E04E)] -  ISR1 up counter
 	btst.b	#2,d0                           	| [$09b3: bit  2,a] -  Chance ...
 	jeq	write_sprite_data_0976                             	| [$09b5: jr   z,$0976] -  ... to use ...
 	addq.b	#1,d3                           	| [$09b7: inc  d] -  ... next image
 	jra	write_sprite_data_0976                             	| [$09b8: jr   $0976] -  Store sprite details
 
-l_09ba:
+draw_volcano_high_09ba:
 	move.b	#0x0E,d0                        	| [$09ba: ld   a,$0E]
 	add.b	d1,d0                            	| [$09bc: add  a,b]
 	move.b	d1,d5                           	| [$09bd: ld   h,b]
@@ -2086,12 +2086,12 @@ l_09ba:
 	move.b	#0x76,d3
 	move.b	#0x08,d4                      	| [$09c4: ld   de,$7608]
 	jra	l_09da                             	| [$09c7: jr   $09DA]
-l_09c9:
+draw_volcano_medium_09c9:
 	move.b	#0x0A,d0                        	| [$09c9: ld   a,$0A]
-	jra	obj_draw_02_09cf                             	| [$09cb: jr   $09CF]
-l_09cd:
+	jra	draw_volcano_flat_09cf                             	| [$09cb: jr   $09CF]
+draw_volcano_low_09cd:
 	move.b	#0x05,d0                        	| [$09cd: ld   a,$05]
-obj_draw_02_09cf:
+draw_volcano_flat_09cf:
 	add.b	d1,d0                            	| [$09cf: add  a,b] -  * J09CB
 	move.b	d1,d5                           	| [$09d0: ld   h,b]
 	move.b	d0,d1                           	| [$09d1: ld   b,a]
@@ -2107,7 +2107,7 @@ l_09da:
 	                              	| [$09e1: ex   de,hl]
 	clr.b	d6                               	| [$09e2: ld   l,$00]
 l_09e4:
-	jbsr	obj_draw_00_0969                            	| [$09e4: call $0969] -  * C09C1,C09D4,J0A3C
+	jbsr	draw_rock_0969                            	| [$09e4: call $0969] -  * C09C1,C09D4,J0A3C
 	move.b	d1,(0x04,a3)                    	| [$09e7: ld   (iy+$04),b]
 	subq.b	#1,d6                           	| [$09ea: dec  l]
 	jne	l_0a16                             	| [$09eb: jr   nz,$0A16]
@@ -2144,7 +2144,7 @@ l_0a16:
 	move.b	d4,(0x05,a3)                    	| [$0a17: ld   (iy+$05),e]
 	move.b	#0x10,d0                        	| [$0a1a: ld   a,$10]
 	jra	l_09f5                             	| [$0a1c: jr   $09F5]
-l_0a1e:
+draw_volcano_kill_score_0a1e:
 	movem.w	d1/d2,-(sp)                    	| [$0a1e: push bc]
 	movem.w	d3/d4,-(sp)                    	| [$0a1f: push de]
 	move.l	a1,-(sp)                        	| [$0a1f: push de]
@@ -2161,7 +2161,7 @@ l_0a1e:
 	add.b	#0x08,d0                         	| [$0a27: add  a,$08]
 	cmp.b	#0xD0,d0                         	| [$0a29: cp   $D0]
 	jcc	l_0a3e                             	| [$0a2b: jr   nc,$0A3E]
-	jbsr	obj_draw_17_0983                            	| [$0a2d: call $0983]
+	jbsr	draw_enemy_kill_score_0983                            	| [$0a2d: call $0983]
 l_0a30:
 	move.w	#0x0004,d3                      	| [$0a30: ld   de,$0004] 4 -  * J0A42
 	add.w	d3,a3                            	| [$0a33: add  iy,de]
@@ -2175,16 +2175,16 @@ l_0a30:
 l_0a3e:
 	clr.b	(0x02,a3)                        	| [$0a3e: ld   (iy+$02),$00] -  * J0A2B
 	jra	l_0a30                             	| [$0a42: jr   $0A30]
-l_0a44:
+draw_jeep_falling_in_hole_0a44:
 	move.b	d0,unknown_E1A6                 	| [$0a44: ld   (unknown_E1A6),a]
 	move.b	d0,unknown_E1AA                 	| [$0a47: ld   (unknown_E1AA),a]
 	move.b	d0,unknown_E1AE                 	| [$0a4a: ld   (unknown_E1AE),a]
 	jbsr	trns_spr_color_0a95                            	| [$0a4d: call $0A95]
 	jra	l_0a62                             	| [$0a50: jr   $0A62]
-update_jeep_position_0a52:
+draw_bomb_smoke_0a52:
 	move.b	#0x18,d0                        	| [$0a52: ld   a,$18] -  Offset by -$18 when drawing
 	jra	l_0a58                             	| [$0a54: jr   $0A58] -  Draw the 2x2
-l_0a56:
+draw_hole_making_explosion_0a56:
 	move.b	#0x0D,d0                        	| [$0a56: ld   a,$0D] -  Offset by -$0D when drawing
 l_0a58:
 	lea	unknown_E174,a3                	| [$0a58: ld   iy,unknown_E174] -  * J0A54
@@ -2240,7 +2240,7 @@ trns_spr_color_0a95:
 	or.b	#0x0C,d0                          	| [$0a9b: or   $0C] -  Transform to C
 	move.b	d0,d4                           	| [$0a9d: ld   e,a] -  Back to color set value
 	rts                                    	| [$0a9e: ret] -  Done
-l_0a9f:
+draw_explosion_smoke_0a9f:
 	lea	unknown_E174,a3                	| [$0a9f: ld   iy,unknown_E174]
 	clr.b	(0x0a,a3)                        	| [$0aa3: ld   (iy+$0a),$00]
 	clr.b	(0x0e,a3)                        	| [$0aa7: ld   (iy+$0e),$00]
@@ -2251,7 +2251,7 @@ l_0a9f:
 	jbsr	update_jeep_sprite_row_0a6f                            	| [$0ab0: call $0A6F]
 	move.b	d3,(0x06,a3)                    	| [$0ab3: ld   (iy+$06),d]
 	rts                                    	| [$0ab6: ret]
-l_0ab7:
+draw_hole_making_explosion_end_0ab7:
 	move.b	#0x18,d0                        	| [$0ab7: ld   a,$18]
 	add.b	d1,d0                            	| [$0ab9: add  a,b]
 	move.b	d0,d1                           	| [$0aba: ld   b,a]
@@ -2274,7 +2274,7 @@ l_0acd:
 	move.b	d0,(0x0a,a3)                    	| [$0ade: ld   (iy+$0a),a]
 	rts                                    	| [$0ae1: ret]
 	
-l_0ae2:
+update_jeep_explosion_0ae2:
 	lea	wheels_sprites_shadow_ram_E1A4,a3                	| [$0ae2: ld   iy,wheels_sprites_shadow_ram_E1A4]
 	move.b	d0,(0x06,a3)                    	| [$0ae6: ld   (iy+$06),a]
 	jbsr	trns_spr_color_0a95                            	| [$0ae9: call $0A95]
@@ -2285,7 +2285,7 @@ l_0ae2:
 	LOAD_D1D2_FROM_D1_16                           	| [$0af1: ld   c,l]
 	jra	write_sprite_data_0976                             	| [$0af2: jp   $0976]
 
-update_exploding_jeep_0af5:
+draw_exploding_jeep_0af5:
 	lea	wheels_sprites_shadow_ram_E1A4,a3                	| [$0af5: ld   iy,wheels_sprites_shadow_ram_E1A4]
 	clr.b	(0x1a,a3)                        	| [$0af9: ld   (iy+$1a),$00]
 	jbsr	trns_spr_color_0a95                            	| [$0afd: call $0A95]
@@ -2305,13 +2305,13 @@ l_0b13:
 	addq.b	#0x02,d0                        	| [$0b17: add  a,$02]
 	move.b	d0,(0x06,a3)                    	| [$0b19: ld   (iy+$06),a]
 	rts                                    	| [$0b1c: ret]
-l_0b1d:
+draw_hole_making_bomb_0b1d:
 	move.b	timer_8bit_E04E,d0                 	| [$0b1d: ld   a,(timer_8bit_E04E)]
 	btst.b	#1,d0                           	| [$0b20: bit  1,a]
-	jeq	obj_draw_0D_0b25                             	| [$0b22: jr   z,$0B25]
+	jeq	draw_ufo_0b25                             	| [$0b22: jr   z,$0B25]
 	addq.b	#1,d4                           	| [$0b24: inc  e]
 	* used to draw UFOs and UFO bombs
-obj_draw_0D_0b25:
+draw_ufo_0b25:
 	jbsr	write_sprite_data_0976                            	| [$0b25: call $0976] -  * J0992,J0B22
 	move.b	(0x01,a2),d0                    	| [$0b28: ld   a,(ix+$01)] -  LSB of object pointer
 	cmp.b	#0x60,d0                         	| [$0b2b: cp   $60] -  Less than 96?
