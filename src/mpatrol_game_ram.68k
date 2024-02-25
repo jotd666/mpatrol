@@ -96,9 +96,9 @@
 	.global	unknown_E261
 	.global	unknown_E277
 	.global	jeep_params_E300
-	.global	unknown_16bit_E302
+	.global	jeep_damping_and_y_E302
 	.global	buggy_x_e303
-	.global	unknown_16bit_E304
+	.global	jeep_damping_force_16bit_E304
 	.global	unknown_16bit_E306
 	.global	buggy_y_e307
 	.global	unknown_16bit_E308
@@ -373,11 +373,11 @@ unknown_E277:
 	.align	2
 jeep_params_E300:
 	ds.b	2
-unknown_16bit_E302:
+jeep_damping_and_y_E302:
 	ds.b	1
 jeep_x_E303:		| must follow E302!!
 	ds.b	1
-unknown_16bit_E304:
+jeep_damping_force_16bit_E304:
 	ds.w	1
 	
 unknown_16bit_E306:
