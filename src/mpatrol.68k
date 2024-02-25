@@ -250,6 +250,7 @@ get_rom_address_d5_to_a0:
 
 clear_video_area:
 	moveq	#0,d0
+	subq	#1,d1
 0:
 	jbsr	osd_w_videoram
 	addq.w	#1,d7
@@ -258,6 +259,7 @@ clear_video_area:
 	
 clear_color_area:
 	moveq	#0,d0
+	subq	#1,d1
 0:
 	jbsr	osd_w_colorram
 	addq.w	#1,d7
@@ -837,29 +839,33 @@ l_0390:
 	jra	l_037e                             	| [$0391: jr   $037E] -  Continue running script
 
 * < A0: pointer on 2 digits (endianness??)
-* < D3: video memory to write to
+* < A1: video memory to write to
 write_2_digits_to_screen_0393:
 	move.b	(a0),d0                         	| [$0393: ld   a,(hl)] -  Get BCD number (most significant) * C2977
-	addq.w	#1,d3                           	| [$0394: inc  de] -  Skip potentially 0 leading digit
+	addq.w	#1,a1                           	| [$0394: inc  de] -  Skip potentially 0 leading digit
 	and.b	#0x0F,d0                         	| [$0395: and  $0F] -  If the lower digit is 0 then ...
 	jeq	l_039d                             	| [$0397: jr   z,$039D] -  ... skip printing it
-	subq.w	#1,d3                           	| [$0399: dec  de] -  We will be printing this digit after all
-l_039a:
+	subq.w	#1,a1                           	| [$0399: dec  de] -  We will be printing this digit after all
+* < A1: video memory to write to
+write_2_digits_to_screen_039a:
 	jbsr	l_03a6                            	| [$039a: call $03A6] -  Print lower BCD digit * C2924,C293A,J296E
 l_039d:
 	                           	| [$039d: dec  hl] -  Next less-significant BCD value * J0397
 	move.b	-(a0),d0                         	| [$039e: ld   a,(hl)] -  Get BCD number
 	ror.b	#4,d0                           	| [$039f: rra] * 4 -  Isolate ...
 	jbsr	l_03a7                            	| [$03a3: call $03A7] -  Print digit (without color change)
+	
+* < A1: screen address
+* < A0: points to number
 l_03a6:
 	move.b	(a0),d0                         	| [$03a6: ld   a,(hl)] -  Get BCD number * C039A
 l_03a7:
 	and.b	#0x0F,d0                         	| [$03a7: and  $0F] -  Isolate lower digit * C03A3
 	add.b	#0x30,d0                         	| [$03a9: add  a,$30] -  Make it ASCII (tile number)
-	exg		d3,d7
+	exg		a1,d7
 	jbsr	osd_w_videoram                         	| [$03ab: ld   (de),a] -  Store it on the screen
-	exg		d3,d7
-	addq.w	#1,d3                           	| [$03ac: inc  de] -  Advance screen pointer
+	exg		a1,d7
+	addq.w	#1,a1                           	| [$03ac: inc  de] -  Advance screen pointer
 	rts                                    	| [$03ad: ret] -  Done
 	
 * < A1: video address (0x8xxx)
@@ -2638,10 +2644,9 @@ l_0d1f:
 l_0d29:
 	* clear screen
 	move.w	#0x8000,d7                      	| [$0d29: ld   hl,$8000] -  * C0013,C010A,C0187,C0745,C0CBF
-	move.w	#0x03FF,d1                        	| [$0d2c: ld   bc,$0800] 2048
+	move.w	#0x0400,d1                        	| [$0d2c: ld   bc,$0800] 2048
 	jbsr	clear_video_area
-	move.w	#0x03FF,d1
-0:
+	move.w	#0x0400,d1
 	jbsr	clear_color_area
 	
 	                   	| [$0d2f: call clear_area_05fa] clear screen
@@ -5962,15 +5967,16 @@ l_2907:
 	move.b	#0x1A,d0                        	| [$2913: ld   a,$1A]
 l_2915:
 	add.b	#0x40,d0                         	| [$2915: add  a,$40] -  * J2911
-	* ??? a1???? d3/d4 ???
-	illegal
+	* write point reached to screen
 	subq.w	#2,a1                           	| [$2917: dec  de] * 2
-	move.b	d0,(a1)                         	| [$2919: ld   (de),a]
+	exg		d7,a1
+	jbsr	osd_w_videoram					| [$2919: ld   (de),a]
+	exg		a1,d7                      	
 	lea	game_rom+0x2B94,a0                      	| [$291a: ld   hl,$2B94]
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$291d: call $034E]
 	lea	unknown_E512,a0                	| [$2920: ld   hl,unknown_E512]
 	addq.w	#1,a1                           	| [$2923: inc  de]
-	jbsr	l_039a                            	| [$2924: call $039A]
+	jbsr	write_2_digits_to_screen_039a                            	| [$2924: call $039A]
 	lea	game_rom+0x2BB0,a0                      	| [$2927: ld   hl,$2BB0] -  "THE AVERAGE TIME " script
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$292a: call $034E]
 	jbsr	l_2968                            	| [$292d: call $2968]
@@ -5978,7 +5984,7 @@ l_2915:
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$2933: call $034E]
 	move.l	unknown_pointer_E096,a0             	| [$2936: ld   hl,(unknown_pointer_E096)]
 	addq.w	#1,a1                           	| [$2939: inc  de]
-	jbsr	l_039a                            	| [$293a: call $039A]
+	jbsr	write_2_digits_to_screen_039a                            	| [$293a: call $039A]
 	LOAD_LEW	unknown_16bit_E094,d5             	| [$293d: ld   hl,(unknown_16bit_E094)]
 	move.w	time_bcd_E511,d3            	| [$2940: ld   de,(time_bcd_E511)]
 	                              	| [$2944: and  a]
@@ -5996,15 +6002,15 @@ l_295a:
 	lea	sprite_shadow_E100,a0          	| [$295a: ld   hl,sprite_shadow_E100] -  * C28BD
 	move.w	#0xc6,d1                        	| [$295d: ld   bc,$00C6] 198
 	jbsr	clear_area_05fa                   	| [$2960: call clear_area_05fa]
-	move.w	#0x320,d1                        	| [$2963: ld   bc,$0320] 800
+	move.w	#0x320,d1                        	| [$2963: ld   bc,$0320]
 	jra	l_2954                             	| [$2966: jr   $2954]
 l_2968:
-	move.w	#0x81D9,d3                      	| [$2968: ld   de,$81D9] -  * C283E,C292D
+	move.w	#0x81D9,a1                      	| [$2968: ld   de,$81D9] -  * C283E,C292D
 	lea	unknown_16bit_E094+1,a0                	| [$296b: ld   hl,unknown_E095]
-	jra	l_039a                             	| [$296e: jp   $039A]
+	jra	write_2_digits_to_screen_039a                             	| [$296e: jp   $039A]
 l_2971:
 	lea	unknown_E099,a0                	| [$2971: ld   hl,unknown_E099] -  * C2808,C284F
-	move.w	#0x8297,d3                      	| [$2974: ld   de,$8297]
+	move.w	#0x8297,a1                      	| [$2974: ld   de,$8297]
 	jbsr	write_2_digits_to_screen_0393                            	| [$2977: call $0393]
 	exg	d3,d7                              	| [$297a: ex   de,hl]
 	move.b	#0x30,d0

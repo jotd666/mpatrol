@@ -15,6 +15,7 @@ graphical issues:
 - multiplex sprites with 2 sprite control copperlist zones (materialize it
   to debug): lower zone already busy with jeep+wheels, upper zone
   would contain ufos
+- reuse 2 blue mountain colors for 2 lower scenery colors (rocks woulc be ideal!)
 - maybe use DPF for AGA and only one layer of monchrome mountain for ECS or two with black outlines...
   if not fast enough
 - remaining color bands (from start platform)
