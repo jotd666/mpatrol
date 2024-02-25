@@ -468,7 +468,7 @@ l_0118:
 	jra	l_0bb7                             	| [$0148: jp   $0BB7]
 l_014b:
 	move.b	#0x1B,d0                        	| [$014b: ld   a,$1B] -  Play ... * J012E
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$014d: call $0D75] -  ... ending music
+	jbsr	queue_sound_effect_0d75                            	| [$014d: call $0D75] -  ... ending music
 	lea	game_status_bits_E046,a0                	| [$0150: ld   hl,game_status_bits_E046]
 	btst.b	#4,(a0)                         	| [$0153: bit  4,(hl)]
 	jeq	l_0176                             	| [$0155: jr   z,$0176]
@@ -2697,11 +2697,11 @@ l_0d64:
 
 l_0d6f:
     jbsr  osd_disable_interrupts  | [di]
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$0d70: call $0D75]
+	jbsr	queue_sound_effect_0d75                            	| [$0d70: call $0D75]
     jbsr  osd_enable_interrupts  | [ei]
 	rts                                    	| [$0d74: ret]
 
-store_d0_in_revolving_E000_if_playing_0d75:
+queue_sound_effect_0d75:
 
 	movem.l	a0,-(sp)                        	| [$0d75: push hl] -  Save HL * C014D,C0D70,C132C,C1375,J13E8,C1522,C1571,J174B,C1768,C1D1D,C1DCC,C27D7,C2854,C2860
 	lea	game_status_bits_E046,a0                	| [$0d76: ld   hl,game_status_bits_E046]
@@ -3625,7 +3625,7 @@ course_start_1311:
 	lea	game_rom+0x2A5F,a0                      	| [$1324: ld   hl,$2A5F] -  "CHAMPION COURSE 1 GO" script
 	jbsr	erase_script_037b                            	| [$1327: call $037B] -  Erase the text
 	move.b	#0x18,d0                        	| [$132a: ld   a,$18] -  Start ...
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75     	| [$132c: call $0D75] -  ... background music
+	jbsr	queue_sound_effect_0d75     	| [$132c: call $0D75] -  ... background music
 	move.l	a0,d5
 	sub.l	#game_rom,d5
 	jra	l_135a                             	| [$132f: jr   $135A]
@@ -3681,7 +3681,7 @@ l_136b:
 init_jump_1370:
 	addq.b	#1,(a2)                    	| [$1370: inc  (ix+$00)] -  Player is now in state "jumping"
 	move.b	#0x14,d0                        	| [$1373: ld   a,$14] -  Play ...
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$1375: call $0D75] -  ... car jump
+	jbsr	queue_sound_effect_0d75                            	| [$1375: call $0D75] -  ... car jump
 l_1378:
 	jbsr	player_shot_1548                            	| [$1378: call $1548] -  Check starting player shot * J13C0
 	LOAD_LEW	unknown_16bit_E30E,d5             	| [$137b: ld   hl,(unknown_16bit_E30E)]
@@ -3734,7 +3734,7 @@ jeep_falling_in_hole_13c2:
 	addq.b	#1,(a2)                    	| [$13df: inc  (ix+$00)]
 	move.b	#0x03,(0x0d,a2)                 	| [$13e2: ld   (ix+$0d),$03]
 	move.b	#0x1F,d0                        	| [$13e6: ld   a,$1F] -  Play ...
-	jra	store_d0_in_revolving_E000_if_playing_0d75                             	| [$13e8: jp   $0D75] -  ... car explosion then return
+	jra	queue_sound_effect_0d75                             	| [$13e8: jp   $0D75] -  ... car explosion then return
 handle_jeep_explosion_13eb:
 	clr.b	d0                               	| [$13eb: xor  a]
 	move.b	d0,unknown_E1A2                 	| [$13ec: ld   (unknown_E1A2),a]
@@ -3940,7 +3940,7 @@ l_1514:
 	jeq	l_27c0                             	| [$151d: jp   z,$27C0]
 l_1520:
 	move.b	#0x10,d0                        	| [$1520: ld   a,$10] -  Play ... * J150F
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$1522: call $0D75] -  ... passing point
+	jbsr	queue_sound_effect_0d75                            	| [$1522: call $0D75] -  ... passing point
 	clr.b	d0                               	| [$1525: xor  a]
 	move.b	#0x01,d2                        	| [$1526: ld   c,$01]
 	jbsr	store_special_event_02c2                            	| [$1528: call $02C2]
@@ -3953,6 +3953,7 @@ compute_jeep_y_1533:
 	add.b	#0x20,d0                         	| [$1536: add  a,$20]
 	
 * < d0: object X
+* > d5/d6: 
 compute_object_y_1538:
 	move.b	d0,d1                           	| [$1538: ld   b,a] -  * C10B1,C1467,C157C,C1A83,C1AE5,C1CFA
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1539: ld   a,(unknown_E1E2)]
@@ -3960,14 +3961,12 @@ compute_object_y_1538:
 l_153d:
 	addq.b	#0x06,d0                        	| [$153d: add  a,$06] -  * C0ED7
 	lsr.b	#2,d0                            	| [$153f: srl  a] * 2
-	moveq	#0,d7
-	move.b	d0,d7                           	| [$1543: ld   l,a]
+	moveq	#0,d5
+	move.b	d0,d5                           	| [$1543: ld   l,a]
 	lea		ground_y_array_E200,a0                        	| [$1544: ld   h,$E2]
-	add.w	d7,a0
+	add.w	d5,a0
 	move.b	(a0),d0                         	| [$1546: ld   a,(hl)]
 	* also update D5/D6, some calls expect that
-	move.l	a0,d5
-	sub.l	#ground_y_array_E200-0xE200,d5
 	LOAD_D5D6_FROM_D5_16
 	rts                                    	| [$1547: ret]
 	
@@ -4009,7 +4008,7 @@ l_1564:
 l_156d:
 	move.b	#0x0E,(a0)                      	| [$156d: ld   (hl),$0E] -  Init player air shot routine * J1566
 	move.b	#0x12,d0                        	| [$156f: ld   a,$12] -  Play ...
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$1571: call $0D75] -  ... missile from car
+	jbsr	queue_sound_effect_0d75                            	| [$1571: call $0D75] -  ... missile from car
 	move.b	d2,d0                           	| [$1574: ld   a,c] -  Restore A
 	rts                                    	| [$1575: ret] -  Done
 	
@@ -4322,7 +4321,7 @@ l_172a:
 	jne	l_172a                             	| [$1744: djnz $172A]
 	jbsr	l_08a1                            	| [$1746: call $08A1]
 	move.b	#0x1F,d0                        	| [$1749: ld   a,$1F] -  Play ...
-	jra	store_d0_in_revolving_E000_if_playing_0d75                             	| [$174b: jp   $0D75] -  ... car explosion
+	jra	queue_sound_effect_0d75                             	| [$174b: jp   $0D75] -  ... car explosion
 l_174e:
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$174e: ld   a,(unknown_E1E2)] -  * J16C8
 	add.b	(0x03,a2),d0                     	| [$1751: add  a,(ix+$03)]
@@ -4334,7 +4333,7 @@ l_174e:
 	move.b	#0x03,d0                        	| [$1761: ld   a,$03]
 	move.b	d0,unknown_E32A                 	| [$1763: ld   (unknown_E32A),a]
 	move.b	#0x01,d0                        	| [$1766: ld   a,$01] -  Play ...
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$1768: call $0D75] -  ... shot a rock
+	jbsr	queue_sound_effect_0d75                            	| [$1768: call $0D75] -  ... shot a rock
 	move.w	#0x0007,d3                      	| [$176b: ld   de,$0007] 7
 	add.w	d3,a0                            	| [$176e: add  hl,de]
 	move.b	(a0),d0                         	| [$176f: ld   a,(hl)]
@@ -5149,24 +5148,27 @@ l_1c87:
 l_1c96:
 	move.b	#0xF8,(0x0e,a2)                 	| [$1c96: ld   (ix+$0e),$F8] -  * J1C78
 	rts                                    	| [$1c9a: ret]
+	
 init_standard_ufo_bomb_1c9b:
 	move.b	(0x04,a2),d6                    	| [$1c9b: ld   l,(ix+$04)]
 	move.b	(0x05,a2),d5                    	| [$1c9e: ld   h,(ix+$05)]
-	lsr.b	#1,d5                            	| [$1ca1: srl  h]
-	roxr.b	#1,d6                           	| [$1ca3: rr   l]
+	LOAD_D5_16_FROM_D5D6
+	lsr.w	#1,d5                            	| [$1ca1: srl  h]
+												| [$1ca3: rr   l]
 	btst.b	#0,(0x0c,a2)                    	| [$1ca5: bit  0,(ix+$0c)]
 	jeq	l_1cb2                             	| [$1ca9: jr   z,$1CB2]
 	                              	| [$1cab: ex   de,hl]
 	* negate value
-	LOAD_D5_16_FROM_D5D6								| [$1cac: ld   hl,$0000] 0
+									| [$1cac: ld   hl,$0000] 0
 	                               	| [$1caf: and  a]
 	neg.w	d5                            	| [$1cb0: sbc  hl,de]
-	LOAD_D5D6_FROM_D5_16	
 l_1cb2:
+	LOAD_D5D6_FROM_D5_16	
 	move.b	d6,(0x04,a2)                    	| [$1cb2: ld   (ix+$04),l] -  * J1CA9
 	move.b	d5,(0x05,a2)                    	| [$1cb5: ld   (ix+$05),h]
 	addq.b	#1,(a2)                    	| [$1cb8: inc  (ix+$00)]
 	rts                                    	| [$1cbb: ret]
+	
 update_standard_ufo_bomb_1cbc:
 	move.b	#0x3D,d2                        	| [$1cbc: ld   c,$3D]
 	move.b	(0x09,a2),d0                    	| [$1cbe: ld   a,(ix+$09)]
@@ -5189,14 +5191,13 @@ l_1cd7:
 	lsr.w	#8,d0
 	cmp.b	#0x06,d0                         	| [$1cde: cp   $06]
 	jcs	l_0852                             	| [$1ce0: jp   c,$0852]
-	move.b	#0x00,d1                        	| [$1ce3: ld   bc,$0005] 5
-	move.b	#0x05,d2                        	| [$1ce3: ld   bc,$0005] 5
+											| [$1ce3: ld   bc,$0005] 5
+	move.w	#0x05,d1                        	| [$1ce3: ld   bc,$0005] 5
 l_1ce6:
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1ce6: ld   (unknown_16bit_E0D6),hl] -  * J1D38
 	move.w	d5,d0                           	| [$1ce9: ld   a,h]
 	lsr.w	#8,d0
 	LOAD_LEW	unknown_16bit_E0DC,d5             	| [$1cea: ld   hl,(unknown_16bit_E0DC)]
-	move.b	d2,d1
 	add.w	d1,d5                            	| [$1ced: add  hl,bc]
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$1cee: ld   (unknown_16bit_E0DC),hl]
 l_1cf1:
@@ -5216,15 +5217,16 @@ l_1cf1:
 	move.b	(a2),d0                    	| [$1d0f: ld   a,(ix+$00)]
 	cmp.b	#0x2A,d0                         	| [$1d12: cp   $2A]
 	jne	l_1d1d                             	| [$1d16: jr   nz,$1D1D]
-	move.b	#0x03,d0                        	| [$1d14: ld   a,$03] -  Sound effect 3 ... ?? played right after sound effect 2
+	move.b	#0x02,d0                        	| [$1d14: ld   a,$03] -  Sound effect 3 ... ?? played right after sound effect 2
 	move.b	#0x30,(a2)                 	| [$1d18: ld   (ix+$00),$30]
-	subq.b	#1,d0                           	| [$1d1c: dec  a] -  Sound effect 2 ... missile hitting ground
+											| [$1d1c: dec  a] -  Sound effect 2 ... missile hitting ground
 	bra.b	l_1d1d_2
 l_1d1d:
 	move.b	#0x03,d0                        	| [$1d14: ld   a,$03] -  Sound effect 3 ... ?? played right after sound effect 2
 l_1d1d_2:
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$1d1d: call $0D75] -  Play missile hitting ground or effect played after that * J1D16
+	jbsr	queue_sound_effect_0d75       	| [$1d1d: call $0D75] -  Play missile hitting ground or effect played after that * J1D16
 	jra	l_0856                             	| [$1d20: jp   $0856]
+
 	* handle the shots of the blue UFOs that create holes
 handle_hole_making_bombs_1d23:
 	jbsr	load_d5_16_20db                            	| [$1d23: call $20DB]
@@ -5235,8 +5237,8 @@ handle_hole_making_bombs_1d23:
 	sub.w	d3,d5                            	| [$1d2e: sbc  hl,de]
 	                      	| [$1d30: ld   de,$008E]
 	sub.w	#0x8E,d5                            	| [$1d33: sbc  hl,de]
-	move.b	#0x00,d1                        	| [$1d35: ld   bc,$0010] 16
-	move.b	#0x10,d2                        	| [$1d35: ld   bc,$0010] 16
+												| [$1d35: ld   bc,$0010] 16
+	move.w	#0x10,d1                        	| [$1d35: ld   bc,$0010] 16
 	jra	l_1ce6                             	| [$1d38: jr   $1CE6]
 l_1d3a:
 	jbsr	l_20ef                            	| [$1d00: call $20EF] (duplicated because of comparison)
@@ -5283,7 +5285,7 @@ l_1d73:
 	cmp.b	#0xEA,d0                         	| [$1d8b: cp   $EA]
 	jcs	draw_object_08b8                             	| [$1d8d: jp   c,$08B8]
 	jbsr	osd_read_dsw_2                       	| [$1d90: ld   a,($D004)]
-	btst.b	#6,d0                           	| [$1d93: bit  6,a]
+	btst.b	#6,d0                           	| [$1d93: bit  6,a] invincibility cheat DSW?
 	jeq	draw_object_08b8                             	| [$1d95: jp   z,$08B8]
 	jbsr	l_0852                            	| [$1d98: call $0852]
 	jra	jeep_killed_16fd                             	| [$1d9b: jp   $16FD]
@@ -5310,7 +5312,7 @@ l_1db9:
 	addq.w	#1,a0                           	| [$1dc9: inc  hl]
 l_1dca:
 	move.b	#0x11,d0                        	| [$1dca: ld   a,$11] -  Play ... * J1DC1,J1DC7
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$1dcc: call $0D75] -  ... UFO explosion
+	jbsr	queue_sound_effect_0d75                            	| [$1dcc: call $0D75] -  ... UFO explosion
 	subq.b	#1,(a0)                         	| [$1dcf: dec  (hl)]
 	jne	l_1dda                             	| [$1dd0: jr   nz,$1DDA]
 	addq.w	#3,a0                           	| [$1dd2: inc  hl] * 3
@@ -5700,6 +5702,7 @@ ufo_crashing_on_player_209c:
 	lsr.w	#8,d0
 	LOAD_LEW	unknown_16bit_E0DC,d5             	| [$20a6: ld   hl,(unknown_16bit_E0DC)]
 	jra	l_1cf1                             	| [$20a9: jp   $1CF1]
+	
 ufo_shot_20ac:
 	subq.b	#1,(0x0a,a2)                    	| [$20ac: dec  (ix+$0a)]
 	jne	draw_object_08b8                             	| [$20af: jp   nz,$08B8]
@@ -5797,7 +5800,7 @@ l_27c0:
 l_27d2:
 	jbsr	l_29fa                            	| [$27d2: call $29FA] -  * J27CB
 	move.b	#0x1E,d0                        	| [$27d5: ld   a,$1E] -  Play ...
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$27d7: call $0D75] -  ... congratulations music
+	jbsr	queue_sound_effect_0d75                            	| [$27d7: call $0D75] -  ... congratulations music
 	lea	unknown_E50F,a0                	| [$27da: ld   hl,unknown_E50F]
 	clr.b	(a0)+                             	| [$27dd: ld   (hl),$00]
 	                           	| [$27df: inc  hl] -  Now E510
@@ -5866,13 +5869,13 @@ l_284c:
 	STORE_LEW	d5,unknown_16bit_E098                 	| [$284c: ld   (unknown_16bit_E098),hl] -  * J2849
 	jbsr	l_2971                            	| [$284f: call $2971]
 	move.b	#0x10,d0                        	| [$2852: ld   a,$10] -  Play ...
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$2854: call $0D75] -  ... passing point
+	jbsr	queue_sound_effect_0d75                            	| [$2854: call $0D75] -  ... passing point
 	move.b	#0x0C,d0                        	| [$2857: ld   a,$0C]
 	jbsr	wait_for_sync_05ea                            	| [$2859: call $05EA]
 	jra	l_2827                             	| [$285c: jr   $2827]
 l_285e:
 	move.b	#0x1D,d0                        	| [$285e: ld   a,$1D] -  Play ... * J27CF
-	jbsr	store_d0_in_revolving_E000_if_playing_0d75                            	| [$2860: call $0D75] -  ... reached goal
+	jbsr	queue_sound_effect_0d75                            	| [$2860: call $0D75] -  ... reached goal
 	jbsr	l_29d6                            	| [$2863: call $29D6]
 	jbsr	l_0d12                            	| [$2866: call $0D12]
 	jbsr	l_2948                            	| [$2869: call $2948]

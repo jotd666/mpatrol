@@ -1,23 +1,25 @@
-- write videoram out of range when reaching point E
 - UFO bombs fall straight and too fast
+- ships not appearing is this a double buffering issue / try with immediate blitter
 - a lot of wrong clut yellow flashes
-- jeep explosion: using too many HW sprites, maybe hack to display wheels as bobs if too many of them
-  then missing attack on rightmost explosion sprite band
-- insert coin screen: color bands not removed
+- sorry no bonus! even if time below current best time
+- wheels bouncing when jeep explode: 2 outer wheels bounce y is wrong
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
   (which is cool to test!!) continue flag must be tested wrong
 - continue screen timer doesn't work properly
 - test sector selection cheat
-- slope sections don't work properly: scrolling stutters, no slope tiles appear
+- slope sections don't work properly: scrolling stutters, no slope tiles appear (demo)
 
 graphical issues:
 
+- when title displays (moon patrol), completely loses real time in cycle exact
+  probably needs complete rethinking of what's done here / use backbuffer
+  blitter refresh. Rest of game seems to run OK! Would require back to dual playfield!
+  (object erase need mountains redraw at 50 fps which is probably too much)
+- insert coin screen: color bands not removed
 - multiplex sprites with 2 sprite control copperlist zones (materialize it
-  to debug): lower zone already busy with jeep+wheels, upper zone
+  to debug): lower zone already busy with jeep+wheels (6 sprites, all color banks), upper zone
   would contain ufos
 - reuse 2 blue mountain colors for 2 lower scenery colors (rocks woulc be ideal!)
-- maybe use DPF for AGA and only one layer of monchrome mountain for ECS or two with black outlines...
-  if not fast enough
 - remaining color bands (from start platform)
 - optimize bob erase below a given Y or within a given Y range
   (mountains erase, scrolling gound erases)

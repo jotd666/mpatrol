@@ -24,7 +24,7 @@ def ensure_empty(sd):
         os.mkdir(sd)
 
 dump_tiles = False
-dump_sprites = False
+dump_sprites = True
 dump_palettes = True
 
 if dump_palettes:
@@ -173,12 +173,23 @@ add_sprite_block(0x28,0x29,"jeep_shot",1,False)   # maybe wrong clut
 add_sprite_block(0x35,0x35,"ground_digging_bomb",14,False)   # maybe wrong clut
 
 # group jeep sprites to save sprites
-group_vertically(0x9,0xb)
-group_vertically(0xa,0xc)
-group_vertically(0xd,0xf)
-group_vertically(0xe,0x10)
-group_vertically(0x1,0x3)
-group_vertically(0x2,0x4)
+group_vertically(0x9,0xb)       # falling jeep
+group_vertically(0xa,0xc)       # falling jeep
+group_vertically(0xd,0xf)       # falling jeep
+group_vertically(0xe,0x10)      # falling jeep
+group_vertically(0x1,0x3)       # jeep part
+group_vertically(0x2,0x4)       # jeep part
+# group explosion sprites to save sprites
+group_vertically(0x1d,0x1a)       # exploding jeep
+group_vertically(0x1e,0x21)       # exploding jeep
+group_vertically(0x11,0x14)       # exploding jeep
+group_vertically(0x12,0x15)       # exploding jeep
+group_vertically(0x13,0x16)       # exploding jeep
+
+group_vertically(0x18,0x1b)       # exploding jeep
+group_vertically(0x17,0x20)       # exploding jeep
+group_vertically(0x19,0x22)       # exploding jeep
+group_vertically(0x1f,0x1c)       # exploding jeep
 
 
 bobs_used_colors = collections.Counter()
