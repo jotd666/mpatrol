@@ -102,6 +102,12 @@
 * 3: rising slope
 * >3: descending slope
 
+
+* 5 ufos max of one category? or not counting the hole makers
+MAX_NB_UFOS_1 = 5
+* 9 ufos max
+MAX_NB_UFOS_2 = 9
+
 * jeep states
 STATE_NOTHING_00 = 0
 STATE_REPOSITION_DEFAULT_01 = 1
@@ -111,6 +117,15 @@ START_JUMPING_04 = 4
 STATE_FALL_IN_HOLE_06 = 6
 STATE_EXPLODING_07 = 7
 STATE_HOLD_IN_AIR_08 = 8
+
+* obj_type is an index that allows to fetch object characteristics in a ROM
+* table. For instance, UFO is 0x2A, another ufo is 0x30
+* command/object structure is 16 bytes long
+obj_command = 0
+obj_x = 3
+obj_y = 7
+obj_next_frame_timeout = 0xA
+obj_type = 0xD
 
     .global mpatrol_irq
     .global mpatrol_reset
@@ -541,13 +556,14 @@ l_01da:
 	clr.w	cur_score2_e502                 	| [$01e6: ld   (cur_score2_e502),hl]
 	jra	swap_players_0603                             	| [$01e9: jp   $0603]
 
+
 run_objects_01ec:
 	* jump according to jeep state
 	* 2: normal
 	* 4: jumping
 	* 6: falling in hole
 	* 7: exploding
-	* jeep params is only one of the buffers (the first one)
+	* jeep params is only one of the buffers/objects (the first one)
 	* another block is in E320: forward_shot_indicator_E320
 	* first byte is the command (the index of the routine in jump table)
 	lea	jeep_params_E300,a2                	| [$01ec: ld   ix,jeep_params_E300] -  Pointer to command buffer (32 slots of 16 bytes) * C00F9
@@ -572,8 +588,8 @@ l_01f5:
 	jbsr	rst_28                            	| [$01ff: rst  $28] use jump table -  Call the routine by index number
 
 l_0200:
-	move.w	#0x0010,d3                      	| [$0200: ld   de,$0010] 16 -  Bytes to next slot * J01F9
-	add.w	d3,a2                            	| [$0203: add  ix,de] -  Point to next slot
+											| [$0200: ld   de,$0010] 16 -  Bytes to next slot * J01F9
+	add.w	#0x10,a2                            	| [$0203: add  ix,de] -  Point to next slot
 	lea	command_number_of_slots_E0E8,a0                	| [$0205: ld   hl,command_number_of_slots_E0E8] -  Get current count
 	subq.b	#1,(a0)                         	| [$0208: dec  (hl)] -  Decrement the count
 	jne	l_01f5                             	| [$0209: jr   nz,$01F5] -  Do all 32 slots
@@ -610,15 +626,15 @@ jump_table_020C:
 	.long	jeep_bombed_1433                 | 27
 	.long	update_yellow_tank_18e0          | 28
 	.long	ufo_appearing_1eaa               | 29 blue ufo appearing, transitions to 30
-	.long	animate_ufo_1f28              | 30 blue ufo update
+	.long	animate_ufo_1f28                 | 30 blue ufo update
 	.long	ufo_shot_20ac                    | 31
 	.long	show_kill_score_20c4             | 32
 	.long	ufo_appearing_1eaa               | 33 ufo appearing, transitions to 34
-	.long	animate_ufo_1f28              | 34 ufo flying
+	.long	animate_ufo_1f28                 | 34 ufo flying
 	.long	ufo_appearing_2000               | 35
 	.long	animate_ufo_201a                 | 36
 	.long	ufo_appearing_1ea4               | 37 ufo appearing, transitions to 38
-	.long	animate_ufo_1f28              | 38 ufo transition??? then 34
+	.long	animate_ufo_1f28                 | 38 ufo transition??? then 34
 	.long	ufo_appearing_204d               | 39
 	.long	ufo_crashing_on_player_209c      | 40
 	.long	handle_hole_making_bombs_1d23    | 41
@@ -1759,13 +1775,13 @@ l_0811:
 	
 * > D7: screen address
 compute_screen_address_081b:
-	move.b	(0x07,a2),d0                    	| [$081b: ld   a,(ix+$07)] -  Get the Y coordinate * C1670,C168F
+	move.b	(obj_y,a2),d0                    	| [$081b: ld   a,(ix+$07)] -  Get the Y coordinate * C1670,C168F
 	and.b	#0xF8,d0                         	| [$081e: and  $F8] -  Drop the divide-by-eight remainder (1111_1000)
 	move.w	#0x2000,d5                        	| [$0821: ld   h,$20] -  Will be 40xx ... tile memory
 	move.b	d0,d5                           	| [$0820: ld   l,a] -  To HL
 	add.w	d5,d5                            	| [$0823: add  hl,hl] -  Original Y value of 8 become 16
 	add.w	d5,d5                            	| [$0824: add  hl,hl] -  Value 8 becomes 32 ... multiply by 32 (bytes per row)
-	move.b	(0x03,a2),d0                    	| [$0825: ld   a,(ix+$03)] -  Get X coordinate
+	move.b	(obj_x,a2),d0                    	| [$0825: ld   a,(ix+$03)] -  Get X coordinate
 	roxr.b	#1,d0                           	| [$0828: rra] -  Divide by 2
 	move.b	d0,d3                           	| [$0829: ld   d,a] -  Hold this for use in drawing shot
 	roxr.b	#2,d0                           	| [$082a: rra] * 2 -  Divide by 4
@@ -1795,7 +1811,7 @@ update_surface_object_0838:
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$0838: ld   a,(unknown_E1E2)] -  * C1950,C1A22,C1A73
 	sub.b	(0x0f,a2),d0                     	| [$083b: sub  (ix+$0f)] object "absolute" X
 	neg.b	d0                               	| [$083e: neg]
-	move.b	d0,(0x03,a2)                    	| [$0840: ld   (ix+$03),a] update object screen X
+	move.b	d0,(obj_x,a2)                    	| [$0840: ld   (ix+$03),a] update object screen X
 	cmp.b	#0xE0,d0                         	| [$0843: cp   $E0]
 	jcs	l_08b4                             	| [$0845: jr   c,$08B4]
 	* hole/rock disappearing/appearing in screen
@@ -1808,7 +1824,7 @@ update_surface_object_0838:
 l_0852:
 	clr.b	(a2)                        	| [$0852: ld   (ix+$00),$00] -  * J143E,J1639,J163E,C1711,J177C,J1B13,J1CE0,C1D98,J1E11,J1E30,J1E38,J1E45,J1E55,J1E9E,J2028,J2039,J20BB,J20CF
 l_0856:
-	move.b	(0x0d,a2),d0                    	| [$0856: ld   a,(ix+$0d)] -  A = object.layoutIndex * C1794,J17C1,J1D20,C1E8B
+	move.b	(obj_type,a2),d0                    	| [$0856: ld   a,(ix+$0d)] -  A = object.layoutIndex * C1794,J17C1,J1D20,C1E8B
 												| [$0859: scf] -  A = 2 * object.layoutIndex ...
 	lsl.b	#1,d0                           	| [$085a: rla] -  ... + 1
 	bcc.b	0f                               	| [...]
@@ -1892,7 +1908,7 @@ draw_object_08b8:
 	moveq	#0,d0
 	* when game running, every second update, value is 0x80
 	* which makes game return immediately. Rest of the time it's 0
-	move.b	(0x0d,a2),d0                    	| [$08b8: ld   a,(ix+$0d)] -  Object number * J084B,J084F,J1360,J13B9,C13D8,C13FF,J1419,C1484,J1615,J1AED,J1D3F,J1D7F,J1D8D,J1D95,J1EA1,J20AF,J20C1,J20C7
+	move.b	(obj_type,a2),d0                    	| [$08b8: ld   a,(ix+$0d)] -  Object number * J084B,J084F,J1360,J13B9,C13D8,C13FF,J1419,C1484,J1615,J1AED,J1D3F,J1D7F,J1D8D,J1D95,J1EA1,J20AF,J20C1,J20C7
 	rol.b	#1,d0                            	| [$08bb: rlca] -  Was upper bit set (Thus A*4>=512)?
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$08bc: ret  c] [...] -  Yes ... skip
@@ -1924,9 +1940,9 @@ l_08c4:
 									| [$08e0: ld   h,(hl)] -  Get jump MSB
 									| [$08e1: ld   l,c] -  Now in HL
 	* load jeep X
-	move.b	(0x03,a2),d2                    	| [$08e2: ld   c,(ix+$03)] -  X coordinate to C
+	move.b	(obj_x,a2),d2                    	| [$08e2: ld   c,(ix+$03)] -  X coordinate to C
 	* load jeep Y (relative to ground)
-	move.b	(0x07,a2),d0                    	| [$08e5: ld   a,(ix+$07)] -  Y coordinate to A
+	move.b	(obj_y,a2),d0                    	| [$08e5: ld   a,(ix+$07)] -  Y coordinate to A
 	jbsr	compute_jeep_horizon_object_y_08ed                            	| [$08e8: call $08ED] -  ?? adjusted Y coordinate to B
 	clr.b	d0                               	| [$08eb: xor  a] -  Clear A ... many handlers need a zero
 	* called with d1,d2 as Y,X, d3,d4 as misc parameters
@@ -1971,8 +1987,8 @@ jump_table_08F5:
 
 
 draw_mine_0925:
-	addq.b	#1,(0x0a,a2)                    	| [$0925: inc  (ix+$0a)]
-	move.b	(0x0a,a2),d0                    	| [$0928: ld   a,(ix+$0a)]
+	addq.b	#1,(obj_next_frame_timeout,a2)                    	| [$0925: inc  (ix+$0a)]
+	move.b	(obj_next_frame_timeout,a2),d0                    	| [$0928: ld   a,(ix+$0a)]
 	and.b	#0x1F,d0                         	| [$092b: and  $1F]
 	cmp.b	#0x0B,d0                         	| [$092d: cp   $0B]
 	jcs	draw_rock_0969                             	| [$092f: jr   c,$0969]
@@ -2215,8 +2231,8 @@ update_jeep_sprite_row_0a6f:
 	add.b	d2,d0                            	| [$0a6f: add  a,c] -  Add the X coordinate offset * C0A63,C0AB0,C0ACD,C0B13
 	move.b	d0,d6                           	| [$0a70: ld   l,a] -  Hold in L
 	* set sprite X for 2 first sprites (jeep rear)
-	move.b	d0,(0x03,a3)                    	| [$0a71: ld   (iy+$03),a] -  Set the X coordinate for top sprite
-	move.b	d0,(0x07,a3)                    	| [$0a74: ld   (iy+$07),a] -  Set the X coordinate for the bottom sprite
+	move.b	d0,(obj_x,a3)                    	| [$0a71: ld   (iy+$03),a] -  Set the X coordinate for top sprite
+	move.b	d0,(obj_y,a3)                    	| [$0a74: ld   (iy+$07),a] -  Set the X coordinate for the bottom sprite
 	* set sprite Y
 	move.b	d1,(a3)                    	| [$0a77: ld   (iy+$00),b] -  Set the Y coordinate for top sprite
 	move.b	#0xF0,d0                        	| [$0a7a: ld   a,$F0] -  Back up ...
@@ -2415,9 +2431,9 @@ l_0bb7:
 	move.b	#0x09,(0x10,a2)                 	| [$0bc8: ld   (ix+$10),$09] -  ?? handler
 	move.b	#0xB0,(0x01,a2)                 	| [$0bcc: ld   (ix+$01),$B0] -  Moon buggy uses sprites B0
 	move.b	#0xA0,(0x21,a2)                 	| [$0bd0: ld   (ix+$21),$A0] -  ?? uses sprites A0
-	lea	object7_e370,a2                	| [$0bd4: ld   ix,object7_e370]
+	lea	ufo_objects_e370,a2                	| [$0bd4: ld   ix,ufo_objects_e370]
 	move.b	#0x60,d0                        	| [$0bd8: ld   a,$60]
-	move.b	#0x09,d1                        	| [$0bda: ld   b,$09] -  ?? This code makes the wheels fly off in a crash ??
+	move.b	#MAX_NB_UFOS_2,d1                        	| [$0bda: ld   b,$09]
 	move.w	#0x0010,d3                      	| [$0bdc: ld   de,$0010] 16
 l_0bdf:
 	move.b	d0,(0x01,a2)                    	| [$0bdf: ld   (ix+$01),a] -  * J0BE6
@@ -2864,7 +2880,7 @@ l_0e4b:
 
 l_0e4f:
 	move.b	#0x19,d0                        	| [$0e4f: ld   a,$19] -  * J0E27
-	move.b	d0,object7_e370                 	| [$0e51: ld   (object7_e370),a]
+	move.b	d0,ufo_objects_e370                 	| [$0e51: ld   (ufo_objects_e370),a]
 	rts                                    	| [$0e54: ret]
 
 * called when rock is hit
@@ -2923,7 +2939,7 @@ l_0e93:
 l_0e9e:
 	clr.w	d3                               	| [$0e9e: ld   d,$00] -  * C0F2D
 	move.b	(0x05,a3),d3                    	| [$0ea0: ld   e,(iy+$05)]
-	lea	object7_e370,a2                	| [$0ea3: ld   ix,object7_e370]
+	lea	ufo_objects_e370,a2                	| [$0ea3: ld   ix,ufo_objects_e370]
 l_0ea7:
 	move.b	(0x04,a3),d1                    	| [$0ea7: ld   b,(iy+$04)] -  * J0EC1
 l_0eaa:
@@ -2946,12 +2962,12 @@ l_0ec3:
 	move.b	(a3),d0                    	| [$0ec3: ld   a,(iy+$00)] -  * J0EAE
 	move.b	d0,(0x0c,a2)                    	| [$0ec6: ld   (ix+$0c),a]
 	move.b	(0x01,a3),d0                    	| [$0ec9: ld   a,(iy+$01)]
-	move.b	d0,(0x0d,a2)                    	| [$0ecc: ld   (ix+$0d),a]
+	move.b	d0,(obj_type,a2)                    	| [$0ecc: ld   (ix+$0d),a]
 	move.b	unknown_E509,d0                 	| [$0ecf: ld   a,(unknown_E509)]
 	subq.b	#0x02,d0                        	| [$0ed2: sub  $02]
 	move.b	d0,(0x0f,a2)                    	| [$0ed4: ld   (ix+$0f),a]
 	jbsr	l_153d                            	| [$0ed7: call $153D]
-	add.b	(0x03,a3),d0                     	| [$0eda: add  a,(iy+$03)]
+	add.b	(obj_x,a3),d0                     	| [$0eda: add  a,(iy+$03)]
 	move.b	d0,(0x07,a2)                    	| [$0edd: ld   (ix+$07),a]
 	clr.b	(0x0b,a2)                        	| [$0ee0: ld   (ix+$0b),$00]
 	clr.b	(0x03,a2)                        	| [$0ee4: ld   (ix+$03),$00]
@@ -3003,7 +3019,7 @@ l_0f22:
 	jeq	l_0f3a                             	| [$0f27: jr   z,$0F3A]
 	lea	game_rom+0x1055,a3                      	| [$0f29: ld   iy,$1055]
 	jbsr	l_0e9e                            	| [$0f2d: call $0E9E]
-	clr.b	(0x0a,a2)                        	| [$0f30: ld   (ix+$0a),$00]
+	clr.b	(obj_next_frame_timeout,a2)                        	| [$0f30: ld   (ix+$0a),$00]
 	addq.b	#1,(0x0e,a2)                    	| [$0f34: inc  (ix+$0e)]
 	move.b	d2,(a2)                    	| [$0f37: ld   (ix+$00),c]
 l_0f3a:
@@ -3040,7 +3056,7 @@ l_0f4f:
 	rts                                    	| [$0f69: ret]
 l_0f6a:
 	move.b	d0,(a0)                         	| [$0f6a: ld   (hl),a] -  * J0F58
-	lea	object7_e370,a3                	| [$0f6b: ld   iy,object7_e370]
+	lea	ufo_objects_e370,a3                	| [$0f6b: ld   iy,ufo_objects_e370]
 	move.w	#0x0010,d3                      	| [$0f6f: ld   de,$0010] 16
 	move.b	#0x19,d1                        	| [$0f72: ld   b,$19]
 	subq.b	#1,d2                           	| [$0f74: dec  c]
@@ -3054,7 +3070,7 @@ l_0f78:
 	btst.b	#1,d6                           	| [$0f82: bit  1,l]
 	jne	l_0f9a                             	| [$0f84: jr   nz,$0F9A]
 	move.b	d2,d5                           	| [$0f86: ld   h,c]
-	move.b	(0x0d,a3),d0                    	| [$0f87: ld   a,(iy+$0d)]
+	move.b	(obj_type,a3),d0                    	| [$0f87: ld   a,(iy+$0d)]
 	cmp.b	#0x2A,d0                         	| [$0f8a: cp   $2A]
 	jne	l_0f8f                             	| [$0f8c: jr   nz,$0F8F]
 	addq.b	#1,d5                           	| [$0f8e: inc  h]
@@ -3103,9 +3119,9 @@ l_0fc5:
 	move.b	d0,d3                           	| [$0fca: ld   e,a]
 	lea	unknown_E3FF,a3                	| [$0fcd: ld   iy,unknown_E3FF]
 	add.w	d3,a3                            	| [$0fd1: add  iy,de]
-	lea	object7_e370,a0                	| [$0fd3: ld   hl,object7_e370]
+	lea	ufo_objects_e370,a0                	| [$0fd3: ld   hl,ufo_objects_e370]
 	move.b	#0x10,d3                        	| [$0fd6: ld   e,$10]
-	move.b	#0x05,d1                        	| [$0fd8: ld   bc,$053A] 1338
+	move.b	#MAX_NB_UFOS_1,d1                        	| [$0fd8: ld   bc,$053A] 1338
 	move.b	#0x3a,d2                        	| [$0fd8: ld   bc,$053A] 1338
 	* look for free slot?
 l_0fdb:
@@ -3123,11 +3139,11 @@ l_105d:
 	move.l	a0,a2
 	                            	| [$1062: add  ix,de]
 l_1064:
-	move.b	d2,(0x0d,a2)                    	| [$1064: ld   (ix+$0d),c] -  * J1BBD
+	move.b	d2,(obj_type,a2)                    	| [$1064: ld   (ix+$0d),c] -  * J1BBD
 	clr.b	(0x09,a2)                        	| [$1067: ld   (ix+$09),$00]
 	clr.b	(0x08,a2)                        	| [$106b: ld   (ix+$08),$00]
-	move.b	(0x07,a3),d3                    	| [$106f: ld   d,(iy+$07)]
-	move.b	d3,(0x07,a2)                    	| [$1072: ld   (ix+$07),d]
+	move.b	(obj_y,a3),d3                    	| [$106f: ld   d,(iy+$07)]
+	move.b	d3,(obj_y,a2)                    	| [$1072: ld   (ix+$07),d]
 	move.b	(a3),d0                    	| [$1075: ld   a,(iy+$00)]
 	sub.b	#0x1E,d0                         	| [$1078: sub  $1E]
 	cmp.b	#0x0A,d0                         	| [$107a: cp   $0A]
@@ -3138,7 +3154,7 @@ l_1064:
 	beq.b	0f                               	| [...]
 	rts                                    	| [$107f: ret  nz] [...]
 0:
-	move.b	(0x03,a3),d0                    	| [$1080: ld   a,(iy+$03)]
+	move.b	(obj_x,a3),d0                    	| [$1080: ld   a,(iy+$03)]
 	sub.b	#0x10,d0                         	| [$1083: sub  $10]
 	cmp.b	#0xE0,d0                         	| [$1085: cp   $E0]
 	bcs.b	0f                               	| [...]
@@ -3155,7 +3171,7 @@ l_1064:
 	add.b	d1,d0                            	| [$1098: add  a,b]
 	sub.b	#0x2F,d0                         	| [$1099: sub  $2F]
 	move.b	d0,d2                           	| [$109b: ld   c,a]
-	sub.b	(0x03,a2),d0                     	| [$109c: sub  (ix+$03)]
+	sub.b	(obj_x,a2),d0                     	| [$109c: sub  (ix+$03)]
 	add.b	#0x08,d0                         	| [$109f: add  a,$08]
 	cmp.b	#0x11,d0                         	| [$10a1: cp   $11]
 	jcc	l_10a9                             	| [$10a4: jr   nc,$10A9]
@@ -3166,12 +3182,12 @@ l_1064:
 l_10a9:
 	move.b	d2,d0                           	| [$10a3: ld   a,c]
 l_10a9_2:
-	cmp.b	(0x03,a3),d0                     	| [$10a9: cp   (iy+$03)] -  * J10A4
+	cmp.b	(obj_x,a3),d0                     	| [$10a9: cp   (iy+$03)] -  * J10A4
 	SET_X_FROM_C
 	roxl.b	#1,d0                           	| [$10ac: rla]
 	move.b	d0,(0x0c,a2)                    	| [$10ad: ld   (ix+$0c),a]
 	move.b	d2,d0                           	| [$10b0: ld   a,c]
-	jbsr	compute_object_y_1538                            	| [$10b1: call $1538]
+	jbsr	compute_ground_object_y_from_x_1538                            	| [$10b1: call $1538]
 	sub.b	d3,d0                            	| [$10b4: sub  d]
 	roxr.b	#3,d0                           	| [$10b5: rra] * 3
 	and.b	#0x1F,d0                         	| [$10b8: and  $1F]
@@ -3530,7 +3546,7 @@ l_129f:
 	move.w	(a7)+,d0
 	rts                                    	| [$12a6: ret] -  Done
 l_12a7:
-	lea	object7_e370,a0                	| [$12a7: ld   hl,object7_e370] -  * C027A
+	lea	ufo_objects_e370,a0                	| [$12a7: ld   hl,ufo_objects_e370] -  * C027A
 	move.w	#0x0010,d3                      	| [$12aa: ld   de,$0010] 16
 	move.b	#0x19,d1                        	| [$12ad: ld   bc,$1902] 6402
 	move.b	#0x02,d2                        	| [$12ad: ld   bc,$1902] 6402
@@ -3620,7 +3636,7 @@ course_start_1311:
 	move.b	timer_8bit_E04E,d0                 	| [$1317: ld   a,(timer_8bit_E04E)] -  Decrement counter ...
 	and.b	#0x03,d0                         	| [$131a: and  $03] -  ... at 1/4 ISR rate
 	jne	l_1366                             	| [$131c: jr   nz,$1366] -  Not time to decrement
-	subq.b	#1,(0x0a,a2)                    	| [$131e: dec  (ix+$0a)] -  Decrement the counter for waiting to start
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$131e: dec  (ix+$0a)] -  Decrement the counter for waiting to start
 	jpl	l_1366                             	| [$1321: jp   p,$1366] -  Not time to start
 	lea	game_rom+0x2A5F,a0                      	| [$1324: ld   hl,$2A5F] -  "CHAMPION COURSE 1 GO" script
 	jbsr	erase_script_037b                            	| [$1327: call $037B] -  Erase the text
@@ -3727,47 +3743,47 @@ jeep_falling_in_hole_13c2:
 	add.w	d3,d5                            	| [$13d4: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E306                 	| [$13d5: ld   (unknown_16bit_E306),hl]
 	jbsr	draw_object_08b8                            	| [$13d8: call $08B8]
-	subq.b	#1,(0x0a,a2)                    	| [$13db: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$13db: dec  (ix+$0a)]
 	beq.b	0f                               	| [...]
 	rts                                    	| [$13de: ret  nz] [...]
 0:
 	addq.b	#1,(a2)                    	| [$13df: inc  (ix+$00)]
-	move.b	#0x03,(0x0d,a2)                 	| [$13e2: ld   (ix+$0d),$03]
+	move.b	#0x03,(obj_type,a2)                 	| [$13e2: ld   (ix+$0d),$03]
 	move.b	#0x1F,d0                        	| [$13e6: ld   a,$1F] -  Play ...
 	jra	queue_sound_effect_0d75                             	| [$13e8: jp   $0D75] -  ... car explosion then return
 handle_jeep_explosion_13eb:
 	clr.b	d0                               	| [$13eb: xor  a]
 	move.b	d0,unknown_E1A2                 	| [$13ec: ld   (unknown_E1A2),a]
-	subq.b	#1,(0x0a,a2)                    	| [$13ef: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$13ef: dec  (ix+$0a)]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$13f2: ret  p] [...]
 0:
-	move.b	(0x0d,a2),d0                    	| [$13f3: ld   a,(ix+$0d)]
+	move.b	(obj_type,a2),d0                    	| [$13f3: ld   a,(ix+$0d)]
 	cmp.b	#0x09,d0                         	| [$13f6: cp   $09]
 	jcc	l_0118                             	| [$13f8: jp   nc,$0118]
 	cmp.b	#0x05,d0                         	| [$13fb: cp   $05]
 	jcs	l_140a                             	| [$13fd: jr   c,$140A]
 	jbsr	draw_object_08b8                            	| [$13ff: call $08B8]
-	addq.b	#1,(0x0d,a2)                    	| [$1402: inc  (ix+$0d)]
-	move.b	#0x0E,(0x0a,a2)                 	| [$1405: ld   (ix+$0a),$0E]
+	addq.b	#1,(obj_type,a2)                    	| [$1402: inc  (ix+$0d)]
+	move.b	#0x0E,(obj_next_frame_timeout,a2)                 	| [$1405: ld   (ix+$0a),$0E]
 	rts                                    	| [$1409: ret]
 l_140a:
-	btst.b	#1,(0x0a,a2)                    	| [$140a: bit  1,(ix+$0a)] -  * J13FD
+	btst.b	#1,(obj_next_frame_timeout,a2)                    	| [$140a: bit  1,(ix+$0a)] -  * J13FD
 	beq.b	0f                               	| [...]
 	rts                                    	| [$140e: ret  nz] [...]
 0:
 	eor.b	#0x07,d0                         	| [$140f: xor  $07]
-	move.b	d0,(0x0d,a2)                    	| [$1411: ld   (ix+$0d),a]
-	move.b	(0x0a,a2),d0                    	| [$1414: ld   a,(ix+$0a)]
+	move.b	d0,(obj_type,a2)                    	| [$1411: ld   (ix+$0d),a]
+	move.b	(obj_next_frame_timeout,a2),d0                    	| [$1414: ld   a,(ix+$0a)]
 	cmp.b	#0xC0,d0                         	| [$1417: cp   $C0]
 	jcc	draw_object_08b8                             	| [$1419: jp   nc,$08B8]
-	move.b	#0x05,(0x0d,a2)                 	| [$141c: ld   (ix+$0d),$05]
+	move.b	#0x05,(obj_type,a2)                 	| [$141c: ld   (ix+$0d),$05]
 	rts                                    	| [$1420: ret]
 
 * called when the jeep jumps just after "moon patrol" title
 display_moon_patrol_title_1421:
-	subq.b	#1,(0x0a,a2)                    	| [$1421: dec  (ix+$0a)] -  Decrement the count-down timer
-	move.b	(0x0a,a2),d0                    	| [$1424: ld   a,(ix+$0a)] -  Has the counter ...
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1421: dec  (ix+$0a)] -  Decrement the count-down timer
+	move.b	(obj_next_frame_timeout,a2),d0                    	| [$1424: ld   a,(ix+$0a)] -  Has the counter ...
 	cmp.b	#0x50,d0                         	| [$1427: cp   $50] -  ... dropped low enough?
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1429: ret  nc] [...] -  No ... stay in this state
@@ -3776,8 +3792,9 @@ display_moon_patrol_title_1421:
 	addq.b	#1,(a0)                         	| [$142d: inc  (hl)]
 	move.b	#0x04,(a2)                 	| [$142e: ld   (ix+$00),$04] -  Transition to handling buggy jumping
 	rts                                    	| [$1432: ret] -  Done
+	
 jeep_bombed_1433:
-	jbsr	load_d5_16_20db                            	| [$1433: call $20DB]
+	jbsr	copy_object_structure_to_temp_object_20ef                            	| [$1433: call $20DB]
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1436: ld   (unknown_16bit_E0D6),hl]
 	move.w	d5,d0                           	| [$1439: ld   a,h]
 	lsr.w	#8,d0
@@ -3786,8 +3803,8 @@ jeep_bombed_1433:
 	jcc	l_0852                             	| [$143e: jp   nc,$0852]
 	LOAD_LEW	unknown_16bit_E0D8,d5             	| [$1441: ld   hl,(unknown_16bit_E0D8)]
 	addq.w	#1,d5                           	| [$1444: inc  hl]
-	btst.b	#7,d5                           	| [$1445: bit  7,h]
-	jne	l_144b                             	| [$1447: jr   nz,$144B]
+												| [$1445: bit  7,h]
+	jmi	l_144b                             	| [$1447: jr   nz,$144B]
 	subq.w	#2,d5                           	| [$1449: dec  hl] * 2
 l_144b:
 	STORE_LEW	d5,unknown_16bit_E0D8                 	| [$144b: ld   (unknown_16bit_E0D8),hl] -  * J1447
@@ -3803,7 +3820,7 @@ l_144b:
 	rol.b	#1,d5                           	| [$1461: rl   h]
 	jcs	l_1484                             	| [$1463: jr   c,$1484]
 	add.b	#0x0B,d0                         	| [$1465: add  a,$0B]
-	jbsr	compute_object_y_1538                            	| [$1467: call $1538]
+	jbsr	compute_ground_object_y_from_x_1538                            	| [$1467: call $1538]
 	sub.b	#0x08,d0                         	| [$146a: sub  $08]
 	cmp.b	d2,d0                            	| [$146c: cp   c]
 	jcc	l_1484                             	| [$146d: jr   nc,$1484]
@@ -3819,7 +3836,7 @@ l_144b:
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$1481: ld   (unknown_16bit_E0DC),hl]
 l_1484:
 	jbsr	draw_object_08b8                            	| [$1484: call $08B8] -  * J1463,J146D
-	jra	l_20ef                             	| [$1487: jp   $20EF]
+	jra	copy_temp_object_structure_to_object_20ef                             	| [$1487: jp   $20EF]
 l_148a:
 	move.b	unknown_E049,d0                 	| [$148a: ld   a,(unknown_E049)] -  * C1363
 	add.b	d0,d0                            	| [$148d: add  a,a]
@@ -3952,22 +3969,24 @@ compute_jeep_y_1533:
 	move.b	jeep_x_E303,d0                 	| [$1533: ld   a,(buggy_x_e303)] -  * C1366,C1381,C13A7,C18C3
 	add.b	#0x20,d0                         	| [$1536: add  a,$20]
 	
+* computes exact ground Y projection given X
 * < d0: object X
+* > d0: Y projection of object
 * > d5/d6: 
-compute_object_y_1538:
+compute_ground_object_y_from_x_1538:
 	move.b	d0,d1                           	| [$1538: ld   b,a] -  * C10B1,C1467,C157C,C1A83,C1AE5,C1CFA
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1539: ld   a,(unknown_E1E2)]
 	add.b	d1,d0                            	| [$153c: add  a,b]
 l_153d:
 	addq.b	#0x06,d0                        	| [$153d: add  a,$06] -  * C0ED7
 	lsr.b	#2,d0                            	| [$153f: srl  a] * 2
-	moveq	#0,d5
-	move.b	d0,d5                           	| [$1543: ld   l,a]
+	moveq	#0,d6
+	move.b	d0,d6                           	| [$1543: ld   l,a]
 	lea		ground_y_array_E200,a0                        	| [$1544: ld   h,$E2]
-	add.w	d5,a0
+	add.w	d6,a0
 	move.b	(a0),d0                         	| [$1546: ld   a,(hl)]
 	* also update D5/D6, some calls expect that
-	LOAD_D5D6_FROM_D5_16
+	move.b	#0xE2,d5		| useful??
 	rts                                    	| [$1547: ret]
 	
 * Check the fire button and initiate a player shot if
@@ -3993,7 +4012,7 @@ player_shot_1548:
 	move.b	#0x0A,d0                        	| [$1557: ld   a,$0A] -  Init player ...
 	move.b	d0,forward_shot_indicator_E320                 	| [$1559: ld   (forward_shot_indicator_E320),a] -  ... forward shot routine
 l_155c:
-	lea	unknown_E330,a0                	| [$155c: ld   hl,unknown_E330] -  Start of player air shot objects * J1555
+	lea	player_air_shots_E330,a0                	| [$155c: ld   hl,player_air_shots_E330] -  Start of player air shot objects * J1555
 	move.b	#0x04,d1                        	| [$155f: ld   b,$04] -  Maximum of 4 shots in the air
 	move.w	#0x0010,d3                      	| [$1561: ld   de,$0010] 16 -  16 bytes per shot structure
 l_1564:
@@ -4017,7 +4036,7 @@ compute_wheels_positions_1576:
 	move.b	jeep_x_E303,d0                 	| [$1576: ld   a,(buggy_x_e303)] -  * C135D
 	move.b	d0,d2                           	| [$1579: ld   c,a]
 	addq.b	#0x04,d0                        	| [$157a: add  a,$04]
-	jbsr	compute_object_y_1538                            	| [$157c: call $1538]
+	jbsr	compute_ground_object_y_from_x_1538                            	| [$157c: call $1538]
 	sub.b	#0x09,d0                         	| [$157f: sub  $09]
 	jbsr	update_leftmost_jeep_wheel_15c9                            	| [$1581: call $15C9]
 	                           	| [$1584: ld   a,d]
@@ -4086,7 +4105,7 @@ l_15d9:
 	jra	write_sprite_data_0976                             	| [$15dd: jp   $0976]
 	
 init_forward_shot_15e0:
-	move.b	#0x0C,(0x0a,a2)                 	| [$15e0: ld   (ix+$0a),$0C] -  12 movements before ending
+	move.b	#0x0C,(obj_next_frame_timeout,a2)                 	| [$15e0: ld   (ix+$0a),$0C] -  12 movements before ending
 	move.b	jeep_y_offset_E307,d0                 	| [$15e4: ld   a,(buggy_y_e307)] -  Moon buggy Y coordinate
 	add.b	#0x0A,d0                         	| [$15e7: add  a,$0A] -  Start shot in front of gun
 	move.b	d0,forward_shot_y_E327                 	| [$15e9: ld   (forward_shot_y_E327),a] -  Set the forward shot's Y coordinate
@@ -4097,13 +4116,13 @@ init_forward_shot_15e0:
 	addq.b	#1,(a2)                    	| [$15f6: inc  (ix+$00)] -  Handler is now "0B Run player forward shot"
 	rts                                    	| [$15f9: ret] -  Done
 handle_forward_shot_15fa:
-	subq.b	#1,(0x0a,a2)                    	| [$15fa: dec  (ix+$0a)] -  Has the shot moved all of its allocated time?
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$15fa: dec  (ix+$0a)] -  Has the shot moved all of its allocated time?
 	jeq	l_1618                             	| [$15fd: jr   z,$1618] -  Yes ... begin its death
 	LOAD_LEW	unknown_16bit_E322,d5             	| [$15ff: ld   hl,(unknown_16bit_E322)] -  Forward shot X coordinate (and ???)
 	                      	| [$1602: ld   de,$045D] -  +4 X forward rate
 	add.w	#0x45D,d5                            	| [$1605: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E322                 	| [$1606: ld   (unknown_16bit_E322),hl]
-	move.b	(0x0a,a2),d0                    	| [$1609: ld   a,(ix+$0a)] -  Count
+	move.b	(obj_next_frame_timeout,a2),d0                    	| [$1609: ld   a,(ix+$0a)] -  Count
 	ror.b	#1,d0                           	| [$160c: rra] -  Is it odd or even?
 	jcs	l_1612                             	| [$160f: jr   c,$1612] -  It is odd ... use first shot image
 	move.b	#0x0A,d0                        	| [$160d: ld   a,$09] -  Object_09 First shot image
@@ -4112,51 +4131,51 @@ handle_forward_shot_15fa:
 l_1612:
 	move.b	#0x09,d0                        	| [$160d: ld   a,$09] -  Object_09 First shot image
 l_1612_2:
-	move.b	d0,(0x0d,a2)                    	| [$1612: ld   (ix+$0d),a] -  Set new shot image * J160F
+	move.b	d0,(obj_type,a2)                    	| [$1612: ld   (ix+$0d),a] -  Set new shot image * J160F
 	jra	draw_object_08b8                             	| [$1615: jp   $08B8]
 l_1618:
 	addq.b	#1,(a2)                    	| [$1618: inc  (ix+$00)] -  Transition to 0C to show the shot exploding * J15FD
-	move.b	#0x03,(0x0a,a2)                 	| [$161b: ld   (ix+$0a),$03] -  Three runs before changing sprite image
-	move.b	#0x0B,(0x0d,a2)                 	| [$161f: ld   (ix+$0d),$0B] -  Start with first explosion Object_0B
+	move.b	#0x03,(obj_next_frame_timeout,a2)                 	| [$161b: ld   (ix+$0a),$03] -  Three runs before changing sprite image
+	move.b	#0x0B,(obj_type,a2)                 	| [$161f: ld   (ix+$0d),$0B] -  Start with first explosion Object_0B
 l_1623:
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1623: ld   a,(unknown_E1E2)] -  * C1DF7,C1E18
-	add.b	(0x03,a2),d0                     	| [$1626: add  a,(ix+$03)]
+	add.b	(obj_x,a2),d0                     	| [$1626: add  a,(ix+$03)]
 	move.b	d0,(0x0f,a2)                    	| [$1629: ld   (ix+$0f),a] -  ?? X offset accounting for speed ??
 	rts                                    	| [$162c: ret]
 forward_shot_exploding_162d:
 	jbsr	update_surface_object_0831                            	| [$162d: call $0831] -  ?? changing X based on speed
-	subq.b	#1,(0x0a,a2)                    	| [$1630: dec  (ix+$0a)] -  Count down delay between image changes
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1630: dec  (ix+$0a)] -  Count down delay between image changes
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$1633: ret  p] [...] -  Return ... not time to change image
 0:
-	move.b	(0x0d,a2),d0                    	| [$1634: ld   a,(ix+$0d)] -  Get image number
+	move.b	(obj_type,a2),d0                    	| [$1634: ld   a,(ix+$0d)] -  Get image number
 	cmp.b	#0x0D,d0                         	| [$1637: cp   $0D] -  Player shot miss explosion end Object_0D?
 	jeq	l_0852                             	| [$1639: jp   z,$0852] -  Yes ... end the explosion
 	cmp.b	#0x29,d0                         	| [$163c: cp   $29] -  Player shot hit explosion end Object_29?
 	jeq	l_0852                             	| [$163e: jp   z,$0852] -  Yes ... end the explosion
-	addq.b	#1,(0x0d,a2)                    	| [$1641: inc  (ix+$0d)] -  Next image
-	move.b	#0x03,(0x0a,a2)                 	| [$1644: ld   (ix+$0a),$03] -  Set new image delay
+	addq.b	#1,(obj_type,a2)                    	| [$1641: inc  (ix+$0d)] -  Next image
+	move.b	#0x03,(obj_next_frame_timeout,a2)                 	| [$1644: ld   (ix+$0a),$03] -  Set new image delay
 	rts                                    	| [$1648: ret] -  Done
 init_vertical_shot_1649:
 	move.b	jeep_x_E303,d0                 	| [$1649: ld   a,(buggy_x_e303)] -  Get the player-object X coordinate
 	add.b	#0x0A,d0                         	| [$164c: add  a,$0A] -  Offset to where the up-gun is in the image
-	move.b	d0,(0x03,a2)                    	| [$164e: ld   (ix+$03),a] -  Set the air-shot's X coordinate
+	move.b	d0,(obj_x,a2)                    	| [$164e: ld   (ix+$03),a] -  Set the air-shot's X coordinate
 	move.b	jeep_y_offset_E307,d0                 	| [$1651: ld   a,(buggy_y_e307)] -  Get the player's Y coordinate
 	addq.b	#0x02,d0                        	| [$1654: add  a,$02] -  Offset to where shot starts
-	move.b	d0,(0x07,a2)                    	| [$1656: ld   (ix+$07),a] -  Set shot Y coordinate
+	move.b	d0,(obj_y,a2)                    	| [$1656: ld   (ix+$07),a] -  Set shot Y coordinate
 	addq.b	#1,(a2)                    	| [$1659: inc  (ix+$00)] -  Next command ... 0F (run the air shot)
 	rts                                    	| [$165c: ret] -  Done
 handle_vertical_shot_165d:
 	move.b	jeep_params_E300,d0                 	| [$165d: ld   a,(jeep_params_E300)] -  Moon buggy command
 	cmp.b	#STATE_FALL_IN_HOLE_06,d0                         	| [$1660: cp   $06] -  Is buggy crashing?
 	jcc	clear_vertical_shot_168f                             	| [$1662: jr   nc,$168F] -  Yes ... command 6 or greater ... remove shot from active duty
-	move.b	(0x07,a2),d0                    	| [$1664: ld   a,(ix+$07)] -  Get shot Y coordinate
+	move.b	(obj_y,a2),d0                    	| [$1664: ld   a,(ix+$07)] -  Get shot Y coordinate
 	subq.b	#0x03,d0                        	| [$1667: sub  $03] -  Move it up
 	cmp.b	#0x3A,d0                         	| [$1669: cp   $3A] -  Less than 58 (status area) ?
 	jcs	clear_vertical_shot_168f                             	| [$166b: jr   c,$168F] -  Shot has left the screen ... remove it
-	move.b	d0,(0x07,a2)                    	| [$166d: ld   (ix+$07),a] -  New shot Y coordinate
+	move.b	d0,(obj_y,a2)                    	| [$166d: ld   (ix+$07),a] -  New shot Y coordinate
 	jbsr	compute_screen_address_081b                            	| [$1670: call $081B] -  Get text screen pointer for X,Y coordinates
-	move.b	(0x07,a2),d0                    	| [$1673: ld   a,(ix+$07)] -  Get Y coordinate
+	move.b	(obj_y,a2),d0                    	| [$1673: ld   a,(ix+$07)] -  Get Y coordinate
 	roxr.b	#3,d0                           	| [$1676: rra] * 3 -  Rotate ... (well, rather *8)
 	move.b	d3,d0                           	| [$1679: ld   a,d] -  X coordinate divided by 2
 	roxl.b	#1,d0                           	| [$167a: rla] -  Pull in Y bit to select top (0) or bottom (1) for shot's position in tile
@@ -4198,7 +4217,7 @@ clear_vertical_shot_168f:
 ground_objects_collision_checks_1699:
 	moveq	#0,d0
 	* load object screen X in D2
-	move.b	(0x03,a2),d2                    	| [$1699: ld   c,(ix+$03)] -  * C18E3,C1953,C195A,C1A2B,C1A8A,C1B16,C1B27
+	move.b	(obj_x,a2),d2                    	| [$1699: ld   c,(ix+$03)] -  * C18E3,C1953,C195A,C1A2B,C1A8A,C1B16,C1B27
 	
 	move.b	(0x0c,a2),d0                    	| [$169c: ld   a,(ix+$0c)]
 	lsl.b	#3,d0                            	| [$169f: add  a,a]
@@ -4223,7 +4242,7 @@ l_16b7:
 	cmp.b	#0xE8,d0                         	| [$16bc: cp   $E8]
 	jcs	l_16cb                             	| [$16be: jr   c,$16CB]
 	move.b	forward_shot_y_E327,d0                 	| [$16c0: ld   a,(forward_shot_y_E327)]
-	sub.b	(0x07,a2),d0                     	| [$16c3: sub  (ix+$07)]
+	sub.b	(obj_y,a2),d0                     	| [$16c3: sub  (ix+$07)]
 	add.b	(a0),d0                          	| [$16c6: add  a,(hl)]
 	add.b	d4,d0                            	| [$16c7: add  a,e]
 	jpl	l_174e                             	| [$16c8: jp   p,$174E]
@@ -4271,7 +4290,7 @@ l_16e1:
 	
 	move.b	jeep_y_offset_E307,d0                 	| [$16ec: ld   a,(buggy_y_e307)]
 	add.b	(a0),d0                          	| [$16ef: add  a,(hl)]
-	sub.b	(0x07,a2),d0                     	| [$16f0: sub  (ix+$07)]
+	sub.b	(obj_y,a2),d0                     	| [$16f0: sub  (ix+$07)]
 	subq.b	#1,d0                           	| [$16f3: dec  a]
 	* collision with object (rock,...) or hit by bomb
 	add.b	d1,d0                            	| [$16f4: add  a,b]
@@ -4324,7 +4343,7 @@ l_172a:
 	jra	queue_sound_effect_0d75                             	| [$174b: jp   $0D75] -  ... car explosion
 l_174e:
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$174e: ld   a,(unknown_E1E2)] -  * J16C8
-	add.b	(0x03,a2),d0                     	| [$1751: add  a,(ix+$03)]
+	add.b	(obj_x,a2),d0                     	| [$1751: add  a,(ix+$03)]
 	move.b	d0,unknown_E32F                 	| [$1754: ld   (unknown_E32F),a]
 	move.b	#0x0D,d0                        	| [$1757: ld   a,$0D]
 	move.b	d0,forward_shot_indicator_E320                 	| [$1759: ld   (forward_shot_indicator_E320),a]
@@ -4350,8 +4369,8 @@ l_177f:
 	addq.b	#0x05,d0                        	| [$1784: add  a,$05]
 	move.b	d0,(0x08,a2)                    	| [$1786: ld   (ix+$08),a]
 	jbsr	store_special_event_02c2                            	| [$1789: call $02C2]
-	addq.b	#1,(a2)                    	| [$178c: inc  (ix+$00)]
-	clr.b	(0x0a,a2)                        	| [$178f: ld   (ix+$0a),$00]
+	addq.b	#1,(obj_command,a2)                    	| [$178c: inc  (ix+$00)] change state
+	clr.b	(obj_next_frame_timeout,a2)                        	| [$178f: ld   (ix+$0a),$00]
 	rts                                    	| [$1793: ret]
 l_1794:
 	jbsr	l_0856                            	| [$1794: call $0856] -  * J177F
@@ -4367,15 +4386,15 @@ l_179d:
 
 	LOAD_D5D6_FROM_D5_16
 	
-	move.b	(0x07,a2),d0                    	| [$17a7: ld   a,(ix+$07)]
+	move.b	(obj_y,a2),d0                    	| [$17a7: ld   a,(ix+$07)]
 	add.b	d5,d0                            	| [$17aa: add  a,h]
-	move.b	d0,(0x07,a2)                    	| [$17ab: ld   (ix+$07),a]
-	move.b	(0x03,a2),d0                    	| [$17ae: ld   a,(ix+$03)]
+	move.b	d0,(obj_y,a2)                    	| [$17ab: ld   (ix+$07),a]
+	move.b	(obj_x,a2),d0                    	| [$17ae: ld   a,(ix+$03)]
 	add.b	d6,d0                            	| [$17b1: add  a,l]
-	move.b	d0,(0x03,a2)                    	| [$17b2: ld   (ix+$03),a]
-	move.b	#0x54,(0x0d,a2)                 	| [$17b5: ld   (ix+$0d),$54]
+	move.b	d0,(obj_x,a2)                    	| [$17b2: ld   (ix+$03),a]
+	move.b	#0x54,(obj_type,a2)                 	| [$17b5: ld   (ix+$0d),$54]
 	move.b	#0x21,(a2)                 	| [$17b9: ld   (ix+$00),$21]
-	move.b	#0x3B,(0x0a,a2)                 	| [$17bd: ld   (ix+$0a),$3B]
+	move.b	#0x3B,(obj_next_frame_timeout,a2)                 	| [$17bd: ld   (ix+$0a),$3B]
 	jra	l_0856                             	| [$17c1: jp   $0856]
 
 l_17c4:
@@ -4565,12 +4584,12 @@ l_18d1:
 update_yellow_tank_18e0:
 	jbsr	update_surface_object_0831                            	| [$18e0: call $0831]
 	jbsr	ground_objects_collision_checks_1699                            	| [$18e3: call $1699]
-	subq.b	#1,(0x0a,a2)                    	| [$18e6: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$18e6: dec  (ix+$0a)]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$18e9: ret  p] [...]
 0:
-	addq.b	#1,(0x0a,a2)                    	| [$18ea: inc  (ix+$0a)]
-	move.b	(0x03,a2),d0                    	| [$18ed: ld   a,(ix+$03)]
+	addq.b	#1,(obj_next_frame_timeout,a2)                    	| [$18ea: inc  (ix+$0a)]
+	move.b	(obj_x,a2),d0                    	| [$18ed: ld   a,(ix+$03)]
 	cmp.b	#0xE0,d0                         	| [$18f0: cp   $E0]
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$18f2: ret  nc] [...]
@@ -4586,9 +4605,9 @@ update_yellow_tank_18e0:
 	beq.b	0f                               	| [...]
 	rts                                    	| [$18fc: ret  nz] [...]
 0:
-	lea	object7_e370,a3                	| [$18fd: ld   iy,object7_e370]
+	lea	ufo_objects_e370,a3                	| [$18fd: ld   iy,ufo_objects_e370]
 	move.w	#0x0010,d3                      	| [$1901: ld   de,$0010] 16
-	move.b	#0x05,d1                        	| [$1904: ld   b,$05]
+	move.b	#MAX_NB_UFOS_1,d1                        	| [$1904: ld   b,$05]
 l_1906:
 	move.b	(a3),d0                    	| [$1906: ld   a,(iy+$00)] -  * J191C
 	cmp.b	#0x1D,d0                         	| [$1909: cp   $1D]
@@ -4597,8 +4616,8 @@ l_1906:
 	move.b	(0x0c,a3),d0                    	| [$190d: ld   a,(iy+$0c)]
 	roxl.b	#1,d0                           	| [$1910: rla]
 	jcs	l_191a                             	| [$1911: jr   c,$191A]
-	move.b	(0x03,a2),d0                    	| [$1913: ld   a,(ix+$03)]
-	sub.b	(0x03,a3),d0                     	| [$1916: sub  (iy+$03)]
+	move.b	(obj_x,a2),d0                    	| [$1913: ld   a,(ix+$03)]
+	sub.b	(obj_x,a3),d0                     	| [$1916: sub  (iy+$03)]
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$1919: ret  c] [...]
 0:
@@ -4606,15 +4625,15 @@ l_191a:
 	add.w	d3,a3                            	| [$191a: add  iy,de] -  * J190B,J1911
 	subq.b	#1,d1                           	| [...]
 	jne	l_1906                             	| [$191c: djnz $1906]
-	move.b	(0x07,a2),d0                    	| [$191e: ld   a,(ix+$07)]
-	move.b	d0,(0x07,a3)                    	| [$1921: ld   (iy+$07),a]
+	move.b	(obj_y,a2),d0                    	| [$191e: ld   a,(ix+$07)]
+	move.b	d0,(obj_y,a3)                    	| [$1921: ld   (iy+$07),a]
 	move.b	(0x0f,a2),d0                    	| [$1924: ld   a,(ix+$0f)]
 	subq.b	#0x04,d0                        	| [$1927: sub  $04]
 	move.b	d0,(0x0f,a3)                    	| [$1929: ld   (iy+$0f),a]
 	move.b	#0x11,(a3)                 	| [$192c: ld   (iy+$00),$11]
-	move.b	#0x22,(0x0d,a3)                 	| [$1930: ld   (iy+$0d),$22]
+	move.b	#0x22,(obj_type,a3)                 	| [$1930: ld   (iy+$0d),$22]
 	move.b	#0x0C,(0x0c,a3)                 	| [$1934: ld   (iy+$0c),$0C]
-	move.b	#0x43,(0x0a,a2)                 	| [$1938: ld   (ix+$0a),$43]
+	move.b	#0x43,(obj_next_frame_timeout,a2)                 	| [$1938: ld   (ix+$0a),$43]
 	rts                                    	| [$193c: ret]
 	
 update_yellow_tank_shot_193d:
@@ -4644,7 +4663,7 @@ check_if_fall_in_hole_195e:
 	beq.b	0f                               	| [...]
 	rts                                    	| [$1965: ret  nz] [...]
 0:
-	move.b	(0x0d,a2),d0                    	| [$1966: ld   a,(ix+$0d)]
+	move.b	(obj_type,a2),d0                    	| [$1966: ld   a,(ix+$0d)]
 	rol.b	#2,d0                            	| [$1969: rlca] * 2
 	and.b	#0x1C,d0                         	| [$196b: and  $1C]
 	lea	game_rom+0x2E00,a0                      	| [$196d: ld   hl,$2E00]
@@ -4653,7 +4672,7 @@ check_if_fall_in_hole_195e:
                 	| [$1970: add  a,l]
 					| [$1971: ld   l,a]
 	move.b	jeep_x_E303,d0                 	| [$1972: ld   a,(buggy_x_e303)]
-	sub.b	(0x03,a2),d0                     	| [$1975: sub  (ix+$03)]
+	sub.b	(obj_x,a2),d0                     	| [$1975: sub  (ix+$03)]
 	add.b	(a0)+,d0                          	| [$1978: add  a,(hl)]
 	                           	| [$1979: inc  hl]
 	cmp.b	(a0),d0                          	| [$197a: cp   (hl)]
@@ -4686,7 +4705,7 @@ check_if_fall_in_hole_195e:
 	move.b	d0,d1                           	| [$1998: ld   b,a]
 	subq.b	#1,d2                           	| [$1999: dec  c]
 l_199a:
-	move.b	(0x03,a2),d0                    	| [$199a: ld   a,(ix+$03)] -  * J1994
+	move.b	(obj_x,a2),d0                    	| [$199a: ld   a,(ix+$03)] -  * J1994
 	add.b	d1,d0                            	| [$199d: add  a,b]
 	sub.b	#0x1C,d0                         	| [$199e: sub  $1C]
 	move.b	d0,jeep_x_E303                 	| [$19a0: ld   (buggy_x_e303),a]
@@ -4720,7 +4739,7 @@ l_19c2:
 	move.b	#0x01,d2                        	| [$19cc: ld   c,$01]
 	jra	store_special_event_02c2                             	| [$19ce: jp   $02C2]
 update_volcano_19d1:
-	subq.b	#1,(0x0a,a2)                    	| [$19d1: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$19d1: dec  (ix+$0a)]
 	jpl	l_1a0d                             	| [$19d4: jp   p,$1A0D]
 	move.b	(0x0e,a2),d0                    	| [$19d7: ld   a,(ix+$0e)]
 	move.b	d0,d1                           	| [$19da: ld   b,a]
@@ -4737,7 +4756,7 @@ l_19eb:
 	clr.b	d0                               	| [$19ec: xor  a]
 l_19ed:
 	move.b	d0,(0x0e,a2)                    	| [$19ed: ld   (ix+$0e),a] -  * J19E0
-	move.b	d2,(0x0a,a2)                    	| [$19f0: ld   (ix+$0a),c]
+	move.b	d2,(obj_next_frame_timeout,a2)                    	| [$19f0: ld   (ix+$0a),c]
 	move.b	d1,d0                           	| [$19f3: ld   a,b]
 	cmp.b	#0x04,d0                         	| [$19f4: cp   $04]
 	jcs	l_19fc                             	| [$19f6: jr   c,$19FC]
@@ -4752,7 +4771,7 @@ l_19fc:
 	move.b	d0,(0x0c,a2)                    	| [$1a05: ld   (ix+$0c),a]
 l_1a08:
 	add.b	#0x45,d0                         	| [$1a08: add  a,$45] -  * J1A02
-	move.b	d0,(0x0d,a2)                    	| [$1a0a: ld   (ix+$0d),a]
+	move.b	d0,(obj_type,a2)                    	| [$1a0a: ld   (ix+$0d),a]
 l_1a0d:
 	move.b	forward_shot_indicator_E320,d0                 	| [$1a0d: ld   a,(forward_shot_indicator_E320)] -  * J19D4
 	cmp.b	#0x0F,d0                         	| [$1a10: cp   $0F]
@@ -4761,7 +4780,7 @@ l_1a0d:
 	rts                                    	| [$1a14: ret  nz] [...]
 0:
 	move.b	jeep_x_E303,d0                 	| [$1a15: ld   a,(buggy_x_e303)]
-	sub.b	(0x03,a2),d0                     	| [$1a18: sub  (ix+$03)]
+	sub.b	(obj_x,a2),d0                     	| [$1a18: sub  (ix+$03)]
 	add.b	#0x10,d0                         	| [$1a1b: add  a,$10]
 	cmp.b	#0x30,d0                         	| [$1a1d: cp   $30]
 	jcs	jeep_killed_16fd                             	| [$1a1f: jp   c,$16FD]
@@ -4776,17 +4795,17 @@ l_1a22:
 	rts                                    	| [$1a2e: ret]
 exploding_volcano_1a2f:
 	jbsr	update_surface_object_0831                            	| [$1a2f: call $0831]
-	subq.b	#1,(0x0a,a2)                    	| [$1a32: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1a32: dec  (ix+$0a)]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$1a35: ret  p] [...]
 0:
-	move.b	(0x0d,a2),d0                    	| [$1a36: ld   a,(ix+$0d)]
+	move.b	(obj_type,a2),d0                    	| [$1a36: ld   a,(ix+$0d)]
 	cmp.b	#0x4A,d0                         	| [$1a39: cp   $4A]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1a3b: ret  z] [...]
 0:
-	subq.b	#1,(0x0d,a2)                    	| [$1a3c: dec  (ix+$0d)]
-	move.b	#0x07,(0x0a,a2)                 	| [$1a3f: ld   (ix+$0a),$07]
+	subq.b	#1,(obj_type,a2)                    	| [$1a3c: dec  (ix+$0d)]
+	move.b	#0x07,(obj_next_frame_timeout,a2)                 	| [$1a3f: ld   (ix+$0a),$07]
 	rts                                    	| [$1a43: ret]
 update_rolling_rock_1a44:
 	move.b	jeep_params_E300,d0                 	| [$1a44: ld   a,(jeep_params_E300)]
@@ -4797,7 +4816,7 @@ update_rolling_rock_1a44:
 	subq.b	#1,(0x0e,a2)                    	| [$1a4a: dec  (ix+$0e)]
 	jpl	l_1a66                             	| [$1a4d: jp   p,$1A66]
 	move.b	#0x06,(0x0e,a2)                 	| [$1a50: ld   (ix+$0e),$06]
-	move.b	(0x0d,a2),d0                    	| [$1a54: ld   a,(ix+$0d)]
+	move.b	(obj_type,a2),d0                    	| [$1a54: ld   a,(ix+$0d)]
 	subq.b	#1,d0                           	| [$1a57: dec  a]
 	move.w	#0x03,d1                        	| [$1a58: ld   bc,$0003] 3
 	lea	game_rom+0x1A8E,a0                      	| [$1a5b: ld   hl,$1A8E]
@@ -4805,7 +4824,7 @@ update_rolling_rock_1a44:
 	jne	l_1a63                             	| [$1a60: jr   nz,$1A63]
 	move.b	(a0),d0                         	| [$1a62: ld   a,(hl)]
 l_1a63:
-	move.b	d0,(0x0d,a2)                    	| [$1a63: ld   (ix+$0d),a] -  * J1A60
+	move.b	d0,(obj_type,a2)                    	| [$1a63: ld   (ix+$0d),a] -  * J1A60
 l_1a66:
 	move.b	(0x04,a2),d0                    	| [$1a66: ld   a,(ix+$04)] -  * J1A4D
 	add.b	#0xC0,d0                         	| [$1a69: add  a,$C0]
@@ -4820,10 +4839,10 @@ l_1a73:
 	asl.b	#1,d0                            	| [$1a7b: sla  a]
 	add.b	#0x0C,d0                         	| [$1a7d: add  a,$0C]
 	move.b	d0,d2                           	| [$1a7f: ld   c,a]
-	move.b	(0x03,a2),d0                    	| [$1a80: ld   a,(ix+$03)]
-	jbsr	compute_object_y_1538                            	| [$1a83: call $1538]
+	move.b	(obj_x,a2),d0                    	| [$1a80: ld   a,(ix+$03)]
+	jbsr	compute_ground_object_y_from_x_1538                            	| [$1a83: call $1538]
 	sub.b	d2,d0                            	| [$1a86: sub  c]
-	move.b	d0,(0x07,a2)                    	| [$1a87: ld   (ix+$07),a]
+	move.b	d0,(obj_y,a2)                    	| [$1a87: ld   (ix+$07),a]
 	jbsr	ground_objects_collision_checks_1699                            	| [$1a8a: call $1699]
 	rts                                    	| [$1a8d: ret]
 	
@@ -4844,7 +4863,7 @@ rear_missile_following_1a92:
 	STORE_LEW	d5,unknown_16bit_E372                 	| [$1aa8: ld   (unknown_16bit_E372),hl]
 	jra	l_1ad9                             	| [$1aab: jr   $1AD9]
 l_1aad:
-	clr.b	(0x0a,a2)                        	| [$1aad: ld   (ix+$0a),$00] -  * J1AA2
+	clr.b	(obj_next_frame_timeout,a2)                        	| [$1aad: ld   (ix+$0a),$00] -  * J1AA2
 	addq.b	#1,(a2)                    	| [$1ab1: inc  (ix+$00)]
 	move.b	#0x80,(0x0e,a2)                 	| [$1ab4: ld   (ix+$0e),$80]
 	rts                                    	| [$1ab8: ret]
@@ -4864,30 +4883,30 @@ l_1ac4:
 	move.b	d0,d1                           	| [$1ac7: ld   b,a]
 	and.b	#0x03,d0                         	| [$1ac8: and  $03]
 	jne	l_1ad9                             	| [$1aca: jr   nz,$1AD9]
-	addq.b	#1,(0x03,a2)                    	| [$1acc: inc  (ix+$03)]
+	addq.b	#1,(obj_x,a2)                    	| [$1acc: inc  (ix+$03)]
 	btst.b	#5,d1                           	| [$1acf: bit  5,b]
 	jeq	l_1ad9                             	| [$1ad1: jr   z,$1AD9]
-	subq.b	#2,(0x03,a2)                    	| [$1ad3: dec  (ix+$03)] * 2
+	subq.b	#2,(obj_x,a2)                    	| [$1ad3: dec  (ix+$03)] * 2
 l_1ad9:
 	move.b	timer_8bit_E04E,d0                 	| [$1ad9: ld   a,(timer_8bit_E04E)] -  * J1AAB,J1ACA,J1AD1,J1B19
 	and.b	#0x07,d0                         	| [$1adc: and  $07]
 	jne	l_1aed                             	| [$1ade: jr   nz,$1AED]
-	move.b	(0x03,a2),d0                    	| [$1ae0: ld   a,(ix+$03)]
+	move.b	(obj_x,a2),d0                    	| [$1ae0: ld   a,(ix+$03)]
 	add.b	#0x18,d0                         	| [$1ae3: add  a,$18]
-	jbsr	compute_object_y_1538                            	| [$1ae5: call $1538]
+	jbsr	compute_ground_object_y_from_x_1538                            	| [$1ae5: call $1538]
 	sub.b	#0x10,d0                         	| [$1ae8: sub  $10]
-	move.b	d0,(0x07,a2)                    	| [$1aea: ld   (ix+$07),a]
+	move.b	d0,(obj_y,a2)                    	| [$1aea: ld   (ix+$07),a]
 l_1aed:
 	jra	draw_object_08b8                             	| [$1aed: jp   $08B8] -  * J1ADE
 rear_missile_following_1af0:
 	subq.b	#1,(0x0e,a2)                    	| [$1af0: dec  (ix+$0e)]
 	jne	l_1ac4                             	| [$1af3: jr   nz,$1AC4]
-	move.b	#0x58,(0x0a,a2)                 	| [$1af5: ld   (ix+$0a),$58]
+	move.b	#0x58,(obj_next_frame_timeout,a2)                 	| [$1af5: ld   (ix+$0a),$58]
 	addq.b	#1,(a2)                    	| [$1af9: inc  (ix+$00)]
-	move.b	#0x52,(0x0d,a2)                 	| [$1afc: ld   (ix+$0d),$52]
+	move.b	#0x52,(obj_type,a2)                 	| [$1afc: ld   (ix+$0d),$52]
 	rts                                    	| [$1b00: ret]
 rear_missile_attacking_1b01:
-	subq.b	#1,(0x0a,a2)                    	| [$1b01: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1b01: dec  (ix+$0a)]
 	jeq	l_1b1b                             	| [$1b04: jr   z,$1B1B]
 	LOAD_LEW	unknown_16bit_E372,d5             	| [$1b06: ld   hl,(unknown_16bit_E372)]
 	                      	| [$1b09: ld   de,$0180]
@@ -4901,16 +4920,16 @@ rear_missile_attacking_1b01:
 	jra	l_1ad9                             	| [$1b19: jr   $1AD9]
 l_1b1b:
 	addq.b	#1,(a2)                    	| [$1b1b: inc  (ix+$00)] -  * J1B04
-	move.b	#0x6E,(0x0a,a2)                 	| [$1b1e: ld   (ix+$0a),$6E]
-	move.b	#0x23,(0x0d,a2)                 	| [$1b22: ld   (ix+$0d),$23]
+	move.b	#0x6E,(obj_next_frame_timeout,a2)                 	| [$1b1e: ld   (ix+$0a),$6E]
+	move.b	#0x23,(obj_type,a2)                 	| [$1b22: ld   (ix+$0d),$23]
 	rts                                    	| [$1b26: ret]
 rear_missile_sitting_duck_1b27:
 	jbsr	ground_objects_collision_checks_1699                            	| [$1b27: call $1699]
-	subq.b	#1,(0x0a,a2)                    	| [$1b2a: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1b2a: dec  (ix+$0a)]
 	jne	l_1ac4                             	| [$1b2d: jr   nz,$1AC4]
 	subq.b	#1,(a2)                    	| [$1b2f: dec  (ix+$00)]
 	subq.b	#1,(0x0b,a2)                    	| [$1b32: dec  (ix+$0b)]
-	move.b	#0x52,(0x0d,a2)                 	| [$1b35: ld   (ix+$0d),$52]
+	move.b	#0x52,(obj_type,a2)                 	| [$1b35: ld   (ix+$0d),$52]
 	rts                                    	| [$1b39: ret]
 l_1b3a:
 	lea	unknown_E0EE,a0                	| [$1b3a: ld   hl,unknown_E0EE] -  * C0274
@@ -4965,8 +4984,8 @@ l_1b7a:
 	LOAD_D1_16_FROM_D1D2
 	add.w	d1,a0                            	| [$1b7d: add  hl,bc]
 	move.b	(a0),d2                         	| [$1b7e: ld   c,(hl)]
-	move.b	#0x05,d1                        	| [$1b7f: ld   b,$05]
-	lea	object7_e370,a0                	| [$1b81: ld   hl,object7_e370]
+	move.b	#MAX_NB_UFOS_1,d1                        	| [$1b7f: ld   b,$05] max 5 flying saucer ufos
+	lea	ufo_objects_e370,a0                	| [$1b81: ld   hl,ufo_objects_e370]
 	moveq	#0,d3                      	| [$1b84: ld   de,$0000] 0
 	* d4 is used as an index which links data from E370 to E300 (jeep params)
 	moveq	#0,d4                      	| [$1b84: ld   de,$0000] 0
@@ -4974,7 +4993,7 @@ l_1b7a:
 l_1b87:
 	move.b	(a0),d0                         	| [$1b87: ld   a,(hl)] -  * J1B94
 	                               	| [$1b88: and  a]
-	jeq	store_e370_offset_1bc4                             	| [$1b89: jr   z,$1BC4] zero? store offset vs object7_e370
+	jeq	store_e370_offset_1bc4                             	| [$1b89: jr   z,$1BC4] zero? store offset vs ufo_objects_e370
 	sub.b	#0x2F,d0                         	| [$1b8b: sub  $2F]
 	jne	l_1b90                             	| [$1b8d: jr   nz,$1B90] 
 	addq.b	#1,d3                           	| [$1b8f: inc  d]
@@ -5017,9 +5036,9 @@ l_1bc0:
 	addq.b	#1,d3                           	| [$1bc1: inc  d]
 	jra	l_1b5f                             	| [$1bc2: jr   $1B5F]
 store_e370_offset_1bc4:
-	* store object7_e370+index lsb!
+	* store ufo_objects_e370+index lsb!
 	move.l	a0,d4
-	sub.l	#object7_e370,d4
+	sub.l	#ufo_objects_e370,d4
 	* and return to loop (spaghetti code!) | [$1bc4: ld   e,l] -  * J1B89
 	jra	l_1b90                             		  | [$1bc5: jr   $1B90]
 handle_flying_enemies_1bc7:
@@ -5055,8 +5074,8 @@ l_1be1:
 	subq.b	#1,d0                           	| [$1bf1: dec  a]
 	jmi	l_1bfd                             	| [$1bf2: jp   m,$1BFD]
 	subq.b	#2,d2                           	| [$1bf5: dec  c] * 2
-	lea	object7_e370,a2                	| [$1bf7: ld   ix,object7_e370]
-	move.b	#0x05,d1                        	| [$1bfb: ld   b,$05]
+	lea	ufo_objects_e370,a2                	| [$1bf7: ld   ix,ufo_objects_e370]
+	move.b	#MAX_NB_UFOS_1,d1                        	| [$1bfb: ld   b,$05]
 l_1bfd:
 	move.w	#0x0010,d3                      	| [$1bfd: ld   de,$0010] 16 -  * J1BEC,J1BF2
 l_1c00:
@@ -5094,17 +5113,17 @@ l_1c2f:
 	lea	game_rom+0x3008,a0                      	| [$1c32: ld   hl,$3008]
 	add.w	d3,a0                            	| [$1c35: add  hl,de]
 	move.b	(a0),d0                         	| [$1c36: ld   a,(hl)]
-	move.b	d0,(0x07,a2)                    	| [$1c37: ld   (ix+$07),a]
+	move.b	d0,(obj_y,a2)                    	| [$1c37: ld   (ix+$07),a]
 	addq.w	#1,a0                           	| [$1c3a: inc  hl]
 	move.b	(a0),d0                         	| [$1c3b: ld   a,(hl)]
-	move.b	d0,(0x03,a2)                    	| [$1c3c: ld   (ix+$03),a]
+	move.b	d0,(obj_x,a2)                    	| [$1c3c: ld   (ix+$03),a]
 	clr.w	d1                               	| [$1c3f: ld   b,$00]
 	move.b	d2,d1
 	lea	game_rom+0x1C59,a0                      	| [$1c41: ld   hl,$1C59]
 	add.w	d1,a0                            	| [$1c44: add  hl,bc]
 	add.w	d1,a0                            	| [$1c45: add  hl,bc]
 	move.b	(a0),d0                         	| [$1c46: ld   a,(hl)]
-	move.b	d0,(0x0d,a2)                    	| [$1c47: ld   (ix+$0d),a]
+	move.b	d0,(obj_type,a2)                    	| [$1c47: ld   (ix+$0d),a]
 	clr.b	(0x0e,a2)                        	| [$1c4a: ld   (ix+$0e),$00]
 	addq.w	#1,a0                           	| [$1c4e: inc  hl]
 	move.b	(a0),d0                         	| [$1c4f: ld   a,(hl)]
@@ -5113,25 +5132,25 @@ l_1c2f:
 l_1c54:
 	jbsr	l_080a                            	| [$1c54: call $080A] -  * J1C0F
 	jra	l_1c1e                             	| [$1c57: jr   $1C1E]
-l_1c63:
-	move.b	(0x0d,a2),d0                    	| [$1c63: ld   a,(ix+$0d)]
+animate_ufo_frame_1c63:
+	move.b	(obj_type,a2),d0                    	| [$1c63: ld   a,(ix+$0d)]
 	subq.b	#1,d2                           	| [$1c65: dec  c]
 	cmp.b	#0x2B,d0                         	| [$1c66: cp   $2B]
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$1c68: ret  c] [...]
 0:
 	btst.b	#7,(0x0e,a2)                    	| [$1c69: bit  7,(ix+$0e)]
-	jne	l_1c87                             	| [$1c6d: jr   nz,$1C87]
+	jne	l_1c87                             	| [$1c6d: jr   nz,$1C87] negative? increase
 	subq.b	#1,(0x0e,a2)                    	| [$1c6f: dec  (ix+$0e)]
 	bmi.b	0f                               	| [...]
 	rts                                    	| [$1c72: ret  p] [...]
 0:
-	addq.b	#1,(0x0d,a2)                    	| [$1c73: inc  (ix+$0d)]
+	addq.b	#1,(obj_type,a2)                    	| [$1c73: inc  (ix+$0d)]
 	cmp.b	#0x2F,d0                         	| [$1c76: cp   $2F]
 	jeq	l_1c96                             	| [$1c78: jr   z,$1C96]
 	cmp.b	#0x34,d0                         	| [$1c7a: cp   $34]
 	jne	l_1c82                             	| [$1c7c: jr   nz,$1C82]
-	move.b	#0x31,(0x0d,a2)                 	| [$1c7e: ld   (ix+$0d),$31]
+	move.b	#0x31,(obj_type,a2)                 	| [$1c7e: ld   (ix+$0d),$31]
 l_1c82:
 	move.b	#0x08,(0x0e,a2)                 	| [$1c82: ld   (ix+$0e),$08] -  * J1C7C,J1C90,J1C94
 	rts                                    	| [$1c86: ret]
@@ -5140,7 +5159,7 @@ l_1c87:
 	bpl.b	0f                               	| [...]
 	rts                                    	| [$1c8a: ret  m] [...]
 0:
-	subq.b	#1,(0x0d,a2)                    	| [$1c8b: dec  (ix+$0d)]
+	subq.b	#1,(obj_type,a2)                    	| [$1c8b: dec  (ix+$0d)]
 	cmp.b	#0x2C,d0                         	| [$1c8e: cp   $2C]
 	jeq	l_1c82                             	| [$1c90: jr   z,$1C82]
 	cmp.b	#0x32,d0                         	| [$1c92: cp   $32]
@@ -5185,13 +5204,12 @@ l_1ccf:
 	jcs	l_1cd7                             	| [$1cd4: jr   c,$1CD7]
 	addq.b	#1,d2                           	| [$1cd6: inc  c]
 l_1cd7:
-	move.b	d2,(0x0d,a2)                    	| [$1cd7: ld   (ix+$0d),c] -  * J1CC2,J1CD4
-	jbsr	load_d5_16_20fb                            	| [$1cda: call $20FB]
+	move.b	d2,(obj_type,a2)                    	| [$1cd7: ld   (ix+$0d),c] -  * J1CC2,J1CD4
+	jbsr	copy_object_structure_to_temp_object_20fb                            	| [$1cda: call $20FB]
 	move.w	d5,d0                           	| [$1cdd: ld   a,h]
 	lsr.w	#8,d0
 	cmp.b	#0x06,d0                         	| [$1cde: cp   $06]
 	jcs	l_0852                             	| [$1ce0: jp   c,$0852]
-											| [$1ce3: ld   bc,$0005] 5
 	move.w	#0x05,d1                        	| [$1ce3: ld   bc,$0005] 5
 l_1ce6:
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1ce6: ld   (unknown_16bit_E0D6),hl] -  * J1D38
@@ -5206,15 +5224,15 @@ l_1cf1:
 	STORE_LEW	d5,unknown_16bit_E0DA                 	| [$1cf6: ld   (unknown_16bit_E0DA),hl]
 	rol.w	#8,d5			| get msb
 	move.b	d5,d3                           	| [$1cf9: ld   d,h]
-	jbsr	compute_object_y_1538                            	| [$1cfa: call $1538]
+	jbsr	compute_ground_object_y_from_x_1538                            	| [$1cfa: call $1538]
 	sub.b	#0x08,d0                         	| [$1cfd: sub  $08]
 	cmp.b	d3,d0                            	| [$1cff: cp   d]
-	jcc	l_1d3a                             	| [$1d03: jr   nc,$1D3A]
-	jbsr	l_20ef                            	| [$1d00: call $20EF] inverted jcc and jbsr!
-	move.b	d0,(0x07,a2)                    	| [$1d05: ld   (ix+$07),a]
-	addq.b	#1,(a2)                    	| [$1d08: inc  (ix+$00)]
+	jcc	check_if_jeep_vertical_shot_kills_object_1d3a       	| [$1d03: jr   nc,$1D3A]
+	jbsr	copy_temp_object_structure_to_object_20ef                            	| [$1d00: call $20EF] inverted jcc and jbsr!
+	move.b	d0,(obj_y,a2)                    	| [$1d05: ld   (ix+$07),a]
+	addq.b	#1,(obj_command,a2)                    	| [$1d08: inc  (ix+$00)]
 	clr.b	(0x0b,a2)                        	| [$1d0b: ld   (ix+$0b),$00]
-	move.b	(a2),d0                    	| [$1d0f: ld   a,(ix+$00)]
+	move.b	(obj_command,a2),d0                    	| [$1d0f: ld   a,(ix+$00)]
 	cmp.b	#0x2A,d0                         	| [$1d12: cp   $2A]
 	jne	l_1d1d                             	| [$1d16: jr   nz,$1D1D]
 	move.b	#0x02,d0                        	| [$1d14: ld   a,$03] -  Sound effect 3 ... ?? played right after sound effect 2
@@ -5229,7 +5247,7 @@ l_1d1d_2:
 
 	* handle the shots of the blue UFOs that create holes
 handle_hole_making_bombs_1d23:
-	jbsr	load_d5_16_20db                            	| [$1d23: call $20DB]
+	jbsr	copy_object_structure_to_temp_object_20ef                            	| [$1d23: call $20DB]
 	move.w	jeep_x_speed_E314,d3             	| [$1d26: ld   de,(jeep_x_speed_E314)]
 	* divide value by 2
 	asr.w	#1,d3                            	| [$1d2a: sra  d]
@@ -5240,47 +5258,52 @@ handle_hole_making_bombs_1d23:
 												| [$1d35: ld   bc,$0010] 16
 	move.w	#0x10,d1                        	| [$1d35: ld   bc,$0010] 16
 	jra	l_1ce6                             	| [$1d38: jr   $1CE6]
-l_1d3a:
-	jbsr	l_20ef                            	| [$1d00: call $20EF] (duplicated because of comparison)
+	
+* < a2: UFO structure
+check_if_jeep_vertical_shot_kills_object_1d3a:
+	jbsr	copy_temp_object_structure_to_object_20ef                            	| [$1d00: call $20EF] (duplicated because of comparison)
 	move.b	jeep_params_E300,d0                 	| [$1d3a: ld   a,(jeep_params_E300)] -  * J1D03
-	cmp.b	#0x06,d0                         	| [$1d3d: cp   $06]
+	cmp.b	#STATE_FALL_IN_HOLE_06,d0                         	| [$1d3d: cp   $06]
 	jcc	draw_object_08b8                             	| [$1d3f: jp   nc,$08B8]
+	* dimensions of enemy
 	move.b	#6,d5                      	| [$1d42: ld   hl,$0605]
 	move.b	#5,d6                      	| [$1d42: ld   hl,$0605]
-	move.b	(a2),d0                    	| [$1d45: ld   a,(ix+$00)]
+	move.b	(obj_command,a2),d0                    	| [$1d45: ld   a,(ix+$00)]
 	cmp.b	#0x2A,d0                         	| [$1d48: cp   $2A]
 	jcc	l_1d4f                             	| [$1d4a: jr   nc,$1D4F]
 l_1d4c:
+	* different dimension of enemy?
 	move.b	#2,d5                      	| [$1d4c: ld   hl,$020B] -  * J1F7B
 	move.b	#0xB,d6                      	| [$1d4c: ld   hl,$020B] -  * J1F7B
 l_1d4f:
-	lea	unknown_E330,a3                	| [$1d4f: ld   iy,unknown_E330] -  Start of player air-shots (4 of them, 16 bytes each) * J1D4A
+	lea	player_air_shots_E330,a3                | [$1d4f: ld   iy,player_air_shots_E330] -  Start of player air-shots (4 of them, 16 bytes each) * J1D4A
 	move.w	#0x0010,d3                      	| [$1d53: ld   de,$0010] 16 -  Each structure is 16 bytes
 	move.b	#0x04,d1                        	| [$1d56: ld   b,$04] -  There are 4 structures
 l_1d58:
 	move.b	(a3),d0                    	| [$1d58: ld   a,(iy+$00)] -  * J1D75
 	cmp.b	#0x0F,d0                         	| [$1d5b: cp   $0F]
 	jne	l_1d73                             	| [$1d5d: jr   nz,$1D73] -  Not a shot ... move on
-	move.b	(0x07,a3),d0                    	| [$1d5f: ld   a,(iy+$07)]
-	sub.b	(0x07,a2),d0                     	| [$1d62: sub  (ix+$07)]
+	* compare enemy & shot bounding boxes
+	move.b	(obj_y,a3),d0                    	| [$1d5f: ld   a,(iy+$07)]
+	sub.b	(obj_y,a2),d0                     	| [$1d62: sub  (ix+$07)]
 	cmp.b	#0x0A,d0                         	| [$1d65: cp   $0A]
 	jcc	l_1d73                             	| [$1d67: jr   nc,$1D73]
-	move.b	(0x03,a3),d0                    	| [$1d69: ld   a,(iy+$03)]
-	sub.b	(0x03,a2),d0                     	| [$1d6c: sub  (ix+$03)]
+	move.b	(obj_x,a3),d0                    	| [$1d69: ld   a,(iy+$03)]
+	sub.b	(obj_x,a2),d0                     	| [$1d6c: sub  (ix+$03)]
 	sub.b	d5,d0                            	| [$1d6f: sub  h]
 	cmp.b	d6,d0                            	| [$1d70: cp   l]
-	jcs	l_1d9e                             	| [$1d71: jr   c,$1D9E]
+	jcs	ufo_shot_1d9e                             	| [$1d71: jr   c,$1D9E]
 l_1d73:
 	add.w	d3,a3                            	| [$1d73: add  iy,de] -  Bump to next structure * J1D5D,J1D67
 	subq.b	#1,d1                           	| [...]
 	jne	l_1d58                             	| [$1d75: djnz $1D58] -  Do all structures
 	move.b	jeep_y_offset_E307,d0                 	| [$1d77: ld   a,(buggy_y_e307)]
-	sub.b	(0x07,a2),d0                     	| [$1d7a: sub  (ix+$07)]
+	sub.b	(obj_y,a2),d0                     	| [$1d7a: sub  (ix+$07)]
 	cmp.b	#0xF0,d0                         	| [$1d7d: cp   $F0]
 	jcs	draw_object_08b8                             	| [$1d7f: jp   c,$08B8]
 	move.b	d0,d3                           	| [$1d82: ld   d,a]
 	move.b	jeep_x_E303,d0                 	| [$1d83: ld   a,(buggy_x_e303)]
-	sub.b	(0x03,a2),d0                     	| [$1d86: sub  (ix+$03)]
+	sub.b	(obj_x,a2),d0                     	| [$1d86: sub  (ix+$03)]
 	subq.b	#0x04,d0                        	| [$1d89: sub  $04]
 	cmp.b	#0xEA,d0                         	| [$1d8b: cp   $EA]
 	jcs	draw_object_08b8                             	| [$1d8d: jp   c,$08B8]
@@ -5289,15 +5312,15 @@ l_1d73:
 	jeq	draw_object_08b8                             	| [$1d95: jp   z,$08B8]
 	jbsr	l_0852                            	| [$1d98: call $0852]
 	jra	jeep_killed_16fd                             	| [$1d9b: jp   $16FD]
-l_1d9e:
-	addq.b	#1,(a3)                    	| [$1d9e: inc  (iy+$00)] -  ?? From E (initial) to F (moved above) * J1D71
-	move.b	(0x0d,a2),d0                    	| [$1da1: ld   a,(ix+$0d)]
+ufo_shot_1d9e:
+	addq.b	#1,(obj_command,a3)                    	| [$1d9e: inc  (iy+$00)] -  ?? From E (initial) to F (moved above) * J1D71
+	move.b	(obj_type,a2),d0                    	| [$1da1: ld   a,(ix+$0d)]
 	cmp.b	#0x37,d0                         	| [$1da4: cp   $37]
 	jcs	l_1db9                             	| [$1da6: jr   c,$1DB9]
 	clr.b	(0x0c,a2)                        	| [$1da8: ld   (ix+$0c),$00]
 	move.b	#0x2D,(a2)                 	| [$1dac: ld   (ix+$00),$2D]
-	move.b	#0x0A,(0x0a,a2)                 	| [$1db0: ld   (ix+$0a),$0A]
-	move.b	#0x4F,(0x0d,a2)                 	| [$1db4: ld   (ix+$0d),$4F]
+	move.b	#0x0A,(obj_next_frame_timeout,a2)                 	| [$1db0: ld   (ix+$0a),$0A]
+	move.b	#0x4F,(obj_type,a2)                 	| [$1db4: ld   (ix+$0d),$4F]
 	rts                                    	| [$1db8: ret]
 l_1db9:
 	lea	unknown_E1C9,a0                	| [$1db9: ld   hl,unknown_E1C9] -  * J1DA6
@@ -5321,8 +5344,8 @@ l_1dca:
 	jcc	l_1deb                             	| [$1dd8: jr   nc,$1DEB]
 l_1dda:
 	move.b	#0x20,(a2)                 	| [$1dda: ld   (ix+$00),$20] -  * J1DD0
-	move.b	#0x06,(0x0a,a2)                 	| [$1dde: ld   (ix+$0a),$06]
-	move.b	#0x37,(0x0d,a2)                 	| [$1de2: ld   (ix+$0d),$37]
+	move.b	#0x06,(obj_next_frame_timeout,a2)                 	| [$1dde: ld   (ix+$0a),$06]
+	move.b	#0x37,(obj_type,a2)                 	| [$1de2: ld   (ix+$0d),$37]
 	move.b	d1,d0                           	| [$1de6: ld   a,b]
 	jbsr	store_special_event_02c2                            	| [$1de7: call $02C2]
 	rts                                    	| [$1dea: ret]
@@ -5331,7 +5354,7 @@ l_1deb:
 	subq.b	#0x02,d0                        	| [$1dee: sub  $02]
 	jra	l_179d                             	| [$1df0: jp   $179D]
 hole_making_bomb_explodes_1df3:
-	move.b	#0x3E,(0x0d,a2)                 	| [$1df3: ld   (ix+$0d),$3E]
+	move.b	#0x3E,(obj_type,a2)                 	| [$1df3: ld   (ix+$0d),$3E]
 	jbsr	l_1623                            	| [$1df7: call $1623]
 	subq.b	#0x03,d0                        	| [$1dfa: sub  $03]
 	and.b	#0xF8,d0                         	| [$1dfc: and  $F8]
@@ -5352,13 +5375,13 @@ l_1e03:
 0:
 	jra	l_0852                             	| [$1e11: jp   $0852]
 init_ground_explosion_1e14:
-	move.b	#0x43,(0x0d,a2)                 	| [$1e14: ld   (ix+$0d),$43]
+	move.b	#0x43,(obj_type,a2)                 	| [$1e14: ld   (ix+$0d),$43]
 	jbsr	l_1623                            	| [$1e18: call $1623]
 	jra	l_1e03                             	| [$1e1b: jr   $1E03]
 l_1e1d:
 	addq.b	#1,(a0)                         	| [$1e1d: inc  (hl)] -  * J1E08
 	addq.b	#1,(a2)                    	| [$1e1e: inc  (ix+$00)]
-	move.b	#0x04,(0x0a,a2)                 	| [$1e21: ld   (ix+$0a),$04]
+	move.b	#0x04,(obj_next_frame_timeout,a2)                 	| [$1e21: ld   (ix+$0a),$04]
 l_1e25:
 	jbsr	update_surface_object_0831                            	| [$1e25: call $0831] -  * J1E3E,J1E4F,J1E5B,J1E81
 	rts                                    	| [$1e28: ret]
@@ -5369,27 +5392,27 @@ update_ground_explosion_1e29:
 	or.b	(a0),d0                           	| [$1e2e: or   (hl)]
 	                               	| [$1e2f: and  a]
 	jne	l_0852                             	| [$1e30: jp   nz,$0852]
-	move.b	(0x03,a2),d0                    	| [$1e33: ld   a,(ix+$03)]
+	move.b	(obj_x,a2),d0                    	| [$1e33: ld   a,(ix+$03)]
 	cmp.b	#0xF8,d0                         	| [$1e36: cp   $F8]
 	jcc	l_0852                             	| [$1e38: jp   nc,$0852]
-	subq.b	#1,(0x0a,a2)                    	| [$1e3b: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1e3b: dec  (ix+$0a)]
 	jne	l_1e25                             	| [$1e3e: jr   nz,$1E25]
-	move.b	(0x0d,a2),d0                    	| [$1e40: ld   a,(ix+$0d)]
+	move.b	(obj_type,a2),d0                    	| [$1e40: ld   a,(ix+$0d)]
 	cmp.b	#0x49,d0                         	| [$1e43: cp   $49]
 	jeq	l_0852                             	| [$1e45: jp   z,$0852]
-	addq.b	#1,(0x0d,a2)                    	| [$1e48: inc  (ix+$0d)]
-	move.b	#0x05,(0x0a,a2)                 	| [$1e4b: ld   (ix+$0a),$05]
+	addq.b	#1,(obj_type,a2)                    	| [$1e48: inc  (ix+$0d)]
+	move.b	#0x05,(obj_next_frame_timeout,a2)                 	| [$1e4b: ld   (ix+$0a),$05]
 	jra	l_1e25                             	| [$1e4f: jr   $1E25]
 bomb_creates_hole_1e51:
 	move.b	unknown_E1D3,d0                 	| [$1e51: ld   a,(unknown_E1D3)]
 	                               	| [$1e54: and  a]
 	jne	l_0852                             	| [$1e55: jp   nz,$0852]
-	subq.b	#1,(0x0a,a2)                    	| [$1e58: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1e58: dec  (ix+$0a)]
 	jne	l_1e25                             	| [$1e5b: jr   nz,$1E25]
-	move.b	(0x0d,a2),d0                    	| [$1e5d: ld   a,(ix+$0d)]
+	move.b	(obj_type,a2),d0                    	| [$1e5d: ld   a,(ix+$0d)]
 	cmp.b	#0x42,d0                         	| [$1e60: cp   $42]
 	jcc	l_1e83                             	| [$1e62: jr   nc,$1E83]
-	addq.b	#1,(0x0d,a2)                    	| [$1e64: inc  (ix+$0d)]
+	addq.b	#1,(obj_type,a2)                    	| [$1e64: inc  (ix+$0d)]
 	cmp.b	#0x3F,d0                         	| [$1e67: cp   $3F]
 	jne	l_1e7d                             	| [$1e69: jr   nz,$1E7D]
 	move.b	(0x0f,a2),d0                    	| [$1e6b: ld   a,(ix+$0f)]
@@ -5401,19 +5424,19 @@ bomb_creates_hole_1e51:
 	move.b	#0x01,d0                        	| [$1e78: ld   a,$01]
 	jbsr	store_special_event_02c2                            	| [$1e7a: call $02C2]
 l_1e7d:
-	move.b	#0x02,(0x0a,a2)                 	| [$1e7d: ld   (ix+$0a),$02] -  * J1E69
+	move.b	#0x02,(obj_next_frame_timeout,a2)                 	| [$1e7d: ld   (ix+$0a),$02] -  * J1E69
 	jra	l_1e25                             	| [$1e81: jr   $1E25]
 l_1e83:
-	move.b	(0x07,a2),d0                    	| [$1e83: ld   a,(ix+$07)] -  * J1E62
+	move.b	(obj_y,a2),d0                    	| [$1e83: ld   a,(ix+$07)] -  * J1E62
 	add.b	#0x08,d0                         	| [$1e86: add  a,$08]
-	move.b	d0,(0x07,a2)                    	| [$1e88: ld   (ix+$07),a]
+	move.b	d0,(obj_y,a2)                    	| [$1e88: ld   (ix+$07),a]
 	jbsr	l_0856                            	| [$1e8b: call $0856]
 	clr.b	(0x0c,a2)                        	| [$1e8e: ld   (ix+$0c),$00]
-	move.b	#0x81,(0x0d,a2)                 	| [$1e92: ld   (ix+$0d),$81]
+	move.b	#0x81,(obj_type,a2)                 	| [$1e92: ld   (ix+$0d),$81]
 	move.b	#0x13,(a2)                 	| [$1e96: ld   (ix+$00),$13]
 	rts                                    	| [$1e9a: ret]
 bomb_shot_1e9b:
-	subq.b	#1,(0x0a,a2)                    	| [$1e9b: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1e9b: dec  (ix+$0a)]
 	jeq	l_0852                             	| [$1e9e: jp   z,$0852]
 	jra	draw_object_08b8                             	| [$1ea1: jp   $08B8]
 	
@@ -5458,7 +5481,7 @@ l_1ed2:
 	jbsr	osd_get_random                           	| [$1ee7: ld   a,r]
 	and.b	#0x7F,d0                         	| [$1ee9: and  $7F]
 	add.b	#0x20,d0                         	| [$1eeb: add  a,$20]
-	move.b	d0,(0x0a,a2)                    	| [$1eed: ld   (ix+$0a),a]
+	move.b	d0,(obj_next_frame_timeout,a2)                    	| [$1eed: ld   (ix+$0a),a]
 	rts                                    	| [$1ef0: ret]
 l_1ef1:
 	move.b	#0x01,d1                        	| [$1ef1: ld   b,$01] -  * J1EB2
@@ -5488,13 +5511,14 @@ l_1f06:
 	rts                                    	| [$1f27: ret]
 	
 * used for UFOs (any kind) when attacking player
+* one of the slots used can be E370 (7th slot)
 animate_ufo_1f28:
-	jbsr	l_1c63                            	| [$1f28: call $1C63] -  * C2009
-	jbsr	load_d5_16_20db                            	| [$1f2b: call $20DB]
+	jbsr	animate_ufo_frame_1c63                            	| [$1f28: call $1C63] -  * C2009
+	jbsr	copy_object_structure_to_temp_object_20ef                            	| [$1f2b: call $20DB]
 	move.b	(0x0c,a2),d0                    	| [$1f2e: ld   a,(ix+$0c)]
 	asl.b	#1,d0                            	| [$1f31: sla  a]
 	jne	l_1f87                             	| [$1f33: jr   nz,$1F87]
-	subq.b	#1,(0x0a,a2)                    	| [$1f35: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1f35: dec  (ix+$0a)]
 	jeq	l_1f83                             	| [$1f38: jr   z,$1F83]
 	LOAD_LEW	unknown_16bit_E0D6,d5             	| [$1f3a: ld   hl,(unknown_16bit_E0D6)]
 	LOAD_LEW	unknown_16bit_E0D8,d3             	| [$1f3d: ld   de,(unknown_16bit_E0D8)]
@@ -5506,7 +5530,7 @@ animate_ufo_1f28:
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1f49: ld   (unknown_16bit_E0D6),hl]
 	roxl.b	#1,d0                           	| [$1f4c: rla]
 	jcs	l_1f7e                             	| [$1f4d: jr   c,$1F7E]
-	move.b	(0x0d,a2),d0                    	| [$1f4f: ld   a,(ix+$0d)]
+	move.b	(obj_type,a2),d0                    	| [$1f4f: ld   a,(ix+$0d)]
 	move.b	#0xA0,d1                        	| [$1f52: ld   b,$A0]
 	sub.b	#0x2A,d0                         	| [$1f54: sub  $2A]
 	jeq	l_1f60                             	| [$1f56: jr   z,$1F60]
@@ -5531,7 +5555,7 @@ l_1f64:
 	cmp.b	#0x70,d0                         	| [$1f74: cp   $70]
 	jcc	l_1f83                             	| [$1f76: jr   nc,$1F83]
 l_1f78:
-	jbsr	l_20ef                            	| [$1f78: call $20EF] -  * J1FE8,J203E,J204A
+	jbsr	copy_temp_object_structure_to_object_20ef                            	| [$1f78: call $20EF] -  * J1FE8,J203E,J204A
 	jra	l_1d4c                             	| [$1f7b: jp   $1D4C]
 l_1f7e:
 	move.w	d5,d0                           	| [$1f7e: ld   a,h] -  * J1F4D
@@ -5619,8 +5643,8 @@ ufo_appearing_2000:
 	jeq	ufo_appearing_1eaa                             	| [$2016: jp   z,$1EAA]
 	rts                                    	| [$2019: ret]
 animate_ufo_201a:
-	jbsr	l_1c63                            	| [$201a: call $1C63]
-	jbsr	load_d5_16_20db                            	| [$201d: call $20DB]
+	jbsr	animate_ufo_frame_1c63                            	| [$201a: call $1C63]
+	jbsr	copy_object_structure_to_temp_object_20ef                            	| [$201d: call $20DB]
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$2020: ld   (unknown_16bit_E0D6),hl]
 	move.w	d5,d0                           	| [$2023: ld   a,h]
 	lsr.w	#8,d0
@@ -5647,7 +5671,7 @@ ufo_appearing_204d:
 	move.b	jeep_x_E303,d0                 	| [$204d: ld   a,(buggy_x_e303)] -  * J1EA7
 	clr.b	d3                               	| [$2050: ld   d,$00]
 	add.b	#0x10,d0                         	| [$2052: add  a,$10]
-	sub.b	(0x03,a2),d0                     	| [$2054: sub  (ix+$03)]
+	sub.b	(obj_x,a2),d0                     	| [$2054: sub  (ix+$03)]
 	jcc	l_205c                             	| [$2057: jr   nc,$205C]
 	neg.b	d0                               	| [$2059: neg]
 	subq.b	#1,d3                           	| [$205b: dec  d]
@@ -5695,8 +5719,8 @@ l_2092:
 	rts                                    	| [$209b: ret]
 	
 ufo_crashing_on_player_209c:
-	jbsr	l_1c63                            	| [$209c: call $1C63]
-	jbsr	load_d5_16_20fb                            	| [$209f: call $20FB]
+	jbsr	animate_ufo_frame_1c63                            	| [$209c: call $1C63]
+	jbsr	copy_object_structure_to_temp_object_20fb                            	| [$209f: call $20FB]
 	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$20a2: ld   (unknown_16bit_E0D6),hl]
 	move.w	d5,d0                           	| [$20a5: ld   a,h]
 	lsr.w	#8,d0
@@ -5704,18 +5728,19 @@ ufo_crashing_on_player_209c:
 	jra	l_1cf1                             	| [$20a9: jp   $1CF1]
 	
 ufo_shot_20ac:
-	subq.b	#1,(0x0a,a2)                    	| [$20ac: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$20ac: dec  (ix+$0a)]
 	jne	draw_object_08b8                             	| [$20af: jp   nz,$08B8]
-	move.b	#0x06,(0x0a,a2)                 	| [$20b2: ld   (ix+$0a),$06]
-	move.b	(0x0d,a2),d0                    	| [$20b6: ld   a,(ix+$0d)]
+	move.b	#0x06,(obj_next_frame_timeout,a2)                 	| [$20b2: ld   (ix+$0a),$06]
+	move.b	(obj_type,a2),d0                    	| [$20b6: ld   a,(ix+$0d)]
 	cmp.b	#0x39,d0                         	| [$20b9: cp   $39]
 	jcc	l_0852                             	| [$20bb: jp   nc,$0852]
-	addq.b	#1,(0x0d,a2)                    	| [$20be: inc  (ix+$0d)]
+	addq.b	#1,(obj_type,a2)                    	| [$20be: inc  (ix+$0d)]
 	jra	draw_object_08b8                             	| [$20c1: jp   $08B8]
+	
 show_kill_score_20c4:
-	subq.b	#1,(0x0a,a2)                    	| [$20c4: dec  (ix+$0a)]
+	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$20c4: dec  (ix+$0a)]
 	jne	draw_object_08b8                             	| [$20c7: jp   nz,$08B8]
-	move.b	(0x07,a2),d0                    	| [$20ca: ld   a,(ix+$07)]
+	move.b	(obj_y,a2),d0                    	| [$20ca: ld   a,(ix+$07)]
 	cmp.b	#0x80,d0                         	| [$20cd: cp   $80]
 	jcc	l_0852                             	| [$20cf: jp   nc,$0852]
 	move.b	#0x80,d1                        	| [$20d2: ld   b,$80]
@@ -5723,26 +5748,30 @@ show_kill_score_20c4:
 	jra	l_0869                             	| [$20d8: jp   $0869]
 	
 * > D5: 16 bit value of ??
-load_d5_16_20db:
+copy_object_structure_to_temp_object_20ef:
 	move.l	a2,a0                        	| [$20db: push ix] -  * C1433,C1D23,C1F2B,C201D,C20FB
 											| [$20dd: pop  hl]
-	lea	unknown_E0D4,a1                	| [$20de: ld   de,unknown_E0D4]
+	lea	temp_object_structure_E0D4,a1                	| [$20de: ld   de,temp_object_structure_E0D4]
 	move.w	#0x0a,d1                        	| [$20e1: ld   bc,$000A] 10
 	jbsr	ldir                              	| [$20e4: ldir]
+	* contains X (offset 3) and ??
 	LOAD_LEW	unknown_16bit_E0D6,d3             	| [$20e6: ld   de,(unknown_16bit_E0D6)]
 	LOAD_LEW	unknown_16bit_E0D8,d5             	| [$20ea: ld   hl,(unknown_16bit_E0D8)]
 	add.w	d3,d5                            	| [$20ed: add  hl,de]
 	rts                                    	| [$20ee: ret]
 	
-l_20ef:
+* after game fiddles with temp object structure
+* called to copy data into actual object struct in a2 (10 first bytes only)
+copy_temp_object_structure_to_object_20ef:
 	move.l	a2,a1                        	| [$20ef: push ix] -  * J1487,C1D00,C1F78
 	                        	| [$20f1: pop  de]
-	lea	unknown_E0D4,a0                	| [$20f2: ld   hl,unknown_E0D4]
+	lea	temp_object_structure_E0D4,a0                	| [$20f2: ld   hl,temp_object_structure_E0D4]
 	move.w	#0x0a,d1                        	| [$20f5: ld   bc,$000A] 10
 	jbsr	ldir                              	| [$20f8: ldir]
 	rts                                    	| [$20fa: ret]
-load_d5_16_20fb:
-	jbsr	load_d5_16_20db                            	| [$20fb: call $20DB] -  * C1CDA,C209F
+	
+copy_object_structure_to_temp_object_20fb:
+	jbsr	copy_object_structure_to_temp_object_20ef                            	| [$20fb: call $20DB] -  * C1CDA,C209F
 	exg	d3,d5                              	| [$20fe: ex   de,hl]
 	* recompose 2 value nibbles
 	move.b	(0x0f,a2),d5                    	| [$2102: ld   h,(ix+$0f)]

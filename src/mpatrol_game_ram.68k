@@ -35,7 +35,7 @@
 	.global	unknown_pointer_E096
 	.global	unknown_16bit_E098
 	.global	unknown_E099
-	.global	unknown_E0D4
+	.global	temp_object_structure_E0D4
 	.global	unknown_16bit_E0D6
 	.global	unknown_16bit_E0D8
 	.global	unknown_16bit_E0DA
@@ -116,8 +116,8 @@
 	.global	unknown_E32A
 	.global	unknown_E32D
 	.global	unknown_E32F
-	.global	unknown_E330
-	.global	object7_e370
+	.global	player_air_shots_E330
+	.global	ufo_objects_e370
 	.global	unknown_16bit_E372
 	.global	objectB_e3b0
 	.global	objectC_e3c0
@@ -241,7 +241,7 @@ unknown_16bit_E098:
 	ds.b	1
 unknown_E099:
 	ds.b	59
-unknown_E0D4:
+temp_object_structure_E0D4:
 	ds.b	2
 	.align	2
 unknown_16bit_E0D6:
@@ -412,9 +412,9 @@ unknown_E32D:
 	ds.b	2
 unknown_E32F:
 	ds.b	1
-unknown_E330:
+player_air_shots_E330:
 	ds.b	64
-object7_e370:
+ufo_objects_e370:
 	ds.b	2
 unknown_16bit_E372:
 	ds.b	62
