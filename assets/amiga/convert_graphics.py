@@ -156,21 +156,22 @@ add_sprite_block(0x7D,0x7D,"points",{14,15},False)  # 300,500
 add_sprite_block(0x31,0x34,"rock_ball",4,False)
 add_sprite_block(0x36,0x37,"rock_ball",4,False)
 add_sprite_block(0x40,0x41,"medium_explosion",1,False)
-add_sprite_block(0x2a,0x2c,"shot_explosion",7,False)
+add_sprite_block(0x2a,0x2c,"shot_explosion",1,False)
 add_sprite_block(0x2D,0x30,"rock",4,False)
-add_sprite_block(0x3E,0x3F,"explosion",7,False)
+add_sprite_block(0x3E,0x3F,"explosion",1,False)
+add_sprite_block(0x4E,0x5F,"hole_explosion",1,False)
 add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
 add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
 add_sprite_block(0x61,0x6F,"ground_explosion",3,False)
 add_sprite_block(0x4B,0x4D,"ship_bomb",1,False)
 add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},True)
-add_sprite_block(0x3D,0x3D,"mine",{3,10},False)
+add_sprite_block(0x3D,0x3D,"mine",{3,0xA,0xB},False)
 add_sprite_block(0x39,0x39,"tank_shot",4,True)
 #add_sprite_block(0x73,0x75,"trap",2,False)  # adding this => palette overflow...
 add_sprite_block(0x3C,0x3C,"missile_shot",4,False)   # maybe wrong clut
 add_sprite_block(0,0,"blank",0,False)   # maybe wrong clut
 add_sprite_block(0x28,0x29,"jeep_shot",1,False)   # maybe wrong clut
-add_sprite_block(0x35,0x35,"ground_digging_bomb",14,False)   # maybe wrong clut
+add_sprite_block(0x35,0x35,"ground_digging_bomb",{0xA,0xB},False)   # maybe wrong clut
 
 # group jeep sprites to save sprites
 group_vertically(0x9,0xb)       # falling jeep

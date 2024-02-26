@@ -3280,11 +3280,10 @@ draw_ground_block_1106:
 	move.b	d0,d1                           	| [$1115: ld   b,a]
 	subq.b	#1,d1                           	| [$1116: dec  b]
 	lea	game_rom+0x2CB4,a0                      	| [$1117: ld   hl,$2CB4]
-	moveq	#0,d7		| offset
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$111a: ld   a,(unknown_E1E2)]
 	ror.b	#3,d0                           	| [$111d: rra] * 3
 	and.b	#0x1F,d0                         	| [$1120: and  $1F]
-	add.b	d7,d0                            	| [$1122: add  a,l]
+												| [$1122: add  a,l]
 	subq.b	#1,d1                           	| [...]
 	jne	l_1127                             	| [$1123: djnz $1127]
 	* maybe can get past 0x100 offset??
@@ -3396,9 +3395,10 @@ l_119a:
 	move.b	#0x0B,d0                        	| [$11b2: ld   a,$0B]
 	jra	l_11dd                             	| [$11b4: jr   $11DD]
 l_11b6:
+	* moved / duplicated code to avoid trashing C flag
+	jcc	l_11d8                             	| [$11ba: jr   nc,$11D8]
 	move.b	(a0),d0                         	| [$11b6: ld   a,(hl)] -  * J11A4
 	lea	unknown_E514,a0                	| [$11b7: ld   hl,unknown_E514]
-	jcc	l_11d8                             	| [$11ba: jr   nc,$11D8]
 	tst.b	d0                               	| [$11bc: and  a]
 	jne	l_11c0                             	| [$11bd: jr   nz,$11C0]
 	subq.b	#1,(a0)                         	| [$11bf: dec  (hl)]
@@ -3421,6 +3421,9 @@ l_11c0_2:
 	move.b	#0x0B,d0
 	bra.b	l_11c0
 l_11d8:
+	* duplicated code
+	move.b	(a0),d0                         	| [$11b6: ld   a,(hl)] -  * J11A4
+	lea	unknown_E514,a0                	| [$11b7: ld   hl,unknown_E514]
 	cmp.b	#0x09,d0                         	| [$11d8: cp   $09] -  * J11BA
 	jne	l_11dd                             	| [$11da: jr   nz,$11DD]
 	addq.b	#1,(a0)                         	| [$11dc: inc  (hl)]

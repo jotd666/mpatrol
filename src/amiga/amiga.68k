@@ -1213,6 +1213,7 @@ update_bobs:
 	* bob is valid but wrong clut
 	.ifndef	RELEASE
 	* not known/registered: we should log that!
+	move.l	(a7),a0
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
 	and.b	#0xF,d3	| get attributes

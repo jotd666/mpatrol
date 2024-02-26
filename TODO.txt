@@ -1,7 +1,6 @@
 - ufo crashing: wrong x speed (too high)
-- hole making bombs: not displayed: check cluts, but create holes!!
 - ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
-- a lot of wrong clut yellow flashes
+- wrong clut yellow/red flashes
 - sorry no bonus! even if time below current best time
 - wheels bouncing when jeep explode: 2 outer wheels bounce y is wrong
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
@@ -13,13 +12,41 @@
 
 graphical issues:
 
+- palette:
+  status tiles: group first 8 colors
+  change colors afterwards
+  
+  dual playfield
+  * lower layer:
+    - black/blue/green: 0
+    - blue mountain, then change 2 colors for rocks
+	  (recolor rock in those blue colors artficially): 1-2
+	- green mountain, dark green or yellow (mountain/city) 3-4
+	- orange (ground) reuse 3
+	- brown (ground holes) reuse 4
+	- white/yellow/dark red: 5-6-7 bomb explosions 
+	  but pri problem vs jeep sprite, can be a non-problem
+	  depending on the position of the green moutain!
+	- reuse colors for volcanoes close to ground
+	- change point color letters properly (below holes)
+	
+  * upper playfield
+    - 8: wasted (transparent)
+    - 9-10-11: blue/yellow/red for ships
+	- 12: purple (bomb)
+	- 13: white (hole bomb)
+	- 9-10... rear missile is alone, reuse ship colors?
+	- 14: red (explosions)
+	- 15: green (in explosions)
+	
+	
+- most ground object colors are wrong
 - insert coin screen: color bands not removed
 - multiplex sprites with 2 sprite control copperlist zones (materialize it
   to debug): lower zone already busy with jeep+wheels (6 sprites, all color banks), upper zone
   would contain ufos
 - reuse 2 blue mountain colors for 2 lower scenery colors (rocks woulc be ideal!)
 - remaining color bands (from start platform)
-- rock colors are wrong
 - moonbase colors not properly displayed
 - 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
 - re-set tiles palette at some low Y so letters have proper palettes
