@@ -652,7 +652,7 @@ jump_table_020C:
 game_mainloop_026e:
 	jbsr	handle_path_advance_0ddc            | [$026e: call $0DDC] -  ?? Change terrain
 	jbsr	handle_time_210d                    | [$0271: call $210D] -  Draw "point letter" in upper center status window
-	jbsr	l_1b3a                            	| [$0274: call $1B3A] -  ?? Start UFO shot
+	jbsr	handle_ufo_shots_1b3a               | [$0274: call $1B3A] -  ?? Start UFO shot
 	jbsr	handle_flying_enemies_1bc7          | [$0277: call $1BC7] -  ?? Init aliens
 	jbsr	update_alien_sounds_12a7   		  	| [$027a: call $12A7] -  ?? Alien sounds
 	jbsr	l_12e7                            	| [$027d: call $12E7] -  ??
@@ -1444,19 +1444,18 @@ l_0622:
 0:
 	* game in play!
 	lea	player_score_E500,a1                	| [$0631: ld   de,player_score_E500] -  Score for current player
-	move.b	#0x03,d1                        	| [$0634: ld   b,$03] -  Do three bytes (6 digits)
+	move.w	#0x03-1,d1                        	| [$0634: ld   b,$03] -  Do three bytes (6 digits)
 l_0636:
 	CLEAR_XC_FLAGS                               	| [$0636: and  a] -  Clear carry for first pass * C2899
 l_0637:
 	move.b	(a1),d0                         	| [$0637: ld   a,(de)] -  Add current value ... * J063D
-	move.b	(a0),d7			|	adc  a,(hl)
+	move.b	(a0)+,d7			|	adc  a,(hl)
 	abcd	d7,d0           |    daa
 
 	move.b	d0,(a1)+                         	| [$063a: ld   (de),a] -  New current value
 	                           	| [$063b: inc  de] -  Next in value
-	addq.w	#1,a0                           	| [$063c: inc  hl] -  Next in offset
-	subq.b	#1,d1                           	| [...]
-	jne	l_0637                             	| [$063d: djnz $0637] -  Do all digits
+	                           	| [$063c: inc  hl] -  Next in offset
+	dbf		d1,l_0637                             	| [$063d: djnz $0637] -  Do all digits, preserve X flag!
 	jbsr	check_ext_play_06af                            	| [$063f: call $06AF] -  Check and handle extended play
 	move.b	#0x03,d1                        	| [$0642: ld   b,$03] -  Three bytes (six digits)
 	lea	player_score_E500,a1                	| [$0644: ld   de,player_score_E500] -  Current score
@@ -3330,6 +3329,8 @@ l_114d:
 l_1155:
 	add.w	d3,d7                            	| [$1155: add  hl,de] -  * J115E
 	add.w	d3,a3                            	| [$1156: add  iy,de]
+	cmp.w	#0x8400,d7
+	bcc.b	0f			| probably an overflow in the game too
 	move.b	#0xF3,d0
 	jbsr	osd_w_videoram                      	| [$1158: ld   (hl),$F3]
 	move.b	#0x04,d0
@@ -3338,6 +3339,7 @@ l_1155:
 	exg		d7,a3
 	subq.b	#1,d1                           	| [...]
 	jne	l_1155                             	| [$115e: djnz $1155]
+0:
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1160: ld   a,(unknown_E1E2)]
 	ror.b	#2,d0                           	| [$1163: rra] * 2
  	and.b	#0x3E,d0                         	| [$1165: and  $3E]
@@ -3657,9 +3659,8 @@ l_130b:
 	rts                                    	| [$1310: ret]
 
 * < A2: E300
-
+* called just before the demo, then when game starts
 course_start_1311:
-											| [$1311: ld   hl,$4000] -  ?? and initial X (40)
 	move.b	#0,jeep_damping_and_y_E302
 	move.b	#0x40,jeep_x_E303                 	| [$1314: ld   (jeep_damping_and_y_E302),hl] -  Store ?? and initial X
 	move.b	timer_8bit_E04E,d0                 	| [$1317: ld   a,(timer_8bit_E04E)] -  Decrement counter ...
@@ -3673,7 +3674,8 @@ course_start_1311:
 	jbsr	queue_sound_effect_0d75     	| [$132c: call $0D75] -  ... background music
 	move.l	a0,d5
 	sub.l	#game_rom,d5
-	jra	l_135a                             	| [$132f: jr   $135A]
+	jra	next_jeep_state_135a                             	| [$132f: jr   $135A]
+	
 jeep_moving_on_track_1331:
 	jbsr	player_shot_1548                            	| [$1331: call $1548] -  Check starting player shot
 	* returns 0x40 at some point (when jeep jumps in the intro)
@@ -3708,7 +3710,7 @@ l_134a:
 	move.b	d0,d5                           	| [$1356: ld   h,a]
 	rol.w	#8,d5
 	STORE_LEW	d5,unknown_16bit_E308                 	| [$1357: ld   (unknown_16bit_E308),hl]
-l_135a:
+next_jeep_state_135a:
 	LOAD_D5D6_FROM_D5_16
 	* starts jumping: E300 from STATE_NORMAL_02 => STATE_JUMP_START_03
 	addq.b	#1,(a2)                    	| [$135a: inc  (ix+$00)] -  Transition buggy to "next" state (running or jumping) * J132F
@@ -3846,7 +3848,7 @@ l_144b:
 	move.w	#0x0024,d5                      	| [$145a: ld   hl,$0024] 36
 	add.w	d3,d5                            	| [$145d: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$145e: ld   (unknown_16bit_E0DC),hl]
-	rol.b	#1,d5                           	| [$1461: rl   h]
+	rol.w	#1,d5                           	| [$1461: rl   h] rol word!!
 	jcs	l_1484                             	| [$1463: jr   c,$1484]
 	add.b	#0x0B,d0                         	| [$1465: add  a,$0B]
 	jbsr	compute_ground_object_y_from_x_1538                            	| [$1467: call $1538]
@@ -3877,10 +3879,9 @@ l_148a:
 	move.b	(a0),d5                         	| [$1495: ld   h,(hl)]
 	lsl.w	#8,d5                               	| [$1496: ld   l,$00]
 	STORE_LEW	d5,unknown_16bit_E30E                 	| [$1498: ld   (unknown_16bit_E30E),hl]
-	clr.b	d0                               	| [$149b: xor  a]
+													| [$149b: xor  a]
 	and.w	#0xFF,d4
-	add.w	d4,d4
-	                           	| [$149c: rl   e]
+	add.w	d4,d4				| [$149c: rl   e]
 	                           	| [$149e: rla]
 	                           	| [$149f: ld   d,a]
 	STORE_LEW	d4,unknown_16bit_E31C                 	| [$14a0: ld   (unknown_16bit_E31C),de]
@@ -4966,7 +4967,8 @@ rear_missile_sitting_duck_1b27:
 	subq.b	#1,(0x0b,a2)                    	| [$1b32: dec  (ix+$0b)]
 	move.b	#0x52,(obj_type,a2)                 	| [$1b35: ld   (ix+$0d),$52]
 	rts                                    	| [$1b39: ret]
-l_1b3a:
+	
+handle_ufo_shots_1b3a:
 	lea	unknown_E0EE,a0                	| [$1b3a: ld   hl,unknown_E0EE] -  * C0274
 	move.b	timer_8bit_E04E,d0                 	| [$1b3d: ld   a,(timer_8bit_E04E)]
 	sub.b	(a0),d0                          	| [$1b40: sub  (hl)]
@@ -4975,6 +4977,7 @@ l_1b3a:
 0:
 	move.b	#0x10,d1                        	| [$1b42: ld   bc,$1000] 4096
 	move.b	#0x00,d2                        	| [$1b42: ld   bc,$1000] 4096
+	* pick one of the positions 0-15
 	jbsr	osd_get_random                           	| [$1b45: ld   a,r]
 	and.b	#0xF0,d0                         	| [$1b47: and  $F0]
 	lea		unknown_E400,a0                        	| [$1b49: ld   h,$E4]
@@ -4995,7 +4998,7 @@ l_1b4d:
 	move.b	d7,d4                           	| [$1b5e: ld   e,l]
 l_1b5f:
 	move.b	d7,d0                           	| [$1b5f: ld   a,l] -  * J1B53,J1B57,J1BC2
-	add.b	#0x10,d0                         	| [$1b60: add  a,$10]
+	add.b	#0x10,d0                         	| [$1b60: add  a,$10] next slot
 	subq.b	#1,d1                           	| [...]
 	jne	l_1b4d                             	| [$1b62: djnz $1B4D]
 	move.b	d4,unknown_E1D4
@@ -5049,6 +5052,7 @@ l_1b90:
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1b9b: ret  z] [...]
 0:
+	* reaches here if bombing is decided
 	jbsr	osd_get_random                           	| [$1b9c: ld   a,r]
 	and.b	#0x0F,d0                         	| [$1b9e: and  $0F]
 	add.b	#0x19,d0                         	| [$1ba0: add  a,$19]
@@ -5062,6 +5066,7 @@ l_1b90:
 	lea	unknown_E1D4,a0                	| [$1bb1: ld   hl,unknown_E1D4]
 	move.b	(a0),d4                         	| [$1bb4: ld   e,(hl)]
 	move.b	d4,d3
+	* start of shooting ufos in E400
 	lea	unknown_E400,a3                	| [$1bb5: ld   iy,unknown_E400]
 	add.w	d3,a3                            	| [$1bb9: add  iy,de]
 	move.b	#0x3B,d2                        	| [$1bbb: ld   c,$3B]
@@ -5071,9 +5076,9 @@ l_1bc0:
 	addq.b	#1,d3                           	| [$1bc1: inc  d]
 	jra	l_1b5f                             	| [$1bc2: jr   $1B5F]
 store_e370_offset_1bc4:
-	* store ufo_objects_e370+index lsb!
+	* memorize index lsb!
 	move.l	a0,d4
-	sub.l	#ufo_objects_e370,d4
+	sub.l	#jeep_params_E300,d4
 	* and return to loop (spaghetti code!) | [$1bc4: ld   e,l] -  * J1B89
 	jra	l_1b90                             		  | [$1bc5: jr   $1B90]
 handle_flying_enemies_1bc7:

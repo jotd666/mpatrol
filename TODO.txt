@@ -1,14 +1,15 @@
-- UFO bombs: same slot seems to be reused, last bomb is OK but others seem to reset
-- hole making bombs: not displayed, but create holes!!
+- ufo crashing: wrong x speed (too high)
+- hole making bombs: not displayed: check cluts, but create holes!!
 - ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
 - a lot of wrong clut yellow flashes
 - sorry no bonus! even if time below current best time
 - wheels bouncing when jeep explode: 2 outer wheels bounce y is wrong
 - insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
-  (which is cool to test!!) continue flag must be tested wrong
+  (which is cool to test!!) continue flag must be tested wrong: break in course_start_1311
 - continue screen timer doesn't work properly
 - after section E should be moon city and doesn't work
 - slope sections don't work properly: scrolling stutters, no slope tiles appear (demo)
+
 
 graphical issues:
 
