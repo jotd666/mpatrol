@@ -1,4 +1,3 @@
-- wheels bouncing when jeep explode: 2 outer wheels bounce y is wrong
 - ufo crashing: wrong x speed (too high)
 - slope sections don't work properly: scrolling stutters, no slope tiles appear (demo)
 - ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!

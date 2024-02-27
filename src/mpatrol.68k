@@ -1906,6 +1906,8 @@ l_08b2:
 	* a2: object params (ex: jeep E300)
 l_08b4:
 	move.b	#0x01,(0x0b,a2)                 	| [$08b4: ld   (ix+$0b),$01] -  * J0845
+	
+* < A2: object structure
 draw_object_08b8:
 	moveq	#0,d0
 	* when game running, every second update, value is 0x80
@@ -3828,27 +3830,28 @@ display_moon_patrol_title_1421:
 	move.b	#0x04,(a2)                 	| [$142e: ld   (ix+$00),$04] -  Transition to handling buggy jumping
 	rts                                    	| [$1432: ret] -  Done
 	
+* jeep explosion animation: hitting a rock/mine or bombed
 jeep_bombed_1433:
 	jbsr	copy_object_structure_to_temp_object_20ef                            	| [$1433: call $20DB]
-	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1436: ld   (unknown_16bit_E0D6),hl]
+	STORE_LEW	d5,temp_16bit_x_and_what_E0D6                 	| [$1436: ld   (temp_16bit_x_and_what_E0D6),hl]
 	move.w	d5,d0                           	| [$1439: ld   a,h]
-	lsr.w	#8,d0
+	lsr.w	#8,d0								| d0 now contains object X
 	sub.b	#0x08,d0                         	| [$143a: sub  $08]
 	cmp.b	#0xF0,d0                         	| [$143c: cp   $F0]
 	jcc	l_0852                             	| [$143e: jp   nc,$0852]
-	LOAD_LEW	unknown_16bit_E0D8,d5             	| [$1441: ld   hl,(unknown_16bit_E0D8)]
+	LOAD_LEW	temp_unknown_16bit_E0D8,d5             	| [$1441: ld   hl,(temp_unknown_16bit_E0D8)]
 	addq.w	#1,d5                           	| [$1444: inc  hl]
 												| [$1445: bit  7,h]
 	jmi	l_144b                             	| [$1447: jr   nz,$144B]
 	subq.w	#2,d5                           	| [$1449: dec  hl] * 2
 l_144b:
-	STORE_LEW	d5,unknown_16bit_E0D8                 	| [$144b: ld   (unknown_16bit_E0D8),hl] -  * J1447
-	LOAD_LEW	unknown_16bit_E0DA,d5             	| [$144e: ld   hl,(unknown_16bit_E0DA)]
+	STORE_LEW	d5,temp_unknown_16bit_E0D8                 	| [$144b: ld   (temp_unknown_16bit_E0D8),hl] -  * J1447
+	LOAD_LEW	temp_16bit_y_and_what_E0DA,d5             	| [$144e: ld   hl,(temp_16bit_y_and_what_E0DA)]
 	LOAD_LEW	unknown_16bit_E0DC,d3             	| [$1451: ld   de,(unknown_16bit_E0DC)]
 	add.w	d3,d5                            	| [$1455: add  hl,de]
 	move.w	d5,d2                           	| [$1456: ld   c,h]
-	lsr.w	#8,d2
-	STORE_LEW	d5,unknown_16bit_E0DA                 	| [$1457: ld   (unknown_16bit_E0DA),hl]
+	lsr.w	#8,d2								| d2 now contains object Y
+	STORE_LEW	d5,temp_16bit_y_and_what_E0DA                 	| [$1457: ld   (temp_16bit_y_and_what_E0DA),hl]
 	move.w	#0x0024,d5                      	| [$145a: ld   hl,$0024] 36
 	add.w	d3,d5                            	| [$145d: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$145e: ld   (unknown_16bit_E0DC),hl]
@@ -3860,8 +3863,10 @@ l_144b:
 	cmp.b	d2,d0                            	| [$146c: cp   c]
 	jcc	l_1484                             	| [$146d: jr   nc,$1484]
 	SET_XC_FLAGS							| cmp just set carry!
+	* wheel is touching the ground, make it bounce
 	LOAD_LEW	unknown_16bit_E0DC,d3             	| [$146f: ld   de,(unknown_16bit_E0DC)]
-	move.w	#0x0001,d5                      	| [$1473: ld   hl,$0000] 0
+	clr.w	d5                      	| [$1473: ld   hl,$0000] 0
+	* negate D5 but with carry, probably intents to Y speed inversion: wheels bounce up!
 	subx.w	d3,d5                            	| [$1476: sbc  hl,de]
 	lsr.w	#2,d3                            	| [$1478: srl  d]
 	                           	| [$147a: rr   e]
@@ -3870,8 +3875,11 @@ l_144b:
 	add.w	d3,d5                            	| [$1480: add  hl,de]
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$1481: ld   (unknown_16bit_E0DC),hl]
 l_1484:
+	* draw the wheels that go in the air and bounce
 	jbsr	draw_object_08b8                            	| [$1484: call $08B8] -  * J1463,J146D
+	* commit changes into structure
 	jra	copy_temp_object_structure_to_object_20ef                             	| [$1487: jp   $20EF]
+	
 l_148a:
 	move.b	unknown_E049,d0                 	| [$148a: ld   a,(unknown_E049)] -  * C1363
 	add.b	d0,d0                            	| [$148d: add  a,a]
@@ -5257,16 +5265,16 @@ l_1cd7:
 	jcs	l_0852                             	| [$1ce0: jp   c,$0852]
 	move.w	#0x05,d1                        	| [$1ce3: ld   bc,$0005] 5
 l_1ce6:
-	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1ce6: ld   (unknown_16bit_E0D6),hl] -  * J1D38
+	STORE_LEW	d5,temp_16bit_x_and_what_E0D6                 	| [$1ce6: ld   (temp_16bit_x_and_what_E0D6),hl] -  * J1D38
 	move.w	d5,d0                           	| [$1ce9: ld   a,h]
 	lsr.w	#8,d0
 	LOAD_LEW	unknown_16bit_E0DC,d5             	| [$1cea: ld   hl,(unknown_16bit_E0DC)]
 	add.w	d1,d5                            	| [$1ced: add  hl,bc]
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$1cee: ld   (unknown_16bit_E0DC),hl]
 l_1cf1:
-	LOAD_LEW	unknown_16bit_E0DA,d3             	| [$1cf1: ld   de,(unknown_16bit_E0DA)] -  * J20A9
+	LOAD_LEW	temp_16bit_y_and_what_E0DA,d3             	| [$1cf1: ld   de,(temp_16bit_y_and_what_E0DA)] -  * J20A9
 	add.w	d3,d5                            	| [$1cf5: add  hl,de]
-	STORE_LEW	d5,unknown_16bit_E0DA                 	| [$1cf6: ld   (unknown_16bit_E0DA),hl]
+	STORE_LEW	d5,temp_16bit_y_and_what_E0DA                 	| [$1cf6: ld   (temp_16bit_y_and_what_E0DA),hl]
 	rol.w	#8,d5			| get msb
 	move.b	d5,d3                           	| [$1cf9: ld   d,h]
 	jbsr	compute_ground_object_y_from_x_1538                            	| [$1cfa: call $1538]
@@ -5565,14 +5573,14 @@ animate_ufo_1f28:
 	jne	l_1f87                             	| [$1f33: jr   nz,$1F87]
 	subq.b	#1,(obj_next_frame_timeout,a2)                    	| [$1f35: dec  (ix+$0a)]
 	jeq	l_1f83                             	| [$1f38: jr   z,$1F83]
-	LOAD_LEW	unknown_16bit_E0D6,d5             	| [$1f3a: ld   hl,(unknown_16bit_E0D6)]
-	LOAD_LEW	unknown_16bit_E0D8,d3             	| [$1f3d: ld   de,(unknown_16bit_E0D8)]
+	LOAD_LEW	temp_16bit_x_and_what_E0D6,d5             	| [$1f3a: ld   hl,(temp_16bit_x_and_what_E0D6)]
+	LOAD_LEW	temp_unknown_16bit_E0D8,d3             	| [$1f3d: ld   de,(temp_unknown_16bit_E0D8)]
  	add.w	d3,d5                            	| [$1f41: add  hl,de]
 	move.w	d3,d0                           	| [$1f42: ld   a,d]
 	lsr.w	#8,d0
 	LOAD_LEW	jeep_damping_force_16bit_E304,d3             	| [$1f43: ld   de,(jeep_damping_force_16bit_E304)]
 	sub.w	d3,d5                            	| [$1f47: sbc  hl,de]
-	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1f49: ld   (unknown_16bit_E0D6),hl]
+	STORE_LEW	d5,temp_16bit_x_and_what_E0D6                 	| [$1f49: ld   (temp_16bit_x_and_what_E0D6),hl]
 	roxl.b	#1,d0                           	| [$1f4c: rla]
 	jcs	l_1f7e                             	| [$1f4d: jr   c,$1F7E]
 	move.b	(obj_type,a2),d0                    	| [$1f4f: ld   a,(ix+$0d)]
@@ -5589,10 +5597,10 @@ l_1f60:
 	cmp.b	d1,d0                            	| [$1f61: cp   b]
 	jcc	l_1f83                             	| [$1f62: jr   nc,$1F83]
 l_1f64:
-	LOAD_LEW	unknown_16bit_E0DA,d5             	| [$1f64: ld   hl,(unknown_16bit_E0DA)] -  * J1F81
+	LOAD_LEW	temp_16bit_y_and_what_E0DA,d5             	| [$1f64: ld   hl,(temp_16bit_y_and_what_E0DA)] -  * J1F81
 	LOAD_LEW	unknown_16bit_E0DC,d3             	| [$1f67: ld   de,(unknown_16bit_E0DC)]
 	add.w	d3,d5                            	| [$1f6b: add  hl,de]
-	STORE_LEW	d5,unknown_16bit_E0DA                 	| [$1f6c: ld   (unknown_16bit_E0DA),hl]
+	STORE_LEW	d5,temp_16bit_y_and_what_E0DA                 	| [$1f6c: ld   (temp_16bit_y_and_what_E0DA),hl]
 	move.w	d5,d0                           	| [$1f6f: ld   a,h]
 	lsr.w	#8,d0
 	cmp.b	#0x38,d0                         	| [$1f70: cp   $38]
@@ -5611,12 +5619,12 @@ l_1f83:
 	subq.b	#1,(a2)                    	| [$1f83: dec  (ix+$00)] -  * J1F38,J1F62,J1F72,J1F76,J1FD4,J2011
 	rts                                    	| [$1f86: ret]
 l_1f87:
-	LOAD_LEW	unknown_16bit_E0D8,d5             	| [$1f87: ld   hl,(unknown_16bit_E0D8)] -  * J1F33
+	LOAD_LEW	temp_unknown_16bit_E0D8,d5             	| [$1f87: ld   hl,(temp_unknown_16bit_E0D8)] -  * J1F33
 	clr.w	d3                               	| [$1f8d: ld   d,$00]
 	move.b	(0x0b,a2),d3                    	| [$1f8a: ld   e,(ix+$0b)]
 	move.w	d5,d7                               	| [$1f8f: and  a]
 	sub.w	d3,d7                            	| [$1f90: sbc  hl,de]
-	STORE_LEW	d7,unknown_16bit_E0D8                 	| [$1f92: ld   (unknown_16bit_E0D8),hl]
+	STORE_LEW	d7,temp_unknown_16bit_E0D8                 	| [$1f92: ld   (temp_unknown_16bit_E0D8),hl]
 	* redo sub to get flags as move clears carry
 	sub.w	d3,d5                            	| [$1f90: sbc  hl,de]
 	jcc	l_1fad                             	| [$1f95: jr   nc,$1FAD]
@@ -5636,7 +5644,7 @@ l_1fa6_2:
 l_1fad:
 	* apply X speed
 	exg	d3,d5                              	| [$1fad: ex   de,hl] -  * J1F95
-	LOAD_LEW	unknown_16bit_E0D6,d5             	| [$1fae: ld   hl,(unknown_16bit_E0D6)]
+	LOAD_LEW	temp_16bit_x_and_what_E0D6,d5             	| [$1fae: ld   hl,(temp_16bit_x_and_what_E0D6)]
 	sub.w	d3,d5                            	| [$1fb1: sbc  hl,de] sub
 	move.b	(0x0c,a2),d0                    	| [$1fb3: ld   a,(ix+$0c)]
 	rol.b	#1,d0                            	| [$1fb6: rlca]
@@ -5646,7 +5654,7 @@ l_1fad:
 l_1fbb:
 	LOAD_LEW	jeep_damping_force_16bit_E304,d3             	| [$1fbb: ld   de,(jeep_damping_force_16bit_E304)] -  * J1FB7
 	sub.w	d3,d5                            	| [$1fbf: sbc  hl,de]
-	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$1fc1: ld   (unknown_16bit_E0D6),hl]
+	STORE_LEW	d5,temp_16bit_x_and_what_E0D6                 	| [$1fc1: ld   (temp_16bit_x_and_what_E0D6),hl]
 	LOAD_LEW	unknown_16bit_E0DC,d5             	| [$1fc4: ld   hl,(unknown_16bit_E0DC)]
 	clr.w	d3                               	| [$1fca: ld   d,$00]
 	move.b	(0x0b,a2),d3                    	| [$1fc7: ld   e,(ix+$0b)]
@@ -5661,7 +5669,7 @@ l_1fd6:
 	* apply Y speed
 	STORE_LEW	d5,unknown_16bit_E0DC                 	| [$1fd6: ld   (unknown_16bit_E0DC),hl] -  * J1FEC
 	exg	d3,d5                              	| [$1fd9: ex   de,hl]
-	LOAD_LEW	unknown_16bit_E0DA,d5             	| [$1fda: ld   hl,(unknown_16bit_E0DA)]
+	LOAD_LEW	temp_16bit_y_and_what_E0DA,d5             	| [$1fda: ld   hl,(temp_16bit_y_and_what_E0DA)]
 											| [$1fdd: and  a]
 	sub.w	d3,d5                            	| [$1fde: sbc  hl,de] sub then
 	ror.b	#1,d0                            	| [$1fe0: rrca]		test add or sub
@@ -5670,7 +5678,7 @@ l_1fd6:
 	add.w	d3,d5                            	| [$1fe4: add  hl,de] add
 l_1fe5:
 	* change ?? (seems not used) and Y
-	STORE_LEW	d5,unknown_16bit_E0DA                 	| [$1fe5: ld   (unknown_16bit_E0DA),hl] -  * J1FE1
+	STORE_LEW	d5,temp_16bit_y_and_what_E0DA                 	| [$1fe5: ld   (temp_16bit_y_and_what_E0DA),hl] -  * J1FE1
 	jra	l_1f78                             	| [$1fe8: jp   $1F78]
 l_1feb:
 	add.w	d3,d5                            	| [$1feb: add  hl,de] -  * J1FCF
@@ -5693,16 +5701,16 @@ ufo_appearing_2000:
 animate_ufo_201a:
 	jbsr	animate_ufo_frame_1c63                            	| [$201a: call $1C63]
 	jbsr	copy_object_structure_to_temp_object_20ef                            	| [$201d: call $20DB]
-	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$2020: ld   (unknown_16bit_E0D6),hl]
+	STORE_LEW	d5,temp_16bit_x_and_what_E0D6                 	| [$2020: ld   (temp_16bit_x_and_what_E0D6),hl]
 	move.w	d5,d0                           	| [$2023: ld   a,h]
 	lsr.w	#8,d0
 	sub.w	#0x08,d0                         	| [$2024: sub  $08]
 	cmp.w	#0xF0,d0                         	| [$2026: cp   $F0]
 	jcc	l_0852                             	| [$2028: jp   nc,$0852]
 	LOAD_LEW	unknown_16bit_E0DC,d3             	| [$202b: ld   de,(unknown_16bit_E0DC)]
-	LOAD_LEW	unknown_16bit_E0DA,d5             	| [$202f: ld   hl,(unknown_16bit_E0DA)]
+	LOAD_LEW	temp_16bit_y_and_what_E0DA,d5             	| [$202f: ld   hl,(temp_16bit_y_and_what_E0DA)]
 	add.w	d3,d5                            	| [$2032: add  hl,de]
-	STORE_LEW	d5,unknown_16bit_E0DA                 	| [$2033: ld   (unknown_16bit_E0DA),hl]
+	STORE_LEW	d5,temp_16bit_y_and_what_E0DA                 	| [$2033: ld   (temp_16bit_y_and_what_E0DA),hl]
 	move.w	d5,d0                           	| [$2036: ld   a,h]
 	cmp.w	#0x3000,d0                         	| [$2037: cp   $30]
 	jcs	l_0852                             	| [$2039: jp   c,$0852]
@@ -5769,7 +5777,7 @@ l_2092:
 ufo_crashing_on_player_209c:
 	jbsr	animate_ufo_frame_1c63                            	| [$209c: call $1C63]
 	jbsr	copy_object_structure_to_temp_object_20fb                            	| [$209f: call $20FB]
-	STORE_LEW	d5,unknown_16bit_E0D6                 	| [$20a2: ld   (unknown_16bit_E0D6),hl]
+	STORE_LEW	d5,temp_16bit_x_and_what_E0D6                 	| [$20a2: ld   (temp_16bit_x_and_what_E0D6),hl]
 	move.w	d5,d0                           	| [$20a5: ld   a,h]
 	lsr.w	#8,d0
 	LOAD_LEW	unknown_16bit_E0DC,d5             	| [$20a6: ld   hl,(unknown_16bit_E0DC)]
@@ -5803,8 +5811,8 @@ copy_object_structure_to_temp_object_20ef:
 	move.w	#0x0a,d1                        	| [$20e1: ld   bc,$000A] 10
 	jbsr	ldir                              	| [$20e4: ldir]
 	* contains X (offset 3) and ??
-	LOAD_LEW	unknown_16bit_E0D6,d3             	| [$20e6: ld   de,(unknown_16bit_E0D6)]
-	LOAD_LEW	unknown_16bit_E0D8,d5             	| [$20ea: ld   hl,(unknown_16bit_E0D8)]
+	LOAD_LEW	temp_16bit_x_and_what_E0D6,d3             	| [$20e6: ld   de,(temp_16bit_x_and_what_E0D6)]
+	LOAD_LEW	temp_unknown_16bit_E0D8,d5             	| [$20ea: ld   hl,(temp_unknown_16bit_E0D8)]
 	add.w	d3,d5                            	| [$20ed: add  hl,de]
 	rts                                    	| [$20ee: ret]
 	

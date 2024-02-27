@@ -36,9 +36,9 @@
 	.global	unknown_16bit_E098
 	.global	unknown_E099
 	.global	temp_object_structure_E0D4
-	.global	unknown_16bit_E0D6
-	.global	unknown_16bit_E0D8
-	.global	unknown_16bit_E0DA
+	.global	temp_16bit_x_and_what_E0D6
+	.global	temp_unknown_16bit_E0D8
+	.global	temp_16bit_y_and_what_E0DA
 	.global	unknown_16bit_E0DC
 	.global	screen_address_E0E4
 	.global	unknown_pointer_E0E6
@@ -244,11 +244,11 @@ unknown_E099:
 temp_object_structure_E0D4:
 	ds.b	2
 	.align	2
-unknown_16bit_E0D6:
+temp_16bit_x_and_what_E0D6:
 	ds.b	2
-unknown_16bit_E0D8:
+temp_unknown_16bit_E0D8:
 	ds.b	2
-unknown_16bit_E0DA:
+temp_16bit_y_and_what_E0DA:
 	ds.b	2
 unknown_16bit_E0DC:
 	ds.b	8
