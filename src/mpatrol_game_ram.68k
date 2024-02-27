@@ -31,7 +31,7 @@
 	.global	unknown_E05F
 	.global	unknown_E062
 	.global	unknown_E068
-	.global	unknown_16bit_E094
+	.global	course_section_record_E094
 	.global	unknown_pointer_E096
 	.global	unknown_16bit_E098
 	.global	unknown_E099
@@ -135,7 +135,7 @@
 	.global	fine_position_on_track_E50B
 	.global	unknown_E50D
 	.global	cur_point_e50e
-	.global	unknown_E50F
+	.global	moonbase_already_displayed_E50F
 	.global current_level_E510
 	.global	time_bcd_E511
 	.global	unknown_E512
@@ -233,7 +233,7 @@ unknown_E062:
 	ds.b	6
 unknown_E068:
 	ds.b	44
-unknown_16bit_E094:
+course_section_record_E094:
 	ds.b	2
 unknown_pointer_E096:
 	ds.l	1
@@ -450,7 +450,7 @@ unknown_E50D:
 	ds.b	1
 cur_point_e50e:
 	ds.b	1
-unknown_E50F:
+moonbase_already_displayed_E50F:
 	ds.b	1
 current_level_E510:
 	ds.b	1

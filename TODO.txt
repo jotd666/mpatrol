@@ -1,13 +1,10 @@
-- ufo crashing: wrong x speed (too high)
-- ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
-- wrong clut yellow/red flashes
-- sorry no bonus! even if time below current best time
 - wheels bouncing when jeep explode: 2 outer wheels bounce y is wrong
-- insert coin OK but start game doesn't display moonbase, starts immediately like if it continued
-  (which is cool to test!!) continue flag must be tested wrong: break in course_start_1311
-- continue screen timer doesn't work properly
-- after section E should be moon city and doesn't work
+- ufo crashing: wrong x speed (too high)
 - slope sections don't work properly: scrolling stutters, no slope tiles appear (demo)
+- ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
+- after section E should be moon city and doesn't work
+- continue screen timer doesn't work properly
+- find wrong clut yellow/red flashes
 
 
 graphical issues:

@@ -366,12 +366,12 @@ startup_cont_0068:
     jbsr  osd_enable_interrupts  | [ei]
 	jbsr	display_status_bar_0b8a           	| [$0069: call display_status_bar_0b8a]
 	move.b	#0x01,d0                        	| [$006c: ld   a,$01]
-	move.b	d0,title_display_timer_E04D                 	| [$006e: ld   (title_display_timer_E04D),a]
-	move.b	d0,unknown_E50F                 	| [$0071: ld   (unknown_E50F),a]
+	move.b	d0,title_display_timer_E04D           | [$006e: ld   (title_display_timer_E04D),a]
+	move.b	d0,moonbase_already_displayed_E50F       | [$0071: ld   (moonbase_already_displayed_E50F),a]
 	                           	| [$0074: inc  a]
 	* normal terrain: flat with bumps
 	move.b	#2,terrain_slope_type_E508                 	| [$0075: ld   (terrain_slope_type_E508),a]
-	jra	l_0bb7                             	| [$0078: jp   $0BB7]
+	jra	start_new_section_0bb7                             	| [$0078: jp   $0BB7]
 l_007b:
 	clr.b	d1                               	| [$007b: ld   b,$00] -  * J0504
 l_007d:
@@ -382,7 +382,7 @@ l_007d:
     jbsr  osd_enable_interrupts  | [ei]
 	jbsr	l_0745                            	| [$0086: call $0745]
 	jbsr	display_status_bar_0b8a           	| [$0089: call display_status_bar_0b8a]
-	jra	l_0bb7                             	| [$008c: jp   $0BB7]
+	jra	start_new_section_0bb7                             	| [$008c: jp   $0BB7]
 l_008f:
 	move.b	#0x04,d1                        	| [$008f: ld   b,$04] -  * J00EF
 	jra	l_007d                             	| [$0091: jr   $007D]
@@ -461,7 +461,7 @@ l_010d:
 	jbsr	l_0533                            	| [$010d: call $0533] -  * J0110
 	jeq	l_010d                             	| [$0110: jr   z,$010D]
 	jbsr	l_0b38                            	| [$0112: call $0B38]
-	jra	l_0bb7                             	| [$0115: jp   $0BB7]
+	jra	start_new_section_0bb7                             	| [$0115: jp   $0BB7]
 l_0118:
 	lea		stack_top_E800,sp		| ld   sp,unknown_E800
 	lea	game_status_bits_E046,a0                	| [$011b: ld   hl,game_status_bits_E046]
@@ -477,13 +477,13 @@ l_0118:
 	jbsr	display_nb_lives_06d5                            	| [$0130: call $06D5]
 	lea	game_status_bits_E046,a0                	| [$0133: ld   hl,game_status_bits_E046]
 	btst.b	#4,(a0)                         	| [$0136: bit  4,(hl)]
-	jeq	l_0bb7                             	| [$0138: jp   z,$0BB7]
+	jeq	start_new_section_0bb7                             	| [$0138: jp   z,$0BB7]
 	jbsr	swap_players_0603                            	| [$013b: call $0603]
 	move.b	nb_lives_E515,d0                	| [$013e: ld   a,(nb_lives_E515)]
 	                               	| [$0141: and  a]
-	jne	l_0bb7                             	| [$0142: jp   nz,$0BB7]
+	jne	start_new_section_0bb7                             	| [$0142: jp   nz,$0BB7]
 	jbsr	swap_players_0603                            	| [$0145: call $0603]
-	jra	l_0bb7                             	| [$0148: jp   $0BB7]
+	jra	start_new_section_0bb7                             	| [$0148: jp   $0BB7]
 l_014b:
 	move.b	#0x1B,d0                        	| [$014b: ld   a,$1B] -  Play ... * J012E
 	jbsr	queue_sound_effect_0d75                            	| [$014d: call $0D75] -  ... ending music
@@ -501,7 +501,7 @@ l_014b:
 	jbsr	delay1_sec_05e4                            	| [$016c: call $05E4]
 	move.b	nb_lives_E515,d0                	| [$016f: ld   a,(nb_lives_E515)]
 	                               	| [$0172: and  a]
-	jne	l_0bb7                             	| [$0173: jp   nz,$0BB7]
+	jne	start_new_section_0bb7                             	| [$0173: jp   nz,$0BB7]
 l_0176:
 	lea	game_rom+0x2B02,a0                      	| [$0176: ld   hl,$2B02] -  "GAME OVER" script * J0155
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$0179: call $034E]
@@ -543,7 +543,7 @@ l_01c1:
 	jbsr	l_01da                            	| [$01c6: call $01DA]
 	jbsr	l_01da                            	| [$01c9: call $01DA]
 	jbsr	l_0cbf                            	| [$01cc: call $0CBF]
-	jra	l_0bb7                             	| [$01cf: jp   $0BB7]
+	jra	start_new_section_0bb7                             	| [$01cf: jp   $0BB7]
 
 l_01d2:
     jbsr  osd_disable_interrupts  | [di]
@@ -2424,7 +2424,8 @@ l_0b99:
 	addq.w	#2,a0                           	| [$0bb1: inc  hl] * 2
 	move.l	a0,enemy_track_data_pointer_E516                 	| [$0bb3: ld   (enemy_track_data_pointer_E516),hl]
 	rts                                    	| [$0bb6: ret]
-l_0bb7:
+	
+start_new_section_0bb7:
 	lea	sprite_shadow_E100,a0          	| [$0bb7: ld   hl,sprite_shadow_E100] -  Clear sprite mirror ... * J0078,J008C,J0115,J0138,J0142,J0148,J0173,J01CF,J28A7,J28B7
 	move.w	#0x400,d1                        	| [$0bba: ld   bc,$0400] 1024 -  ... and game objects ...
 	jbsr	clear_area_05fa                   	| [$0bbd: call clear_area_05fa] -  ... up to high-score
@@ -2476,9 +2477,9 @@ l_0c16:
 	jbsr	l_2981                            	| [$0c1a: call $2981]
 	tst.b	d0                               	| [$0c1d: and  a]
 	jne	l_0c7f                             	| [$0c1e: jr   nz,$0C7F]
-	lea	unknown_E50F,a0                	| [$0c20: ld   hl,unknown_E50F]
+	lea	moonbase_already_displayed_E50F,a0                	| [$0c20: ld   hl,moonbase_already_displayed_E50F]
 	btst.b	#0,(a0)                         	| [$0c23: bit  0,(hl)]
-	jne	l_0c7f                             	| [$0c25: jr   nz,$0C7F]
+	jne	l_0c7f                             	| [$0c25: jr   nz,$0C7F] moonbase already displayed: skip intro
 	addq.b	#1,(a0)                         	| [$0c27: inc  (hl)]
 	move.b	current_level_E510,d0                	| [$0c28: ld   a,(current_level_E510)] -  Get the course number
 	                               	| [$0c2b: and  a] -  Is this the first time?
@@ -2574,7 +2575,7 @@ l_0c95:
 	move.w	#0x16,d1                        	| [$0c9b: ld   bc,$0016] 22
 l_0c9e:
 	jbsr	clear_area_05fa                   	| [$0c9e: call clear_area_05fa] -  * J0CBD
-	move.b	d0,unknown_E50F                 	| [$0ca1: ld   (unknown_E50F),a]
+	clr.b	moonbase_already_displayed_E50F   | [$0ca1: ld   (moonbase_already_displayed_E50F),a] reuse zeroed a value after clear_area_05fa, bad!!!!
 	move.b	per_credit_e040,d0                 	| [$0ca4: ld   a,(per_credit_e040)]
 	move.b	d0,nb_lives_E515                	| [$0ca7: ld   (nb_lives_E515),a]
 	lea	game_rom+0x2162,a0                      	| [$0caa: ld   hl,$2162]
@@ -5877,7 +5878,7 @@ l_27d2:
 	jbsr	l_29fa                            	| [$27d2: call $29FA] -  * J27CB
 	move.b	#0x1E,d0                        	| [$27d5: ld   a,$1E] -  Play ...
 	jbsr	queue_sound_effect_0d75                            	| [$27d7: call $0D75] -  ... congratulations music
-	lea	unknown_E50F,a0                	| [$27da: ld   hl,unknown_E50F]
+	lea	moonbase_already_displayed_E50F,a0                	| [$27da: ld   hl,moonbase_already_displayed_E50F]
 	clr.b	(a0)+                             	| [$27dd: ld   (hl),$00]
 	                           	| [$27df: inc  hl] -  Now E510
 	addq.b	#1,(a0)                         	| [$27e0: inc  (hl)] -  Increment the course number
@@ -5885,7 +5886,7 @@ l_27d2:
 	jbsr	delay3_sec_05e8                            	| [$27e4: call $05E8]
 	lea	game_rom+0x2C24,a0                      	| [$27e7: ld   hl,$2C24] -  "CONGRATULATIONS" script
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$27ea: call $0300]
-	jbsr	l_28ba                            	| [$27ed: call $28BA]
+	jbsr	display_section_results_28ba                            	| [$27ed: call $28BA]
 	lea	game_rom+0x2C0C,a0                      	| [$27f0: ld   hl,$2C0C] -  "SPECIAL BOUNS POINTS" script
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$27f3: call $0300]
 	move.b	unknown_E513,d0                 	| [$27f6: ld   a,(unknown_E513)]
@@ -5905,7 +5906,7 @@ l_2805:
 	                           	| [$280f: dec  hl]
 	move.b	-(a0),d4                         	| [$2810: ld   e,(hl)]
 	LOAD_D3_16_FROM_D3D4
-	move.w	time_bcd_E511,d5            	| [$2811: ld   hl,(time_bcd_E511)]
+	LOAD_LEW	time_bcd_E511,d5            	| [$2811: ld   hl,(time_bcd_E511)]
 	                               	| [$2814: and  a]
 	sub.w	d3,d5                            	| [$2815: sbc  hl,de]
 	jcc	l_2827                             	| [$2817: jr   nc,$2827]
@@ -5919,8 +5920,8 @@ l_2805:
 	lea	game_rom+0x2C39,a0                      	| [$2821: ld   hl,$2C39] -  "YOU HAVE BROKEN A RECORD" script
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$2824: call $034E]
 l_2827:
-	LOAD_LEW	unknown_16bit_E094,d5             	| [$2827: ld   hl,(unknown_16bit_E094)] -  * J2817,J285C
-	move.w	time_bcd_E511,d3            	| [$282a: ld   de,(time_bcd_E511)]
+	LOAD_LEW	course_section_record_E094,d5             	| [$2827: ld   hl,(course_section_record_E094)] -  * J2817,J285C
+	LOAD_LEW	time_bcd_E511,d3            	| [$282a: ld   de,(time_bcd_E511)]
 	CLEAR_XC_FLAGS
 	move.b	#1,d0                           	| [$282e: ld   a,l]
 	sbcd	d0,d5                        	| [$282f: sub  $01 + daa]
@@ -5929,11 +5930,11 @@ l_2827:
 	jcc	l_2836                             	| [$2833: jr   nc,$2836]
 	sub.w	#0x100,d5                           	| [$2835: dec  h]
 l_2836:
-	STORE_LEW	d5,unknown_16bit_E094                 	| [$2836: ld   (unknown_16bit_E094),hl] -  * J2833
+	STORE_LEW	d5,course_section_record_E094                 	| [$2836: ld   (course_section_record_E094),hl] -  * J2833
 	                               	| [$2839: and  a]
 	sub.w	d3,d5                            	| [$283a: sbc  hl,de]
 	jcs	l_288e                             	| [$283c: jr   c,$288E]
-	jbsr	l_2968                            	| [$283e: call $2968]
+	jbsr	write_course_section_record_2968                            	| [$283e: call $2968]
 	LOAD_LEW	unknown_16bit_E098,d5             	| [$2841: ld   hl,(unknown_16bit_E098)]
 	CLEAR_XC_FLAGS
 	move.b	#1,d0                           	| [$2844: ld   a,l]
@@ -5957,14 +5958,16 @@ l_285e:
 	jbsr	l_2948                            	| [$2869: call $2948]
 	move.b	#0x30,d0                        	| [$286c: ld   a,$30]
 	jbsr	wait_for_sync_05ea                            	| [$286e: call $05EA]
-	jbsr	l_28ba                            	| [$2871: call $28BA]
+	jbsr	display_section_results_28ba                            	| [$2871: call $28BA]
 	jcs	l_2883                             	| [$2874: jr   c,$2883]
+	* better than section best time
 	lea	game_rom+0x2BE4,a0                      	| [$2876: ld   hl,$2BE4] -  "GOOD BONUS POINTS" script
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$2879: call $034E]
 	move.b	champ_colors_e0f9,d0                 	| [$287c: ld   a,(champ_colors_e0f9)]
 	addq.b	#1,d0                           	| [$287f: inc  a]
 	jra	l_27f9                             	| [$2880: jp   $27F9]
 l_2883:
+	* not better than section best time
 	lea	game_rom+0x2BF9,a0                      	| [$2883: ld   hl,$2BF9] -  "SORRY NO BONUS" script * J2874
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$2886: call $034E]
 	jbsr	delay3_sec_05e8                            	| [$2889: call $05E8]
@@ -5976,19 +5979,19 @@ l_288e:
 	move.b	#0x02,d1                        	| [$2897: ld   b,$02]
 	jbsr	l_0636                            	| [$2899: call $0636]
 l_289c:
-	move.w	#0x0000,d5                      	| [$289c: ld   hl,$0000] 0 -  * J288C
-	move.w	d5,time_bcd_E511                	| [$289f: ld   (time_bcd_E511),hl]
+										| [$289c: ld   hl,$0000] 0 -  * J288C
+	clr.w	time_bcd_E511                	| [$289f: ld   (time_bcd_E511),hl]
 	lea	unknown_E513,a0                	| [$28a2: ld   hl,unknown_E513]
 	move.b	(a0),d0                         	| [$28a5: ld   a,(hl)]
 	                               	| [$28a6: and  a]
-	jne	l_0bb7                             	| [$28a7: jp   nz,$0BB7]
+	jne	start_new_section_0bb7                             	| [$28a7: jp   nz,$0BB7]
 	move.b	#0x05,(a0)                      	| [$28aa: ld   (hl),$05]
 	lea	game_rom+0x23A2,a0                      	| [$28ac: ld   hl,$23A2]
 	move.l	a0,enemy_track_data_pointer_E516                 	| [$28af: ld   (enemy_track_data_pointer_E516),hl]
 	move.b	#0x1A,d0                        	| [$28b2: ld   a,$1A]
 	move.b	d0,cur_point_e50e                 	| [$28b4: ld   (cur_point_e50e),a]
-	jra	l_0bb7                             	| [$28b7: jp   $0BB7]
-l_28ba:
+	jra	start_new_section_0bb7                             	| [$28b7: jp   $0BB7]
+display_section_results_28ba:
 	jbsr	delay3_sec_05e8                            	| [$28ba: call $05E8] -  * C27ED,C2871
 	jbsr	l_295a                            	| [$28bd: call $295A]
 	move.b	current_level_E510,d0                	| [$28c0: ld   a,(current_level_E510)] -  Course number
@@ -6013,7 +6016,7 @@ l_28ce_2:
 	move.b	#0x20,d2                        	| [$28e0: ld   c,$20]
 l_28e2:
 	LOAD_D1_16_FROM_D1D2
-	STORE_LEW	d1,unknown_16bit_E094                 	| [$28e2: ld   (unknown_16bit_E094),bc] -  * J28D7,J28DE
+	STORE_LEW	d1,course_section_record_E094                 	| [$28e2: ld   (course_section_record_E094),bc] -  * J28D7,J28DE
 	add.b	d4,d0                            	| [$28e6: add  a,e]
 	add.b	d0,d0                            	| [$28e7: add  a,a]
 	move.b	d0,d4                           	| [$28e8: ld   e,a]
@@ -6051,21 +6054,21 @@ l_2915:
 	exg		d7,a1
 	jbsr	osd_w_videoram					| [$2919: ld   (de),a]
 	exg		a1,d7                      	
-	lea	game_rom+0x2B94,a0                      	| [$291a: ld   hl,$2B94]
+	lea	game_rom+0x2B94,a0                      	| [$291a: ld   hl,$2B94]   "YOUR TIME"
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$291d: call $034E]
 	lea	unknown_E512,a0                	| [$2920: ld   hl,unknown_E512]
 	addq.w	#1,a1                           	| [$2923: inc  de]
 	jbsr	write_2_digits_to_screen_039a                            	| [$2924: call $039A]
 	lea	game_rom+0x2BB0,a0                      	| [$2927: ld   hl,$2BB0] -  "THE AVERAGE TIME " script
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$292a: call $034E]
-	jbsr	l_2968                            	| [$292d: call $2968]
+	jbsr	write_course_section_record_2968                            	| [$292d: call $2968]
 	lea	game_rom+0x2BCC,a0                      	| [$2930: ld   hl,$2BCC] -  "TOP RECORD " script
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$2933: call $034E]
 	move.l	unknown_pointer_E096,a0             	| [$2936: ld   hl,(unknown_pointer_E096)]
 	addq.w	#1,a1                           	| [$2939: inc  de]
 	jbsr	write_2_digits_to_screen_039a                            	| [$293a: call $039A]
-	LOAD_LEW	unknown_16bit_E094,d5             	| [$293d: ld   hl,(unknown_16bit_E094)]
-	move.w	time_bcd_E511,d3            	| [$2940: ld   de,(time_bcd_E511)]
+	LOAD_LEW	course_section_record_E094,d5             	| [$293d: ld   hl,(course_section_record_E094)]
+	LOAD_LEW	time_bcd_E511,d3            	| [$2940: ld   de,(time_bcd_E511)]
 	                              	| [$2944: and  a]
 	sub.w	d3,d5                            	| [$2945: sbc  hl,de]
 	rts                                    	| [$2947: ret]
@@ -6083,15 +6086,15 @@ l_295a:
 	jbsr	clear_area_05fa                   	| [$2960: call clear_area_05fa]
 	move.w	#0x320,d1                        	| [$2963: ld   bc,$0320]
 	jra	l_2954                             	| [$2966: jr   $2954]
-l_2968:
+write_course_section_record_2968:
 	move.w	#0x81D9,a1                      	| [$2968: ld   de,$81D9] -  * C283E,C292D
-	lea	unknown_16bit_E094+1,a0                	| [$296b: ld   hl,unknown_E095]
+	lea	course_section_record_E094+1,a0                	| [$296b: ld   hl,unknown_E095]
 	jra	write_2_digits_to_screen_039a                             	| [$296e: jp   $039A]
 l_2971:
 	lea	unknown_E099,a0                	| [$2971: ld   hl,unknown_E099] -  * C2808,C284F
 	move.w	#0x8297,a1                      	| [$2974: ld   de,$8297]
 	jbsr	write_2_digits_to_screen_0393                            	| [$2977: call $0393]
-	exg	d3,d7                              	| [$297a: ex   de,hl]
+	exg	a1,d7                              	| [$297a: ex   de,hl]
 	move.b	#0x30,d0
 	jbsr	osd_w_videoram
 	addq.w	#1,d7
