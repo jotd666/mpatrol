@@ -98,9 +98,14 @@
 * E04C: bit 0: cocktail flip
 * terrain_slope_type_E508: 
 * 0/1: flat with very small bumps
+TERRAIN_FLAT_00 = 0
+TERRAIN_FLAT_01 = 1
 * 2: flat but with bumps (normal)
+TERRAIN_BUMPY_02 = 2
 * 3: rising slope
+TERRAIN_RISING_03 = 3
 * >3: descending slope
+TERRAIN_LOWERING_04 = 4
 
 
 * 5 ufos max of one category? or not counting the hole makers
@@ -377,7 +382,7 @@ startup_cont_0068:
 	move.b	d0,moonbase_already_displayed_E50F       | [$0071: ld   (moonbase_already_displayed_E50F),a]
 	                           	| [$0074: inc  a]
 	* normal terrain: flat with bumps
-	move.b	#2,terrain_slope_type_E508                 	| [$0075: ld   (terrain_slope_type_E508),a]
+	move.b	#TERRAIN_BUMPY_02,terrain_slope_type_E508                 	| [$0075: ld   (terrain_slope_type_E508),a]
 	jra	start_new_section_0bb7                             	| [$0078: jp   $0BB7]
 l_007b:
 	clr.b	d1                               	| [$007b: ld   b,$00] -  * J0504
@@ -2467,7 +2472,7 @@ l_0bfa:
 	move.b	d0,unknown_E514                 	| [$0bfa: ld   (unknown_E514),a] -  * J0BF3
 	move.b	d6,unknown_16bit_E306                 	| [$0bfd: ld   (unknown_16bit_E306),hl]
 	move.b	d5,jeep_y_offset_E307                 	| [$0bfd: ld   (unknown_16bit_E306),hl]
-	move.b	#0x02,d0                        	| [$0c00: ld   a,$02]
+	move.b	#TERRAIN_BUMPY_02,d0                        	| [$0c00: ld   a,$02]
 	move.b	d0,terrain_slope_type_E508                 	| [$0c02: ld   (terrain_slope_type_E508),a]
 	jbsr	draw_ground_0d8d                  	| [$0c05: call draw_ground_0d8d]
 	move.b	unknown_E513,d0                 	| [$0c08: ld   a,(unknown_E513)]
@@ -3285,7 +3290,7 @@ draw_ground_block_1106:
 	jne	l_119a                             	| [$110b: jp   nz,$119A]
 	moveq	#0,d0
 	move.b	terrain_slope_type_E508,d0                 	| [$110e: ld   a,(terrain_slope_type_E508)]
-	cmp.b	#0x03,d0                         	| [$1111: cp   $03]
+	cmp.b	#TERRAIN_RISING_03,d0                         	| [$1111: cp   $03]
 	jcc	is_slope_118e                             	| [$1113: jr   nc,$118E]
 	move.b	d0,d1                           	| [$1115: ld   b,a]
 	subq.b	#1,d1                           	| [$1116: dec  b]
@@ -3378,7 +3383,10 @@ l_1155:
 												| [$118b: inc  hl]
 	move.b	d0,(a0)                         	| [$118c: ld   (hl),a]
 	rts                                    	| [$118d: ret]
+	
+	
 is_slope_118e:
+	* initialize slope
 	add.b	d0,d0                            	| [$118e: add  a,a] -  * J1113
 	add.b	#0x7A,d0                         	| [$118f: add  a,$7A]
 	move.b	d0,(a0)                         	| [$1191: ld   (hl),a]
@@ -3389,11 +3397,11 @@ l_1197:
 	move.b	d0,unknown_E1D8                 	| [$1197: ld   (unknown_E1D8),a] -  * J1193
 l_119a:
 	move.b	(a0),d2                         	| [$119a: ld   c,(hl)] -  * J110B
-	ror.b	#1,d2                           	| [$119b: rr   c]
+	roxr.b	#1,d2                           	| [$119b: rr   c]
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$119d: ret  c] [...]
 0:
-	ror.b	#1,d2                           	| [$119e: rr   c]
+	roxr.b	#1,d2                           	| [$119e: rr   c]
  	lea	unknown_E1D8,a0                	| [$11a0: ld   hl,unknown_E1D8]
 	subq.b	#1,(a0)                         	| [$11a3: dec  (hl)]
 	jpl	l_11b6                             	| [$11a4: jp   p,$11B6]
@@ -4570,7 +4578,7 @@ l_1870:
 	LOAD_LEW	unknown_16bit_E0F1,d3             	| [$1873: ld   de,(unknown_16bit_E0F1)]
 	add.w	d3,d5                            	| [$1877: add  hl,de]
 	move.b	terrain_slope_type_E508,d0                 	| [$1878: ld   a,(terrain_slope_type_E508)]
-	cmp.b	#0x03,d0                         	| [$187b: cp   $03]
+	cmp.b	#TERRAIN_RISING_03,d0                         	| [$187b: cp   $03]
 	jcc	l_188b                             	| [$187d: jr   nc,$188B]
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$187f: ld   a,(unknown_E1E2)]
 	rol.w	#8,d5

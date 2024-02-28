@@ -1,5 +1,6 @@
 - slope sections don't work properly: scrolling stutters, no slope tiles appear (demo)
-  also point "P"
+  also point "P": change unknown_E1D8, E514 figure out what it is
+  slope init could be wrong, slope update too at 188B
 - continue screen timer doesn't work properly
 
 
