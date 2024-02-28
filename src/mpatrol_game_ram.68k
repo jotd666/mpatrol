@@ -36,10 +36,10 @@
 	.global	unknown_16bit_E098
 	.global	unknown_E099
 	.global	temp_object_structure_E0D4
-	.global	temp_16bit_x_and_what_E0D6
-	.global	temp_unknown_16bit_E0D8
-	.global	temp_16bit_y_and_what_E0DA
-	.global	unknown_16bit_E0DC
+	.global	temp_16bit_x_E0D6
+	.global	temp_16bit_x_speed_E0D8
+	.global	temp_unknown_16bit_E0DA
+	.global	temp_16bit_y_E0DC
 	.global	screen_address_E0E4
 	.global	unknown_pointer_E0E6
 	.global	command_number_of_slots_E0E8
@@ -107,7 +107,7 @@
 	.global	unknown_E30D
 	.global	unknown_16bit_E30E
 	.global	jeep_x_speed_E314
-	.global	unknown_16bit_E31A
+	.global	jeep_x_speed_E31A
 	.global	unknown_16bit_E31C
 	.global	forward_shot_indicator_E320
 	.global	unknown_16bit_E322
@@ -244,13 +244,13 @@ unknown_E099:
 temp_object_structure_E0D4:
 	ds.b	2
 	.align	2
-temp_16bit_x_and_what_E0D6:
+temp_16bit_x_E0D6:
 	ds.b	2
-temp_unknown_16bit_E0D8:
+temp_16bit_x_speed_E0D8:
 	ds.b	2
-temp_16bit_y_and_what_E0DA:
+temp_unknown_16bit_E0DA:
 	ds.b	2
-unknown_16bit_E0DC:
+temp_16bit_y_E0DC:
 	ds.b	8
 	.align	2
 screen_address_E0E4:
@@ -395,7 +395,7 @@ unknown_16bit_E30E:
 * max speed 0x201 (not tested slopes), min speed around 0x1BD
 jeep_x_speed_E314:
 	ds.w	3
-unknown_16bit_E31A:
+jeep_x_speed_E31A:
 	ds.b	2
 unknown_16bit_E31C:
 	ds.b	4

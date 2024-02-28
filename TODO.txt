@@ -1,9 +1,6 @@
-- ufo crashing: wrong x speed (too high)
 - slope sections don't work properly: scrolling stutters, no slope tiles appear (demo)
-- ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
-- after section E should be moon city and doesn't work
+  also point "P"
 - continue screen timer doesn't work properly
-- find wrong clut yellow/red flashes
 
 
 graphical issues:
@@ -36,6 +33,9 @@ graphical issues:
 	- 15: green (in explosions)
 	
 	
+- find wrong clut yellow/red flashes
+- ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
+- after section E should be moon city and doesn't work
 - most ground object colors are wrong
 - insert coin screen: color bands not removed
 - multiplex sprites with 2 sprite control copperlist zones (materialize it
@@ -63,7 +63,7 @@ low pri:
   
 - declare tiles & cluts manually (with playfield info) to save memory
 - optim: maybe only 2 planes could be needed for uniform ground
-  or maybe even one (but there are letters...)
+  (but there are letters...)
 
 
 converter:
