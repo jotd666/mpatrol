@@ -1,8 +1,8 @@
-- slope sections don't work properly: scrolling stutters, no slope tiles appear (demo)
-  also point "P": change unknown_E1D8, E514 figure out what it is
-  slope init could be wrong, slope update too at 188B
+- after the flat section after rising slope (point R), when nb slope
+  tiles change, rightmost scrolling tile is buggy, looks like
+  a rodent's head or something... Same when mines...
 - continue screen timer doesn't work properly
-
+- save highscore & best course times
 
 graphical issues:
 

@@ -140,9 +140,9 @@
 	.global	time_bcd_E511
 	.global	unknown_E512
 	.global	unknown_E513
-	.global	unknown_E514
+	.global	terrain_height_in_tiles_E514
 	.global	nb_lives_E515
-	.global	enemy_track_data_pointer_E516
+	.global	track_events_data_pointer_E516
 	.global	unknown_E518
 	.global	unknown_E523
 	.global	unknown_pointer_E52E
@@ -460,12 +460,12 @@ unknown_E512:
 	ds.b	1
 unknown_E513:
 	ds.b	1
-unknown_E514:
+terrain_height_in_tiles_E514:
 	ds.b	1
 nb_lives_E515:
 	ds.b	1
 	.align	2
-enemy_track_data_pointer_E516:
+track_events_data_pointer_E516:
 	ds.l	1
 unknown_E518:
 	ds.b	11

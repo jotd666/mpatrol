@@ -181,13 +181,15 @@ obj_absolute_x = 0xF		| for ground objects
 	.endm
 	
 	.macro  LOAD_LEW	address,reg
-	move.w	\address,\reg
+	move.b	\address+1,\reg
 	rol.w	#8,\reg
+	move.b	\address,\reg
 	.endm
 	
 	.macro  STORE_LEW	reg,address
+	move.b	\reg,\address
 	rol.w	#8,\reg
-	move.w	\reg,\address
+	move.b	\reg,\address+1
 	rol.w	#8,\reg
 	.endm
 	
@@ -302,7 +304,7 @@ mpatrol_reset:
 	tst.b	break_at_startup_flag
 	beq.b	0f
 	* put anything here that you need to track addresses
-	move.l	#jeep_damping_force_16bit_E304,d7
+	move.l	#terrain_height_in_tiles_E514,d7
 
 	jbsr	osd_break
 0:
@@ -2395,7 +2397,7 @@ l_0b61:
 	cmp.b	#0x34,d0                         	| [$0b66: cp   $34]
 	jcc	l_0b4a                             	| [$0b68: jr   nc,$0B4A]
 	move.b	d0,(a0)                         	| [$0b6a: ld   (hl),a] -  New passed point
-	move.l	enemy_track_data_pointer_E516,a0             	| [$0b6b: ld   hl,(enemy_track_data_pointer_E516)]
+	move.l	track_events_data_pointer_E516,a0             	| [$0b6b: ld   hl,(track_events_data_pointer_E516)]
 l_0b6e:
 	move.b	(a0)+,d1                         	| [$0b6e: ld   b,(hl)] -  * J0B76
 	                           	| [$0b6f: inc  hl]
@@ -2406,7 +2408,7 @@ l_0b6e:
 	jne	l_0b6e                             	| [$0b76: jr   nz,$0B6E]
 	move.b	d1,d0                           	| [$0b78: ld   a,b]
 	move.b	d0,fine_position_on_track_E50B                 	| [$0b79: ld   (fine_position_on_track_E50B),a]
-	move.l	a0,enemy_track_data_pointer_E516                 	| [$0b7c: ld   (enemy_track_data_pointer_E516),hl]
+	move.l	a0,track_events_data_pointer_E516                 	| [$0b7c: ld   (track_events_data_pointer_E516),hl]
 	move.b	d0,unknown_E523                 	| [$0b7f: ld   (unknown_E523),a]
 	move.l	a0,unknown_pointer_E52E                 	| [$0b82: ld   (unknown_pointer_E52E),hl]
 	jbsr	l_0d12                            	| [$0b85: call $0D12]
@@ -2415,10 +2417,10 @@ l_0b6e:
 display_status_bar_0b8a:
 	jbsr	l_0cb1                            	| [$0b8a: call $0CB1] -  * C0069,C0089
 	lea	game_rom+0x2694,a0                      	| [$0b8d: ld   hl,$2694]
-	move.l	a0,enemy_track_data_pointer_E516                 	| [$0b90: ld   (enemy_track_data_pointer_E516),hl]
+	move.l	a0,track_events_data_pointer_E516                 	| [$0b90: ld   (track_events_data_pointer_E516),hl]
 	jra	l_0cbf                             	| [$0b93: jp   $0CBF]
 l_0b96:
-	move.l	enemy_track_data_pointer_E516,a0             	| [$0b96: ld   hl,(enemy_track_data_pointer_E516)] -  * C0123,C0BE8
+	move.l	track_events_data_pointer_E516,a0             	| [$0b96: ld   hl,(track_events_data_pointer_E516)] -  * C0123,C0BE8
 l_0b99:
 	                           	| [$0b99: dec  hl] -  * J0BA0,J0BAB
 	move.b	-(a0),d0                         	| [$0b9a: ld   a,(hl)]
@@ -2436,7 +2438,7 @@ l_0b99:
 	move.b	(a0),d0                         	| [$0bad: ld   a,(hl)]
 	move.b	d0,fine_position_on_track_E50B                 	| [$0bae: ld   (fine_position_on_track_E50B),a]
 	addq.w	#2,a0                           	| [$0bb1: inc  hl] * 2
-	move.l	a0,enemy_track_data_pointer_E516                 	| [$0bb3: ld   (enemy_track_data_pointer_E516),hl]
+	move.l	a0,track_events_data_pointer_E516                 	| [$0bb3: ld   (track_events_data_pointer_E516),hl]
 	rts                                    	| [$0bb6: ret]
 	
 start_new_section_0bb7:
@@ -2469,7 +2471,7 @@ l_0bdf:
 	move.b	#0x07,d0                        	| [$0bf6: ld   a,$07]
 	move.b	#0xA8,d5                        	| [$0bf8: ld   h,$A8]
 l_0bfa:
-	move.b	d0,unknown_E514                 	| [$0bfa: ld   (unknown_E514),a] -  * J0BF3
+	move.b	d0,terrain_height_in_tiles_E514                 	| [$0bfa: ld   (terrain_height_in_tiles_E514),a] -  * J0BF3
 	move.b	d6,unknown_16bit_E306                 	| [$0bfd: ld   (unknown_16bit_E306),hl]
 	move.b	d5,jeep_y_offset_E307                 	| [$0bfd: ld   (unknown_16bit_E306),hl]
 	move.b	#TERRAIN_BUMPY_02,d0                        	| [$0c00: ld   a,$02]
@@ -2593,7 +2595,7 @@ l_0c9e:
 	move.b	per_credit_e040,d0                 	| [$0ca4: ld   a,(per_credit_e040)]
 	move.b	d0,nb_lives_E515                	| [$0ca7: ld   (nb_lives_E515),a]
 	lea	game_rom+0x2162,a0                      	| [$0caa: ld   hl,$2162]
-	move.l	a0,enemy_track_data_pointer_E516                 	| [$0cad: ld   (enemy_track_data_pointer_E516),hl]
+	move.l	a0,track_events_data_pointer_E516                 	| [$0cad: ld   (track_events_data_pointer_E516),hl]
 	rts                                    	| [$0cb0: ret]
 l_0cb1:
 	lea	game_rom+0x26DE,a0                      	| [$0cb1: ld   hl,$26DE] -  * C0B8A
@@ -2859,7 +2861,7 @@ handle_path_advance_0ddc:
 	jbsr	l_29d6                            	| [$0e03: call $29D6]
 l_0e06:
 	move.b	d4,d0                           	| [$0e06: ld   a,e] -  * J0DFD,J0E01
-	move.l	enemy_track_data_pointer_E516,a0             	| [$0e07: ld   hl,(enemy_track_data_pointer_E516)]
+	move.l	track_events_data_pointer_E516,a0             	| [$0e07: ld   hl,(track_events_data_pointer_E516)]
 	cmp.b	(a0),d0                          	| [$0e0a: cp   (hl)]
 	jne	l_0e18                             	| [$0e0b: jr   nz,$0E18]
 	addq.w	#1,a0                           	| [$0e0d: inc  hl]
@@ -2867,7 +2869,7 @@ l_0e06:
 	and.b	#0x7F,d0                         	| [$0e0f: and  $7F]
 	move.b	d0,unknown_E1D7                 	| [$0e11: ld   (unknown_E1D7),a]
 	addq.w	#1,a0                           	| [$0e14: inc  hl]
-	move.l	a0,enemy_track_data_pointer_E516                 	| [$0e15: ld   (enemy_track_data_pointer_E516),hl]
+	move.l	a0,track_events_data_pointer_E516                 	| [$0e15: ld   (track_events_data_pointer_E516),hl]
 l_0e18:
 	lea	unknown_E1D7,a0                	| [$0e18: ld   hl,unknown_E1D7] -  * J0E0B
 	move.b	(a0),d0                         	| [$0e1b: ld   a,(hl)]
@@ -2877,11 +2879,11 @@ l_0e18:
 0:
 	clr.b	(a0)                             	| [$0e1e: ld   (hl),$00]
 	cmp.b	#0x18,d0                         	| [$0e20: cp   $18]
-	jcc	l_0f45                             	| [$0e22: jp   nc,$0F45]
+	jcc	ufos_on_approach_0f45                             	| [$0e22: jp   nc,$0F45]
 	cmp.b	#0x17,d0                         	| [$0e25: cp   $17]
-	jeq	l_0e4f                             	| [$0e27: jr   z,$0E4F]
+	jeq	enter_rear_missile_0e4f                             	| [$0e27: jr   z,$0E4F]
 	subq.b	#0x06,d0                        	| [$0e29: sub  $06]
-	jmi	l_0e8a                             	| [$0e2b: jp   m,$0E8A]
+	jmi	change_slope_type_0e8a                             	| [$0e2b: jp   m,$0E8A]
 	subq.b	#0x07,d0                        	| [$0e2e: sub  $07]
 	jmi	draw_hole_on_right_0ef0                             	| [$0e30: jp   m,$0EF0]
 	add.b	d0,d0                            	| [$0e33: add  a,a]
@@ -2900,7 +2902,7 @@ l_0e4b:
 	move.b	d2,(a2)                    	| [$0e4b: ld   (ix+$00),c] -  * J0E46
 	rts                                    	| [$0e4e: ret]
 
-l_0e4f:
+enter_rear_missile_0e4f:
 	move.b	#0x19,d0                        	| [$0e4f: ld   a,$19] -  * J0E27
 	move.b	d0,ufo_objects_e370                 	| [$0e51: ld   (ufo_objects_e370),a]
 	rts                                    	| [$0e54: ret]
@@ -2944,7 +2946,7 @@ l_0e55:
 	jbsr	osd_w_colorram                         	| [$0e88: ld   (hl),a]
 	rts                                    	| [$0e89: ret]
 
-l_0e8a:
+change_slope_type_0e8a:
 	addq.b	#1,d0                           	| [$0e8a: inc  a] -  * J0E2B
 	jeq	l_0e55                             	| [$0e8b: jr   z,$0E55]
 	* make up for negative value by adding 5
@@ -2990,7 +2992,7 @@ l_0ec3:
 	move.b	d0,(obj_timeout,a2)                    	| [$0ed4: ld   (ix+$0f),a]
 	jbsr	l_153d                            	| [$0ed7: call $153D]
 	add.b	(obj_x,a3),d0                     	| [$0eda: add  a,(iy+$03)]
-	move.b	d0,(0x07,a2)                    	| [$0edd: ld   (ix+$07),a]
+	move.b	d0,(obj_y,a2)                    	| [$0edd: ld   (ix+$07),a]
 	clr.b	(0x0b,a2)                        	| [$0ee0: ld   (ix+$0b),$00]
 	clr.b	(0x03,a2)                        	| [$0ee4: ld   (ix+$03),$00]
 	clr.b	(0x0e,a2)                        	| [$0ee8: ld   (ix+$0e),$00]
@@ -3052,9 +3054,9 @@ l_0f3a:
 l_0f40:
 	move.l	unknown_pointer_E0E6,a0             	| [$0f40: ld   hl,(unknown_pointer_E0E6)] -  * J0EF1
 	jra	l_0f0d                             	| [$0f43: jr   $0F0D]
-l_0f45:
+ufos_on_approach_0f45:
 	sub.b	#0x1F,d0                         	| [$0f45: sub  $1F] -  * J0E22
-	jmi	l_0fb7                             	| [$0f47: jp   m,$0FB7]
+	jmi	shoot_hole_making_bomb_0fb7                             	| [$0f47: jp   m,$0FB7]
 	lea	unknown_E1C5,a0                	| [$0f4a: ld   hl,unknown_E1C5]
 	st.b	d2                                	| [$0f4d: ld   c,$FF]
 l_0f4f:
@@ -3121,7 +3123,8 @@ l_0fb2:
 	subq.b	#1,d1                           	| [...]
 	jne	l_0fa5                             	| [$0fb4: djnz $0FA5]
 	rts                                    	| [$0fb6: ret]
-l_0fb7:
+	
+shoot_hole_making_bomb_0fb7:
 	add.b	#0x08,d0                         	| [$0fb7: add  a,$08] -  * J0F47
 	cmp.b	#0x04,d0                         	| [$0fb9: cp   $04]
 	jcc	l_0fc5                             	| [$0fbb: jr   nc,$0FC5]
@@ -3227,7 +3230,7 @@ l_10c3:
 	move.b	#0x8f,d1                        	| [$10c3: ld   bc,$8F2A] 36650 -  * J108B
 	move.b	#0x2a,d2                        	| [$10c3: ld   bc,$8F2A] 36650 -  * J108B shoot a ufo hole making bomb command
 	lsr.b	#3,d3                            	| [$10c6: srl  d] * 3
-	move.b	unknown_E514,d0                 	| [$10cc: ld   a,(unknown_E514)]
+	move.b	terrain_height_in_tiles_E514,d0                 	| [$10cc: ld   a,(terrain_height_in_tiles_E514)]
 	eor.b	#0x1F,d0                         	| [$10cf: xor  $1F]
 	sub.b	d3,d0                            	| [$10d1: sub  d]
 l_10d2:
@@ -3295,18 +3298,18 @@ draw_ground_block_1106:
 	move.b	d0,d1                           	| [$1115: ld   b,a]
 	subq.b	#1,d1                           	| [$1116: dec  b]
 	lea	game_rom+0x2CB4,a0                      	| [$1117: ld   hl,$2CB4]
+	*SET_XC_FLAGS								| C is set from not branching on jcs (no effect, as is masked)
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$111a: ld   a,(unknown_E1E2)]
 	ror.b	#3,d0                           	| [$111d: rra] * 3
-	and.b	#0x1F,d0                         	| [$1120: and  $1F]
-												| [$1122: add  a,l]
+	and.b	#0x1F,d0                         	| [$1120: and  $1F] masks upper bits (carry goes away)
+	* will be done below						| [$1122: add  a,l]
 	subq.b	#1,d1                           	| [...]
 	jne	l_1127                             	| [$1123: djnz $1127]
 	* maybe can get past 0x100 offset??
 	add.w	#0x20,d0                         	| [$1125: add  a,$20]
-l_1127:
-											| [$1127: ld   l,a] -  * J1123
-	move.b	(a0,d0.w),d2                         	| [$1128: ld   c,(hl)]
-l_1129:
+l_1127:											| [$1127: ld   l,a] -  * J1123
+	move.b	(a0,d0.w),d2                         	| [$1128: ld   c,(hl)] get tile to write next in scrolling
+write_ground_tile_1129:
 	move.b	scroll_logical_delta_x_E1E2,d0                 	| [$1129: ld   a,(unknown_E1E2)] -  * J11CE,J11D5,J11E7
 	ror.b	#3,d0                           	| [$112c: rra] * 3
 	and.b	#0x1F,d0                         	| [$112f: and  $1F]
@@ -3319,17 +3322,18 @@ l_1129:
 	add.w	d3,a3                            	| [$1138: add  iy,de]
 	exg	d3,d7                              	| [$113a: ex   de,hl]
 	move.w	#0x0020,d3                      	| [$113b: ld   de,$0020] 32
-	move.b	#0x07,d1                        	| [$113e: ld   b,$07]
-	move.b	unknown_E514,d0                 	| [$1140: ld   a,(unknown_E514)]
+	move.b	#0x07,d1                        	| [$113e: ld   b,$07]  max height in tiles
+	* fill the terrain column
+	move.b	terrain_height_in_tiles_E514,d0     | [$1140: ld   a,(terrain_height_in_tiles_E514)]
 l_1143:
 	cmp.b	d1,d0                            	| [$1143: cp   b] -  * J114B
-	jeq	l_114d                             	| [$1144: jr   z,$114D]
+	jeq	l_114d                             	| [$1144: jr   z,$114D] height reached, exit
 	move.w	d0,-(a7)
 	moveq	#0,d0                             	| [$1146: ld   (hl),$00]
 	jbsr	osd_w_videoram
 	move.w	(a7)+,d0
 	add.w	d3,d7                            	| [$1148: add  hl,de]
-	add.w	d3,a3                            	| [$1149: add  iy,de]
+	add.w	d3,a3                            	| [$1149: add  iy,de] next row of terrain tiles
 	subq.b	#1,d1                           	| [...]
 	jne	l_1143                             	| [$114b: djnz $1143]
 l_114d:
@@ -3362,7 +3366,7 @@ l_1155:
 	move.b	d0,d7                           	| [$1169: ld   l,a]
 	lea 	ground_y_array_E200,a0                        	| [$116a: ld   h,$E2]
 	add.w	d7,a0
-	move.b	unknown_E514,d0                 	| [$116c: ld   a,(unknown_E514)]
+	move.b	terrain_height_in_tiles_E514,d0                 	| [$116c: ld   a,(terrain_height_in_tiles_E514)]
 	eor.b	#0x1F,d0                         	| [$116f: xor  $1F]
 	move.b	d0,d3                           	| [$1171: ld   d,a]
 	lea	game_rom+0x2C24,a3                      	| [$1172: ld   iy,$2C24]
@@ -3386,7 +3390,7 @@ l_1155:
 	
 	
 is_slope_118e:
-	* initialize slope
+	* initialize slope, d0 = slope type, ex 3
 	add.b	d0,d0                            	| [$118e: add  a,a] -  * J1113
 	add.b	#0x7A,d0                         	| [$118f: add  a,$7A]
 	move.b	d0,(a0)                         	| [$1191: ld   (hl),a]
@@ -3402,25 +3406,33 @@ l_119a:
 	rts                                    	| [$119d: ret  c] [...]
 0:
 	roxr.b	#1,d2                           	| [$119e: rr   c]
+	scs		d7
+
  	lea	unknown_E1D8,a0                	| [$11a0: ld   hl,unknown_E1D8]
 	subq.b	#1,(a0)                         	| [$11a3: dec  (hl)]
 	jpl	l_11b6                             	| [$11a4: jp   p,$11B6]
-	jcs	l_11ea                             	| [$11ac: jr   c,$11EA]
+	* here we don't test C result of subq (dec doesn't change C but sub does change X!)
+	* but previous roxr result
+	tst.b	d7
+	jne	l_11ea                             	| [$11ac: jr   c,$11EA]
 	move.b	#0x0B,(a0)                      	| [$11a7: ld   (hl),$0B]
-	move.b	unknown_E514,d0                 	| [$11a9: ld   a,(unknown_E514)]
+	move.b	terrain_height_in_tiles_E514,d0                 	| [$11a9: ld   a,(terrain_height_in_tiles_E514)]
 	cmp.b	#0x07,d0                         	| [$11ae: cp   $07]
 	jeq	l_11f0                             	| [$11b0: jr   z,$11F0]
 	move.b	#0x0B,d0                        	| [$11b2: ld   a,$0B]
 	jra	l_11dd                             	| [$11b4: jr   $11DD]
 l_11b6:
-	* moved / duplicated code to avoid trashing C flag
-	jcc	l_11d8                             	| [$11ba: jr   nc,$11D8]
 	move.b	(a0),d0                         	| [$11b6: ld   a,(hl)] -  * J11A4
-	lea	unknown_E514,a0                	| [$11b7: ld   hl,unknown_E514]
+	lea	terrain_height_in_tiles_E514,a0                	| [$11b7: ld   hl,terrain_height_in_tiles_E514]
+	* here we don't test C result of subq (dec doesn't change C but sub does change X!)
+	* but previous roxr result, code needs some adaptation
+	tst.b	d7
+	jeq	l_11d8                             	| [$11ba: jr   nc,$11D8]
 	tst.b	d0                               	| [$11bc: and  a]
 	jne	l_11c0                             	| [$11bd: jr   nz,$11C0]
-	subq.b	#1,(a0)                         	| [$11bf: dec  (hl)]
+	subq.b	#1,(a0)                         	| [$11bf: dec  (hl)] decrease terrain height by 1 tile
 l_11c0:
+	* tiles for slopes (actually various height rectangles)
 	add.b	#0xF3,d0                         	| [$11c0: add  a,$F3] -  * J11BD,J11EE
 	cmp.b	#0xFC,d0                         	| [$11c2: cp   $FC]
 	jcs	l_11c8                             	| [$11c4: jr   c,$11C8]
@@ -3430,21 +3442,16 @@ l_11c8:
 l_11c9:
 	addq.b	#0x03,d0                        	| [$11c9: add  a,$03] -  * J11CB
 	jmi	l_11c9                             	| [$11cb: jp   m,$11C9]
-	jne	l_1129                             	| [$11ce: jp   nz,$1129]
+	jne	write_ground_tile_1129                             	| [$11ce: jp   nz,$1129]
+	* descending slope
 	move.b	d2,d0                           	| [$11d1: ld   a,c]
 	sub.b	#0x10,d0                         	| [$11d2: sub  $10]
 	move.b	d0,d2                           	| [$11d4: ld   c,a]
-	jra	l_1129                             	| [$11d5: jp   $1129]
-l_11c0_2:
-	move.b	#0x0B,d0
-	bra.b	l_11c0
+	jra	write_ground_tile_1129                             	| [$11d5: jp   $1129]
 l_11d8:
-	* duplicated code
-	move.b	(a0),d0                         	| [$11b6: ld   a,(hl)] -  * J11A4
-	lea	unknown_E514,a0                	| [$11b7: ld   hl,unknown_E514]
 	cmp.b	#0x09,d0                         	| [$11d8: cp   $09] -  * J11BA
 	jne	l_11dd                             	| [$11da: jr   nz,$11DD]
-	addq.b	#1,(a0)                         	| [$11dc: inc  (hl)]
+	addq.b	#1,(a0)                         	| [$11dc: inc  (hl)] increase terrain height by 1 tile
 l_11dd:
 	not.b	d0                               	| [$11dd: cpl] -  * J11B4,J11DA
 	add.b	#0xF2,d0                         	| [$11de: add  a,$F2]
@@ -3452,14 +3459,15 @@ l_11dd:
 	jcc	l_11e6                             	| [$11e2: jr   nc,$11E6]
 	add.b	#0x0C,d0                         	| [$11e4: add  a,$0C]
 l_11e6:
+	* rising slope
 	move.b	d0,d2                           	| [$11e6: ld   c,a] -  * J11E2
-	jra	l_1129                             	| [$11e7: jp   $1129]
+	jra	write_ground_tile_1129                             	| [$11e7: jp   $1129]
 l_11ea:
 	move.b	#0x0B,(a0)                      	| [$11a7: ld   (hl),$0B]
-	move.b	unknown_E514,d0                 	| [$11a9: ld   a,(unknown_E514)]
-	cmp.b	#0x04,d0                         	| [$11ea: cp   $04] -  * J11AC
-	jne	l_11c0_2                             	| [$11ee: jr   nz,$11C0]
+												| [$11a9: ld   a,(terrain_height_in_tiles_E514)]
 	move.b	#0x0B,d0                        	| [$11ec: ld   a,$0B]
+	cmp.b	#0x04,terrain_height_in_tiles_E514                         	| [$11ea: cp   $04] -  * J11AC
+	jne	l_11c0                             	| [$11ee: jr   nz,$11C0]
 l_11f0:
 	lea	unknown_E1D9,a0                	| [$11f0: ld   hl,unknown_E1D9] -  * J11B0
 	addq.b	#1,(a0)                         	| [$11f3: inc  (hl)]
@@ -4574,6 +4582,7 @@ l_1832:
 	jbsr	lddr
 	move.l	(sp)+,a0                        	| [$186f: pop  hl]
 l_1870:
+	* reached constantly when slope fills the screen
 	STORE_LEW	d5,unknown_16bit_E0EF                 	| [$1870: ld   (unknown_16bit_E0EF),hl] -  * J1857
 	LOAD_LEW	unknown_16bit_E0F1,d3             	| [$1873: ld   de,(unknown_16bit_E0F1)]
 	add.w	d3,d5                            	| [$1877: add  hl,de]
@@ -6023,7 +6032,7 @@ l_289c:
 	jne	start_new_section_0bb7                             	| [$28a7: jp   nz,$0BB7]
 	move.b	#0x05,(a0)                      	| [$28aa: ld   (hl),$05]
 	lea	game_rom+0x23A2,a0                      	| [$28ac: ld   hl,$23A2]
-	move.l	a0,enemy_track_data_pointer_E516                 	| [$28af: ld   (enemy_track_data_pointer_E516),hl]
+	move.l	a0,track_events_data_pointer_E516                 	| [$28af: ld   (track_events_data_pointer_E516),hl]
 	move.b	#0x1A,d0                        	| [$28b2: ld   a,$1A]
 	move.b	d0,cur_point_e50e                 	| [$28b4: ld   (cur_point_e50e),a]
 	jra	start_new_section_0bb7                             	| [$28b7: jp   $0BB7]
