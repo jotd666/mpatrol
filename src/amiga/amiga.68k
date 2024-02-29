@@ -783,6 +783,9 @@ is_moonbase_displayed:
 	
 osd_clear_background:
 	movem.l	d0-d7/A0-A6,-(a7)
+	
+	bsr		reset_background_dynamic_colors
+	
 	lea		_custom,a5
 	* compute height
 	moveq	#0,d1

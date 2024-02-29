@@ -1,7 +1,8 @@
 - after the flat section after rising slope (point R), when nb slope
   tiles change, rightmost scrolling tile is buggy, looks like
   a rodent's head or something... Same when mines...
-- continue screen timer doesn't work properly
+- continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
+- check hole-making ship animations, look odd
 - save highscore & best course times
 
 graphical issues:
