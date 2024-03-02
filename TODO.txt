@@ -2,10 +2,15 @@
   tiles change, rightmost scrolling tile is buggy, looks like
   a rodent's head or something... Same when mines...
 - continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
+- after section E should be moon city and doesn't work
 - check hole-making ship animations, look odd
 - save highscore & best course times
 
 graphical issues:
+
+- optimize blit/erase height there are a lot of small objects! (dig out Xevious
+  autocrop code)
+- space plant symmetry??? space plant in general looks hard to draw
 
 - palette:
   status tiles: group first 8 colors
@@ -34,10 +39,11 @@ graphical issues:
 	- 14: red (explosions)
 	- 15: green (in explosions)
 	
-	
+- if scrolling stop because player killed, should refresh
+  actually if ground scrolling doesn't move it means that we should
+  refresh background all the time (if dual playfield is not necessary after all)  
 - find wrong clut yellow/red flashes
 - ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
-- after section E should be moon city and doesn't work
 - most ground object colors are wrong
 - insert coin screen: color bands not removed
 - multiplex sprites with 2 sprite control copperlist zones (materialize it

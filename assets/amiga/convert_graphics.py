@@ -101,8 +101,19 @@ sprite_palette = [tuple(x) for x in block_dict['sprite_palette']["data"]]
 # some colors for background palette
 background_palette = sorted(tuple(x) for x in block_dict["background_palette"]["data"])
 
+if dump_palettes:
+    for name,p in zip(("tiles","sprites","background"),(tile_palette,sprite_palette,background_palette)):
+        bitplanelib.palette_dump(p,os.path.join(dump_palettes_dir,name+".png"),bitplanelib.PALETTE_FORMAT_PNG)
+
 # cluts
 sprite_cluts = [[sprite_palette[i] for i in clut] for clut in block_dict['sprite_clut']["data"]]
+
+yellow_background_city_color = (255,222,81)
+green_background_mountain_color = (0,151,0)
+
+brown_rock_color = (0x84,0x51,0x00)
+blue_dark_mountain_color = (0,0,0xFF)
+
 
 def replace_color(img,color,replacement_color):
     rval = Image.new("RGB",img.size)
@@ -141,9 +152,7 @@ jeep_cluts = {0,12}
 # missile qualifies (made of 2 sprites)
 # tank qualifies (there can be 2 tanks at once)
 
-add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
-add_sprite_block(1,4,"jeep_part",jeep_cluts,True)
-add_sprite_block(5,8,"jeep_wheel",0,True)
+add_sprite_block(1,4,"jeep_part",jeep_cluts,False)
 add_sprite_block(0x42,0x42,"saucer",7,False)
 add_sprite_block(0x43,0x44,"hole_making_ship",7,False)
 add_sprite_block(0x45,0x47,"ovoid_ship",7,False)
@@ -159,8 +168,6 @@ add_sprite_block(0x40,0x41,"medium_explosion",1,False)
 add_sprite_block(0x2a,0x2c,"shot_explosion",1,False)
 add_sprite_block(0x2D,0x30,"rock",4,False)
 add_sprite_block(0x3E,0x3F,"explosion",1,False)
-add_sprite_block(0x4E,0x5E,"hole_explosion",1,False)
-#add_sprite_block(0x5F,0x60,"hole_explosion",0xD,False)
 add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
 add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
 add_sprite_block(0x61,0x6F,"ground_explosion",3,False)
@@ -168,19 +175,37 @@ add_sprite_block(0x4B,0x4D,"ship_bomb",1,False)
 add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},True)
 add_sprite_block(0x3D,0x3D,"mine",{3,0xA,0xB},False)
 add_sprite_block(0x39,0x39,"tank_shot",4,True)
-#add_sprite_block(0x73,0x75,"trap",2,False)  # adding this => palette overflow...
 add_sprite_block(0x3C,0x3C,"missile_shot",4,False)   # maybe wrong clut
 add_sprite_block(0,0,"blank",0,False)   # maybe wrong clut
 add_sprite_block(0x28,0x29,"jeep_shot",1,False)   # maybe wrong clut
 add_sprite_block(0x35,0x35,"ground_digging_bomb",{0xA,0xB},False)   # maybe wrong clut
+
+# below are sprites which are mapped to hardware sprites (lower part of the field)
+# rather chosen for their special colors than for good performance
+add_sprite_block(0x4E,0x5E,"hole_explosion",1,True)
+add_sprite_block(0x5F,0x60,"hole_explosion",0xD,True)
+add_sprite_block(0x73,0x75,"space_plant",2,True)  # symmetry??
+add_sprite_block(0x79,0x79,"space_plant",8,True)
+add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
+add_sprite_block(5,8,"jeep_wheel",0,True)
+
+group_vertically(0x53,0x55)      # bomb digs hole
+group_vertically(0x54,0x56)      # bomb digs hole
+group_vertically(0x57,0x59)      # bomb digs hole
+group_vertically(0x58,0x5a)      # bomb digs hole
+group_vertically(0x50,0x52)      # bomb digs hole
+group_vertically(0x4F,0x51)      # bomb digs hole
+group_vertically(0x5b,0x5d)      # bomb digs hole
+group_vertically(0x5c,0x5e)      # bomb digs hole
+
 
 # group jeep sprites to save sprites
 group_vertically(0x9,0xb)       # falling jeep
 group_vertically(0xa,0xc)       # falling jeep
 group_vertically(0xd,0xf)       # falling jeep
 group_vertically(0xe,0x10)      # falling jeep
-group_vertically(0x1,0x3)       # jeep part
-group_vertically(0x2,0x4)       # jeep part
+#group_vertically(0x1,0x3)       # jeep part
+#group_vertically(0x2,0x4)       # jeep part
 # group explosion sprites to save sprites
 group_vertically(0x1d,0x1a)       # exploding jeep
 group_vertically(0x1e,0x21)       # exploding jeep
@@ -244,13 +269,14 @@ def switch_values(t,a,b):
 # below the blue mountains also set the brown color in dyn color copperlist
 #still master the order of BOB palette to have backgound colors first to save some blitting
 
-brown_rock_color = (0x84,0x51,0x00)
-blue_dark_mountain_color = (0,0,0xFF)
 
 all_bob_colors = sorted(bobs_used_colors)[1:]
 all_bob_colors.remove(brown_rock_color)
 
-bob_global_palette = background_palette + all_bob_colors
+# remove yellow_background_city_color
+bg_copy = [x for x in background_palette if x != yellow_background_city_color]
+
+bob_global_palette = bg_copy + all_bob_colors
 if len(bob_global_palette) != 16:
     # error if not enough colors, no need to hack to shoehorn it
     # if too many colors, we can't use 4 bitplanes!
@@ -573,7 +599,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     backgrounds = ['blue_mountains', 'green_mountains', 'green_city']
 
     # we only need 8 first colors (actually even less)
-    bg_palette = bob_global_palette[:8]
+    bg_palette = background_palette
+
 
     for b in backgrounds:
         f.write(f"{b}:\n")
@@ -592,9 +619,13 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                 rgb = bg_palette[cidx]
                 img.putpixel((x,y),rgb)
                 img.putpixel((x+256,y),rgb)
+
+        # replace yellow by dark green if found, we'll switch to yellow dynamically (saves 1 precious color slot
+        # as both backgrounds can't be present at the same time)
+        img = replace_color(img,yellow_background_city_color,green_background_mountain_color)
         # dump, we don't need a mask for the blue layer as it's behind
 
-        raw = bitplanelib.palette_image2raw(img,None,bg_palette,forced_nb_planes=3,
+        raw = bitplanelib.palette_image2raw(img,None,bob_global_palette[:8],forced_nb_planes=3,
                     palette_precision_mask=0xFF,generate_mask="green" in b,blit_pad=True)
         nb_planes = 4 if "green" in b else 3
         plane_size = len(raw)//nb_planes
