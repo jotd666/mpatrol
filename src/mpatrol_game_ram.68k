@@ -67,7 +67,7 @@
 
 	.global	green_layer_y_pos_E1C3
 	.global	blue_layer_y_pos_E1C4
-	.global	unknown_E1C5
+	.global	background_layer_control_E1C5
 	.global	unknown_E1C6
 	.global	unknown_E1C9
 	.global	com_list_head_e1cf
@@ -311,7 +311,7 @@ green_layer_y_pos_E1C3:
 	ds.b	1
 blue_layer_y_pos_E1C4:
 	ds.b	1
-unknown_E1C5:
+background_layer_control_E1C5:
 	ds.b	1
 unknown_E1C6:
 	ds.b	3

@@ -179,8 +179,8 @@ add_sprite_block(0x3D,0x3D,"mine",{3,0xA,0xB},False)
 add_sprite_block(0x39,0x39,"tank_shot",4,True)
 add_sprite_block(0x3C,0x3C,"missile_shot",4,False)   # maybe wrong clut
 add_sprite_block(0,0,"blank",0,False)   # maybe wrong clut
-add_sprite_block(0x28,0x29,"jeep_shot",1,False)   # maybe wrong clut
-add_sprite_block(0x35,0x35,"ground_digging_bomb",{0xA,0xB},False)   # maybe wrong clut
+add_sprite_block(0x28,0x29,"jeep_shot",1,False)
+add_sprite_block(0x35,0x35,"ground_digging_bomb",{0xA,0xB},False)
 
 # below are sprites which are mapped to hardware sprites (lower part of the field)
 # rather chosen for their special colors than for good performance

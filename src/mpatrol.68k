@@ -2488,7 +2488,8 @@ l_0bfa:
 	addq.b	#1,d1                           	| [$0c15: inc  b]
 l_0c16:
 	move.b	d1,d0                           	| [$0c16: ld   a,b] -  * J0C13
-	move.b	d0,unknown_E1C5                 	| [$0c17: ld   (unknown_E1C5),a]
+	* can write 0 (no layers), FB: green mountain, FC: green city
+	move.b	d0,background_layer_control_E1C5   	| [$0c17: ld   (background_layer_control_E1C5),a]
 	jbsr	l_2981                            	| [$0c1a: call $2981]
 	tst.b	d0                               	| [$0c1d: and  a]
 	jne	l_0c7f                             	| [$0c1e: jr   nz,$0C7F]
@@ -2686,7 +2687,6 @@ l_0d29:
 	                   	| [$0d2f: call clear_area_05fa] clear screen
 	lea	sprite_shadow_E100,a0          	| [$0d32: ld   hl,sprite_shadow_E100]
 	move.w	#0xc6,d1                        	| [$0d35: ld   bc,$00C6] 198
-	jbsr	osd_clear_background
 	jbsr	clear_area_05fa                   	| [$0d38: call clear_area_05fa] clear part of RAM
 
 l_0d3b:
@@ -3100,7 +3100,7 @@ l_0f40:
 ufos_on_approach_0f45:
 	sub.b	#0x1F,d0                         	| [$0f45: sub  $1F] -  * J0E22
 	jmi	shoot_hole_making_bomb_0fb7                             	| [$0f47: jp   m,$0FB7]
-	lea	unknown_E1C5,a0                	| [$0f4a: ld   hl,unknown_E1C5]
+	lea	background_layer_control_E1C5,a0                	| [$0f4a: ld   hl,background_layer_control_E1C5]
 	st.b	d2                                	| [$0f4d: ld   c,$FF]
 l_0f4f:
 	addq.w	#1,a0                           	| [$0f4f: inc  hl] -  * J0F53

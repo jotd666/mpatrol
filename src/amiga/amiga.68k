@@ -1,7 +1,7 @@
 *
-*	Amiga-specific portions of mpatrol
+*	Amiga-specific portions of Moon Patrol
 *
-* (c) JOTD 2023
+* (c) JOTD 2024
 *
 
 .include "../src/mpatrol.inc"
@@ -87,7 +87,7 @@ OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
 
 _custom = 0xDFF000
 
-ENABLE_MULTIPLEXED_SPRITES = 1
+OPT_ENABLE_MULTIPLEXED_SPRITES = 1
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
@@ -200,7 +200,6 @@ start:
 		.global	osd_get_random
 		.global	osd_wait
 		.global	osd_set_ground_scroll_value
-		.global	osd_clear_background
 		
 	
 	.include	"ReadJoypad.i"
@@ -786,7 +785,7 @@ is_moonbase_displayed:
 	movem.l	(a7)+,a1
 	rts
 	
-osd_clear_background:
+clear_background:
 	movem.l	d0-d7/A0-A6,-(a7)
 	
 	bsr		reset_background_dynamic_colors
@@ -809,14 +808,14 @@ osd_clear_background:
 * < A0: 
 update_background:
 	
-	move.l	a0,a2
+	move.l	a0,a2		| a2 points to shadow mem E1C0
 	* don't update scroll if title displayed and the values are the same as before
 	jbsr	is_title_displayed
 	beq.b	1f
 
 
 	lea		previous_values(pc),a1
-	moveq	#5,d0
+	moveq	#5,d0		| 6 values to compare
 0:
 	cmp.b	(a0)+,(a1)+
 	bne.b	1f				| only update if values have changed
@@ -827,9 +826,10 @@ update_background:
 	moveq	#0,d1     | X position of green layer (0-256)
 	moveq	#0,d2     | Y position of blue layer
 	moveq	#0,d3     | Y position of green layer
-	moveq	#0,d4     | 0: green mountains, 1: green city
+	moveq	#0,d4     | layer control (0: no layers)
 	moveq	#0,d5     | X position of ground layer
 	
+	move.b	#1,0x200
 	lea		previous_values(pc),a1
 	move.b	(a2)+,d5
 	move.b	d5,(a1)+	| ground layer
@@ -842,13 +842,18 @@ update_background:
 	move.b	(a1),previous_green_layer_y
 0:
 	move.b	d3,(a1)+
-	move.b	(a2),d2     | blue layer Y
+	move.b	(a2)+,d2     | blue layer Y
+	move.b	d2,(a1)+
+	move.b	(a2)+,d4	 | layer control
+	move.b	d4,(a1)
+	jeq		clear_background
+	
 	* irem hardware works differently for scroll
 	not.b	d0
 	not.b	d1
 	not.b	d5
 	* only display if Y != 0
-	move.b	d2,(a1)
+	tst.b	d2
 	jne		0f
 	
 	tst.b	previous_blue_layer_y
@@ -926,9 +931,9 @@ osd_update_sprites:
 	addq.w	#4,a1
 	dbf		d7,0b
 	
-	* copy 5 more values (scroll registers)
+	* copy 6 more values (scroll registers)
 	move.l	(a0)+,(a1)+
-	move.b	(a0)+,(a1)+
+	move.w	(a0)+,(a1)+
 	bsr		really_update_sprites
 	
 	movem.l	(a7)+,a0-a6/d0-d7
@@ -943,7 +948,7 @@ really_update_sprites:
 	lea		sprite_registers,a0
 	st.b	do_upper_part
 	bsr		update_hardware_sprites
-	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
 	lea		sprite_registers,a0
 	clr.b	do_upper_part
 	bsr		update_hardware_sprites
@@ -1006,7 +1011,7 @@ update_hardware_sprites:
 	beq.b	2f			| Y set to 0: not shown
 	not.b	d1			| negate Y: get normal Y coord!
 	
-	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
 	
 	* depending on upper or lower part, filter sprite
 	tst.b	do_upper_part
@@ -1048,10 +1053,13 @@ update_hardware_sprites:
 	addq.w	#4,a0
 	dbf		d7,1b
 	
-	* all sprites are allocated: now display them
+	***********************************************
+	* all sprites are allocated: now display them *
+	***********************************************
+	
 	lea		host_sprites(pc),a2		| input structure
 	lea		sprites_upper_part,a3				| copperlist
-	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
 	tst.b	do_upper_part
 	bne.b	222f
 	lea		sprites_lower_part,a3
@@ -1067,6 +1075,12 @@ update_hardware_sprites:
 	* boundary but in that case we'll switch for a BOB
 	* (there are potentially too many UFO ships for sprites anyway)
 	lea	blank_sprite_table,a1
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
+	tst.b	do_upper_part
+	beq.b	11f
+	add.w	#8*4,a1		| lower part blanks
+11:
+	.endif
 	move.w	d6,d4
 	add.w	d4,d4
 	add.w	d4,d4			| times 4 for offset
@@ -1121,7 +1135,7 @@ update_hardware_sprites:
 	bsr		store_sprite_pos_32
 223:
 
-	.ifndef	ENABLE_MULTIPLEXED_SPRITES
+	.ifeq	OPT_ENABLE_MULTIPLEXED_SPRITES
 	* just store control word
 	move.l	d0,(a5)
 	.else
@@ -1130,7 +1144,6 @@ update_hardware_sprites:
 	beq.b	224f
 	* store control word
 	move.l	d0,(a5)
-	move.b	#0,0x200
 	* multiplexed: we have to store upper part pic pointer end control word
 	* in a buffer to link to it, d4 is the index of sprite * 4 already
 	move.l	a5,-(a7)
@@ -1161,11 +1174,13 @@ update_hardware_sprites:
 	move.l	d0,(a1)			| store control word in the end of upper sprite data
 225:
 	.endif
+	move.l	a5,d0		| sprite pointer with or without control word
 	
 	* set colors
 	lea		sprite_cluts+2,a6
 	moveq	#0,d3
 	move.b	(SPRITE_CLUT,a2),d3
+	bmi.b	25f			| blank sprite with invalid clut: skip color set!
 	lsl.w	#3,d3		| times 8
 
 	add.w	d3,a6
@@ -1182,7 +1197,6 @@ update_hardware_sprites:
 *	move.l	#blank_sprite,d0
 *	bra.b	25f
 *24:
-	move.l	a5,d0		| sprite pointer with or without control word
 	* d6 is the sprite index: compute/set proper color
 	move.w	d6,d5
 	bclr	#0,d5
@@ -1190,7 +1204,7 @@ update_hardware_sprites:
 	move.w	d5,d2
 	add.w	d2,d2
 	lea		sprites_upper_cols+6,a5	| sprite palette + 2 (first color skipped)
-	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
 	tst.b	do_upper_part
 	bne.b	241f
 	lea		sprites_lower_cols+6,a5	| sprite palette + 2 (first color skipped)
@@ -1578,7 +1592,7 @@ start_process_1_plane:
 * < D1.W: X position of green layer (0-256)
 * < D2.W: Y position of blue layer
 * < D3.W: Y position of green layer
-* < D4.B: 0: green mountains, 1: green city
+* < D4.B: 0xFB: green mountains, 0xFC: green city, 0: no layers
 * < D5.W: X position of the ground layer
 *
 
@@ -1659,8 +1673,9 @@ blit_scrollable_layers:
 	
 	movem.l	(a7),d0-d5/a1
 	lea		green_mountains,a0
-	tst.b	d4
-	beq.b	0f
+	btst.b	#0,d4
+	bne.b	0f
+	* probably 0xFC (there are invalid/impossible combinations)
 	lea		green_city,a0
 0:
 	move.w	d3,d2	| same as blue now
@@ -2255,7 +2270,6 @@ quit_to_os:
 * pointing to blank
 
 init_sprite_bank:
-	lea		blank_sprite_table,a1
 	move.w	#sprpt,d0
 	move.w	#NB_HOST_SPRITES-1,d2		| 7
 0:
@@ -2302,9 +2316,11 @@ platform_init:
 
 	* set sprite registers in copperlist for the upper part
 	lea		sprites_upper_part,a0
+	lea		blank_sprite_table,a1
 	bsr		init_sprite_bank
-	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
 	* lower part!
+	lea		blank_sprite_table+4*8,a1
 	lea		sprites_lower_part,a0
 	bsr		init_sprite_bank
 	.endif
@@ -3667,7 +3683,7 @@ _end_of_ng_code:
 	.align 2
 blank_sprite_table:
 	.set	offset,0
-	.rept	8
+	.rept	16
 	.long	blank_sprite_0+offset
 	.set	offset,offset+40
 	.endr
@@ -3789,7 +3805,7 @@ color_line_copper:
 	.word	beampos,0xFFFE
 	.endr
 	* multiplexed sprites
-	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
 sprites_lower_cols:
 	DECL_COLORS	16,16
 sprites_lower_part:
