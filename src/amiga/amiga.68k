@@ -33,7 +33,8 @@ NO_BACKGROUND_MOUNTAINS = 0
 PANEL_MAX_Y = 48
 DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y   | make sure it's even!!!!
 HALF_DYNAMIC_COPPER_ROWS = DYNAMIC_COPPER_ROWS/2
-SPRITE_COPPERLIST_CHUNK_SIZE = 64
+SPRITE_COPPERLIST_CHUNK_SIZE = 64+64	| sprite copper (8*2 pointers) + color sprite copper (16 colors)
+SPRITE_Y_SPLIT_LIMIT = 96+PANEL_MAX_Y
 
 * with those, buggy wheels match perfectly the ground!
 SPRITE_Y_CORRECTION = -16
@@ -939,6 +940,10 @@ ignore_sprite:
 really_update_sprites:
 	movem.l	a0-a6/d0-d7,-(a7)
 	lea		sprite_registers,a0
+	st.b	do_upper_part
+	bsr		update_hardware_sprites
+	lea		sprite_registers,a0
+	clr.b	do_upper_part
 	bsr		update_hardware_sprites
 	lea		sprite_registers,a0
 	bsr		update_bobs
@@ -946,7 +951,13 @@ really_update_sprites:
 	movem.l	(a7)+,a0-a6/d0-d7
 	rts
 	
-* SPRITE_Y_SPLIT_LIMIT
+do_upper_part:
+	.byte	0
+	.align	2
+	
+* SPRITE_Y_SPLIT_LIMIT has to be carefully computed from copper pos
+* where second sprite write is done
+
 update_hardware_sprites:
 	* clear host sprites
 	moveq	#NB_HOST_SPRITES-1,d0
@@ -993,7 +1004,20 @@ update_hardware_sprites:
 	
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	2f			| Y set to 0: not shown
-	not.b	d1
+	not.b	d1			| negate Y: get normal Y coord!
+	
+	* depending on upper or lower part, filter sprite
+	tst.b	do_upper_part
+	beq.b	21f
+	* higher part
+	cmp.b	#SPRITE_Y_SPLIT_LIMIT,d1
+	bcc.b	2f		| low sprite: skip
+	bra.b	22f
+21:
+	* lower part
+	cmp.b	#SPRITE_Y_SPLIT_LIMIT,d1
+	bcs.b	2f		| high sprite: skip
+22:
 	
 	
 *	cmp.b	#255,d1
@@ -1025,11 +1049,18 @@ update_hardware_sprites:
 	* all sprites are allocated: now display them
 	lea		host_sprites(pc),a2		| input structure
 	lea		sprites_upper_part,a3				| copperlist
+	tst.b	do_upper_part
+	bne.b	222f
+	lea		sprites_lower_part,a3
+222:
 	moveq	#0,d6
 10:
 	move.b	(SPRITE_X,a2),d0
-	bne.b	20f		
+	bne.b	20f
 	* slot free: replace sprite by blank
+	* this doesn't allow that a sprite crosses the SPRITE_Y_SPLIT_LIMIT
+	* boundary but in that case we'll switch for a BOB
+	* (there are potentially too many UFO ships for sprites anyway)
 	move.l	#blank_sprite,d4
 	move.w	d4,(6,a3)
 	swap	d4
@@ -1108,7 +1139,11 @@ update_hardware_sprites:
 	lsl.w	#2,d5	| times 4*2
 	move.w	d5,d2
 	add.w	d2,d2
-	lea		sprite_cols+6,a5	| sprite palette + 2 (first color skipped)
+	lea		sprite_upper_cols+6,a5	| sprite palette + 2 (first color skipped)
+	tst.b	do_upper_part
+	bne.b	241f
+	lea		sprite_lower_cols+6,a5	| sprite palette + 2 (first color skipped)
+241:
 	add.w	d2,a5
 	* copy 3 colors from cached registers into sprite color copperlist
 	move.w	d3,(4,a5)
@@ -1899,16 +1934,9 @@ alloc_sprite:
 
 	
 osd_sound_start:
-	cmp.b	#CREDIT_SND,d0
-	bcs.b	0f			| always play sampled sounds
-	tst.b	music_playing
-	beq.b	0f
-	* don't play AY-sound when music is playing
-	rts
-0:
 	movem.l	d0/d1/a0/a6,-(a7)
 	tst.b	d0
-	jmi	7f		| should stop the sound
+	jeq	7f		| should stop the sound
 	and.w	#0xFF,d0
 	lea		_custom,a6
 	
@@ -2221,7 +2249,7 @@ platform_init:
 	* set sprite registers in copperlist for the upper part
 	lea		sprites_upper_part,a0
 	bsr		init_sprite_bank
-	* temp lower part!
+	* lower part!
 	lea		sprites_lower_part,a0
 	bsr		init_sprite_bank
 
@@ -3658,15 +3686,22 @@ panel_bitplanes:
 	DECL_BITPLANES	0,4
 panel_tiles_colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
-sprite_cols:
+
+sprite_upper_cols:
 	DECL_COLORS	16,16
 sprites_upper_part:
 	DECL_SPRITES
+
+
 
 	* wait until line 48, just after the status panel is displayed
 	* to change palette
  	.set    beampos,0x5401
     .word  beampos,0xFFFE
+sprite_lower_cols:
+	DECL_COLORS	16,16
+sprites_lower_part:
+	DECL_SPRITES
 
 playfield_colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
@@ -3689,8 +3724,9 @@ color_line_copper:
 	.word	beampos,0xFFFE
 	.endr
 	* multiplex sprites
-sprites_lower_part:
-	DECL_SPRITES
+	.rept	32
+	.word	0x1FE,0
+	.endr
 	* rest of the color line copper stuff. Code knows that it must skip the sprites_lower_part sprite table
 	.rept	HALF_DYNAMIC_COPPER_ROWS
 	* room for 3 color registers to change dynamically each line

@@ -33,27 +33,22 @@
 
 
 * sound ordinals
+                    
 
-
-
-	.equ	GUARD_KILLED_SND,                     0
-	.equ	PICKAXE_SND,                          1
-	.equ	PLAYER_CLIMB_SND,                     2
-	.equ	PLAYER_WALK_SND,                      3
-	.equ	PLAYER_KILLED_TALK_SND,               4
-	.equ	REWARD_TALK_SND,                      5
-	.equ	FALL_IN_WAGON_SND,                    6
-	.equ	PLAYER_GRABS_HANDLE_SND,              7
-	.equ	CREDIT_SND,                           8
-	.equ	TIME_WARN_SND,                        9
-	.equ	TAKE_BAG_SND,                         10
-	.equ	REWARD_TUNE_SND,                      11
-	.equ	PLAYER_KILLED_TUNE_SND,     		  12
-	.equ	TUNE1_SND,			                  13
-	.equ	TUNE2_SND,			                  14
-	.equ	GUARD_CLIMB_SND,                      15
-	.equ	GUARD_WALK_SND,                       16
-
-
+	.equ	STOP_LOOP_SND,             0
+	.equ	EXPLOSION_SND,	           1
+	.equ	BOMB_EXPLOSION_SND,        2
+	.equ	PING_SND,                  3
+	.equ	UFO_SHOOT_SND,             4
+	.equ	SHOOT_SND,                 5
+	.equ	COIN_SND,                  6
+	.equ	JEEP_JUMP_SND,             7
+	.equ	SPACE_PLANT_SND,           8
+	.equ	UFO_ATTACK_SND,            9
+	.equ	MAIN_TUNE_SND,             10
+	.equ	COURSE_START_SND,          11
+	.equ	SECTION_END_SND,           12
+	.equ	COURSE_END_SND,            13
+	.equ	JEEP_EXPLOSION_SND,        14
 
     
