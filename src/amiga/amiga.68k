@@ -904,10 +904,11 @@ osd_update_sprites:
 	* when exploding
 	movem.l	a0-a6/d0-d7,-(a7)
 	clr.b	nb_displayed_wheels
+	clr.b	nb_displayed_ships
 	lea		sprite_registers(pc),a1
 	move.w	#NB_TARGET_SPRITES-1,d7
 0:
-	tst.b	(TARGET_SPRITE_Y,a0)
+	move.b	(TARGET_SPRITE_Y,a0),d1
 	beq.b	ignore_sprite
 	move.b	(TARGET_SPRITE_CODE,a0),d0
 	cmp.b	#5,d0
@@ -917,19 +918,35 @@ osd_update_sprites:
 	* jeep wheel: count how many we have
 	* briefly when the jeep explodes there are 6 wheels
 	* which is too much for the sprite engine to handle
+	* (and it's not visible anyway)
 	move.b	nb_displayed_wheels,d0
 	addq.b	#1,d0
 	move.b	d0,nb_displayed_wheels
 	
 	cmp.b	#4,d0
 	bcc.b	ignore_sprite
+	bra.b	2f
 1:
+	* count UFOs
+	cmp.b	#0x42,d0
+	bcs.b	2f
+	cmp.b	#0x47,d0
+	bcc.b	2f
+	* UFO: if too low, convert to bob to avoid conflict
+	not.b	d1		| convert to real coord
+	cmp.b	#SPRITE_Y_SPLIT_LIMIT-16,d1
+	bcc.b	convert_to_bob		| over this Y, HW sprite conflicts with lower part sprites
+	
+	* count how many we have
+	move.b	nb_displayed_ships,d0
+	addq.b	#1,d0
+	move.b	d0,nb_displayed_ships
+	cmp.b	#NB_HOST_SPRITES+1,d0
+	bcc.b	convert_to_bob	| if already 8 sprites, switch to bob copy
 2:
-	move.l	(a0),(a1)		| brutal copy
-3:
-	addq.w	#4,a0
-	addq.w	#4,a1
+	move.l	(a0)+,(a1)+		| brutal copy
 	dbf		d7,0b
+3:
 	
 	* copy 6 more values (scroll registers)
 	move.l	(a0)+,(a1)+
@@ -938,9 +955,16 @@ osd_update_sprites:
 	
 	movem.l	(a7)+,a0-a6/d0-d7
 	rts
-
+	
+convert_to_bob:
+	* more than 8 ships: convert to sprite, now it's a bob
+	add.b	#0x80,(TARGET_SPRITE_CODE,a0)
+	bra.b	2b
+	
 ignore_sprite:
-	clr.l	(a1)
+	addq.w	#4,a0
+	clr.l	(a1)+
+	dbf		d7,0b
 	bra.b	3b
 	
 really_update_sprites:
@@ -3594,6 +3618,8 @@ highscore_loaded:
 flip_flop:
 	.byte	0
 nb_displayed_wheels:
+	.byte	0
+nb_displayed_ships:
 	.byte	0
 	.align	2
 

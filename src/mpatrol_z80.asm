@@ -1619,7 +1619,7 @@ display_status_bar_0b8a:
 0C13: 38 01       jr   c,$0C16
 0C15: 04          inc  b
 0C16: 78          ld   a,b                        ; * J0C13
-0C17: 32 C5 E1    ld   (unknown_E1C5),a
+0C17: 32 C5 E1    ld   (background_layer_control_E1C5),a
 0C1A: CD 81 29    call $2981
 0C1D: A7          and  a
 0C1E: 20 5F       jr   nz,$0C7F
@@ -2030,7 +2030,7 @@ draw_ground_0d8d:
 0F43: 18 C8       jr   $0F0D
 0F45: D6 1F       sub  $1F                        ; * J0E22
 0F47: FA B7 0F    jp   m,$0FB7
-0F4A: 21 C5 E1    ld   hl,unknown_E1C5
+0F4A: 21 C5 E1    ld   hl,background_layer_control_E1C5
 0F4D: 0E FF       ld   c,$FF
 0F4F: 23          inc  hl                         ; * J0F53
 0F50: 0C          inc  c
@@ -4491,7 +4491,7 @@ ISROBJRun_1C:
 service_mode_3300:
 3300: 3E FF       ld   a,$FF
 3302: D3 C0       out  ($C0),a
-3304: 32 C5 E1    ld   (unknown_E1C5),a
+3304: 32 C5 E1    ld   (background_layer_control_E1C5),a
 3307: 21 00 E1    ld   hl,sprite_shadow_E100
 330A: 36 00       ld   (hl),$00
 330C: 54          ld   d,h

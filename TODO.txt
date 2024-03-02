@@ -8,8 +8,7 @@
 
 graphical issues:
 
-- convert ship to bobs if too many of them: 4 of each category max!
-- convert ship to bobs when crashing on player (Y too high conflicts with lower sprites)
+- blit & erase jeep in one go (prepare big special bob in python script)
 - optimize blit/erase height there are a lot of small objects! (dig out Xevious
   autocrop code)
 - space plant symmetry??? space plant in general looks hard to draw: snapshot the game at this point

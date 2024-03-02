@@ -41,7 +41,7 @@ if dump_sprites:
     ensure_empty(uncategorized_dump_sprites_dir)
 
 
-NB_POSSIBLE_SPRITES = 128
+NB_POSSIBLE_SPRITES = 256
 NB_BOB_PLANES = 4
 
 rw_json = os.path.join(this_dir,"used_cluts.json")
@@ -132,11 +132,12 @@ def get_sprite_clut(clut_index):
 # creating the sprite configuration in the code is more flexible than with a config file
 
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite):
+def add_sprite_block(start,end,prefix,cluts,is_sprite,bob_backup=False):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end+1):
-        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite}
+        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"bob_backup":bob_backup}
+
 
 
 def group_vertically(sprite1,sprite2):
@@ -155,9 +156,11 @@ jeep_cluts = {0,12}
 # tank qualifies (there can be 2 tanks at once)
 
 add_sprite_block(1,4,"jeep_part",jeep_cluts,False)
-add_sprite_block(0x42,0x42,"saucer",7,True)
-add_sprite_block(0x43,0x44,"hole_making_ship",7,True)
-add_sprite_block(0x45,0x47,"ovoid_ship",7,True)
+# all ships are sprites with bob backups
+add_sprite_block(0x42,0x42,"saucer",7,True,True)
+add_sprite_block(0x43,0x44,"hole_making_ship",7,True,True)
+add_sprite_block(0x45,0x47,"ovoid_ship",7,True,True)
+
 add_sprite_block(0x38,0x38,"tank",7,True)
 add_sprite_block(0x3A,0x3B,"missile",9,True)
 add_sprite_block(0x7B,0x7C,"missile",9,True)
@@ -235,6 +238,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         clut_range = sprconf["cluts"]
         name = sprconf["name"]
         is_sprite = sprconf["is_sprite"]
+        bob_backup = sprconf["bob_backup"]
         vattached = sprconf.get("vattached")
 
         for cidx in clut_range:
@@ -247,7 +251,12 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     v = next(d)
                     color = spritepal[v]
                     if sprconf:
-                        (sprites_used_colors if is_sprite else bobs_used_colors)[color] += 1
+                        if is_sprite:
+                            sprites_used_colors[color] += 1
+                            if bob_backup:
+                                bobs_used_colors[color] += 1
+                        else:
+                            bobs_used_colors[color] += 1
             if vattached:
                 d = iter(vattached)
                 for j in range(16,32):
@@ -367,11 +376,13 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         clut_range = sprconf["cluts"]
         name = sprconf["name"]
         is_sprite = sprconf["is_sprite"]
+        bob_backup = sprconf["bob_backup"]
         vattached = sprconf.get("vattached")
     else:
         clut_range = range(0,16)
         name = f"unknown_{k:02x}"
         is_sprite = False
+        bob_backup = False
         vattached = None
 
     for cidx in clut_range:
@@ -399,9 +410,9 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         # only consider sprites/cluts which are pre-registered
         if sprconf:
             if k not in sprites:
-                sprites[k] = {"is_sprite":is_sprite,"name":name,"hsize":hsize}
+                sprites[k] = {"is_sprite":is_sprite,"bob_backup":False,"name":name,"hsize":hsize}
             cs = sprites[k]
-
+            is_bob = not is_sprite or bob_backup
             if is_sprite:
                 # hardware sprites only need one bitmap data, copied 8 times to be able
                 # to be assigned several times. Doesn't happen a lot in this game for now
@@ -416,7 +427,14 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     #
                     cs["bitmap"] = bitplanelib.palette_image2sprite(img,None,spritepal,
                             palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
-            else:
+            if is_bob:
+                if bob_backup:
+                    # clone sprite into bob with 0x80 shift (upper 128-255 range isn't normally used)
+                    if k+0x80 not in sprites:
+                        src = sprites[k]
+                        cs = {"is_sprite":False,"bob_backup":False,"name":src["name"]+"_bob","hsize":src["hsize"]}
+                        sprites[k+0x80] = cs
+
                 # software sprites (bobs) need one copy of bitmaps per palette setup. There are 3 or 4 planes
                 # (4 ATM but will switch to dual playfield)
                 # but not all planes are active as game sprites have max 3 colors (+ transparent)
