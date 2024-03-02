@@ -87,7 +87,7 @@ OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
 
 _custom = 0xDFF000
 
-*ENABLE_MULTIPLEXED_SPRITES = 1
+ENABLE_MULTIPLEXED_SPRITES = 1
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
@@ -1066,13 +1066,15 @@ update_hardware_sprites:
 	* this doesn't allow that a sprite crosses the SPRITE_Y_SPLIT_LIMIT
 	* boundary but in that case we'll switch for a BOB
 	* (there are potentially too many UFO ships for sprites anyway)
-	move.l	#blank_sprite,d0
+	lea	blank_sprite_table,a1
 	move.w	d6,d4
-	lsl.w	#3,d4		| times 8 for offset
-	move.w	d0,(6,a3,d4.w)
-	swap	d0
-	move.w	d0,(2,a3,d4.w)
-	jra		30f
+	add.w	d4,d4
+	add.w	d4,d4			| times 4 for offset
+	move.l	(a1,d4.w),a5	| fetch relevant blank sprite data
+	moveq	#0,D0			
+	moveq	#0,D1			| position: X,Y=0
+	move.w	#16,d3
+	jra		220f			| and treat that like a 16-high sprite
 20:
 	* lookup sprite code
 	
@@ -1108,6 +1110,7 @@ update_hardware_sprites:
 	move.w	(A5)+,d3
 	cmp.w	#16,d3
 	bne.b	221f
+220:
 	bsr		store_sprite_pos_16
 	bra.b	223f
 221:
@@ -1118,7 +1121,47 @@ update_hardware_sprites:
 	bsr		store_sprite_pos_32
 223:
 
+	.ifndef	ENABLE_MULTIPLEXED_SPRITES
+	* just store control word
 	move.l	d0,(a5)
+	.else
+	* multiplexed
+	tst.b	do_upper_part
+	beq.b	224f
+	* store control word
+	move.l	d0,(a5)
+	move.b	#0,0x200
+	* multiplexed: we have to store upper part pic pointer end control word
+	* in a buffer to link to it, d4 is the index of sprite * 4 already
+	move.l	a5,-(a7)
+	* we add 4+64 or 4+128 (32) to skip control word+sprite data
+	add.w	d3,d3
+	add.w	d3,d3	| 16*4 or 32*4
+	addq	#4,d3
+	add.w	d3,a5
+	clr.l	(a5)			| clear previous control word ATM (useful if no lower sprite?)
+	lea		upper_sprite_buffers(pc),a1
+	move.l	a5,(a1,d4.w)	| store pointer on control word for lower matching sprite
+	move.l	(a7)+,a5
+	bra.b	225f
+224:
+	* sprite lower part: it doesn't work if we store the control word in A5, it's too late
+	* as upper sprite has finished rendering and stumbled on 0 control word. We have to set
+	* this control word on the upper sprite end control word to enable sprite "chaining"
+	* and store sprite buffer without control word in lower part copperlist!
+	*
+	* big thanks to Ross for the explanation
+	*
+	* what happens is: sprite DMA stumbles on non-zero control word and waits for the beam to
+	* reach the given X/Y pos. In the meantime, we have plenty of time to change sprite pointer
+	* so when sprite DMA resumes, the pointer points on the lower sprite data!
+	addq	#4,a5			| skip second sprite control word
+	lea		upper_sprite_buffers(pc),a1
+	move.l	(a1,d4.w),a1
+	move.l	d0,(a1)			| store control word in the end of upper sprite data
+225:
+	.endif
+	
 	* set colors
 	lea		sprite_cluts+2,a6
 	moveq	#0,d3
@@ -1130,16 +1173,16 @@ update_hardware_sprites:
 	* (we may as well cache the values in spare registers)
 	move.l	(a6)+,d3
 	move.w	(a6)+,d7
-	bne.b	24f
-	tst.l	d3
-	bne.b	24f
-	* all black sprites would hide mpatrol sprites & tiles
-	* we want to hide them instead (no need to change palette)
-	* inherited from pengo, probably not required
-	move.l	#blank_sprite,d0
-	bra.b	25f
-24:
-	move.l	a5,d0		| sprite pointer
+*	bne.b	24f
+*	tst.l	d3
+*	bne.b	24f
+*	* all black sprites would hide mpatrol sprites & tiles
+*	* we want to hide them instead (no need to change palette)
+*	* inherited from pengo, probably not required
+*	move.l	#blank_sprite,d0
+*	bra.b	25f
+*24:
+	move.l	a5,d0		| sprite pointer with or without control word
 	* d6 is the sprite index: compute/set proper color
 	move.w	d6,d5
 	bclr	#0,d5
@@ -2212,10 +2255,11 @@ quit_to_os:
 * pointing to blank
 
 init_sprite_bank:
-	move.l	#blank_sprite,d1
+	lea		blank_sprite_table,a1
 	move.w	#sprpt,d0
 	move.w	#NB_HOST_SPRITES-1,d2		| 7
 0:
+	move.l	(a1)+,d1
 	move.w	d0,(a0)+
 	swap	d1
 	move.w	d1,(a0)+
@@ -3575,6 +3619,8 @@ delay_timer:
 	.word	0
 one_out_of_five:
 	.word	0
+upper_sprite_buffers:
+	ds.l	8			| 8 pointers to 8 upper sprite end control words
 bg_drawed_screen_ptr:
 	.long	bg_screen_data_1
 bg_displayed_screen_ptr:
@@ -3619,6 +3665,13 @@ temp_filename_buffer:
 _end_of_ng_code:
 		
 	.align 2
+blank_sprite_table:
+	.set	offset,0
+	.rept	8
+	.long	blank_sprite_0+offset
+	.set	offset,offset+40
+	.endr
+	
 tiles_palette:
 	.include "tiles_palette.68k"
 
@@ -3682,8 +3735,8 @@ debug_color:
 	dc.w	0
 	dc.l	-2
 	
-blank_sprite:
-	.rept	32
+blank_sprite_0:
+	.rept	40*8
 	.long	0
 	.endr
 	

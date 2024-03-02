@@ -147,15 +147,17 @@ sprite_config = dict()
 attached_sprites = set()
 jeep_cluts = {0,12}
 
-# jeep is made of sprites: 5 sprites needed, 6 color slots
-# so we can allow 2 more sprites but they must have same CLUT...
+# thanks to sprite multiplexing, a lot of ground objects can
+# be sprites
+# jeep wheels are made of sprites: 3 sprites needed, 4 color slots
+# so we can allow 4 more sprites!!!
 # missile qualifies (made of 2 sprites)
 # tank qualifies (there can be 2 tanks at once)
 
 add_sprite_block(1,4,"jeep_part",jeep_cluts,False)
-add_sprite_block(0x42,0x42,"saucer",7,False)
-add_sprite_block(0x43,0x44,"hole_making_ship",7,False)
-add_sprite_block(0x45,0x47,"ovoid_ship",7,False)
+add_sprite_block(0x42,0x42,"saucer",7,True)
+add_sprite_block(0x43,0x44,"hole_making_ship",7,True)
+add_sprite_block(0x45,0x47,"ovoid_ship",7,True)
 add_sprite_block(0x38,0x38,"tank",7,True)
 add_sprite_block(0x3A,0x3B,"missile",9,True)
 add_sprite_block(0x7B,0x7C,"missile",9,True)
@@ -170,7 +172,7 @@ add_sprite_block(0x2D,0x30,"rock",4,False)
 add_sprite_block(0x3E,0x3F,"explosion",1,False)
 add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
 add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
-add_sprite_block(0x61,0x6F,"ground_explosion",3,False)
+add_sprite_block(0x61,0x6F,"ground_explosion",3,True)
 add_sprite_block(0x4B,0x4D,"ship_bomb",1,False)
 add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},True)
 add_sprite_block(0x3D,0x3D,"mine",{3,0xA,0xB},False)
@@ -277,10 +279,13 @@ all_bob_colors.remove(brown_rock_color)
 bg_copy = [x for x in background_palette if x != yellow_background_city_color]
 
 bob_global_palette = bg_copy + all_bob_colors
-if len(bob_global_palette) != 16:
+if len(bob_global_palette) > 16:
     # error if not enough colors, no need to hack to shoehorn it
     # if too many colors, we can't use 4 bitplanes!
     raise Exception("global bob palette should have exactly 16 colors, found {}".format(len(bob_global_palette)))
+elif len(bob_global_palette) < 16:
+    # can't really happen... but
+    bob_global_palette += [(1,2,3)] * (16-len(bob_global_palette))
 
 # hack to make tile & sprite palette partially match for "moon patrol" approx colors
 # one thing we can't do: change order of colors for first half of bob palette (mountains)
