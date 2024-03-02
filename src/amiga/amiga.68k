@@ -18,6 +18,7 @@ NO68020 = 1
 
 BORDERBLANK = 1
 
+
 Y_MAX = 252
 
 BASE_BPLCON2_VALUE = 0x0024
@@ -30,7 +31,9 @@ FIX_GROUND_SCROLL = 0
 NO_BACKGROUND_MOUNTAINS = 0
 
 PANEL_MAX_Y = 48
-DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y
+DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y   | make sure it's even!!!!
+HALF_DYNAMIC_COPPER_ROWS = DYNAMIC_COPPER_ROWS/2
+SPRITE_COPPERLIST_CHUNK_SIZE = 64
 
 * with those, buggy wheels match perfectly the ground!
 SPRITE_Y_CORRECTION = -16
@@ -943,6 +946,7 @@ really_update_sprites:
 	movem.l	(a7)+,a0-a6/d0-d7
 	rts
 	
+* SPRITE_Y_SPLIT_LIMIT
 update_hardware_sprites:
 	* clear host sprites
 	moveq	#NB_HOST_SPRITES-1,d0
@@ -1659,16 +1663,32 @@ blit_scrollable_layers:
 	lea		color_line_copper,a0
 	* Y minus panel Y max times 16 (3 longwords per line in copperlist + wait)
 	lea		bobs_palette(pc),a1
-	lsl.w	#4,d6
+
+	* the line list is not contiguous, we need to check size and skip sprite chunk
+	cmp.w	#DYNAMIC_COPPER_ROWS,d6
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d6
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d6
+9:
+	lsl.w	#4,d6		| times 16
 
 	move.w	#color,(A0,d6.w)
 	move.w	(8,a1),(2,a0,d6.w)
+10:
+	cmp.w	#DYNAMIC_COPPER_ROWS,d7
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d7
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d7
+9:
+
 	lsl.w	#4,d7
 	
 
 	move.w	#color,(A0,d7.w)
 	move.w	(6,a1),(2,a0,d7.w)
-	
+10:	
 	movem.l	(a7)+,d0-d5/a1
 	.endif
 	
@@ -3306,32 +3326,42 @@ handle_keyboard:
 	
 * reset all 3 slots for each line
 reset_dynamic_colors:
-	movem.l	a0/d2-d3,-(a7)
+	movem.l	a0/d2-d4,-(a7)
 	lea	color_line_copper,a0
-	move.w	#DYNAMIC_COPPER_ROWS-1,d3
+	moveq	#1,d4
 	move.w	#0x1FE,d2
 0:
+	move.w	#HALF_DYNAMIC_COPPER_ROWS-1,d3
+1:
 	move.w	d2,(a0)
 	addq.w	#4,a0
 	move.w	d2,(a0)
 	addq.w	#4,a0
 	move.w	d2,(a0)
 	addq.w	#8,a0
-	dbf		d3,0b
-	movem.l	(a7)+,a0/d2-d3
+	dbf		d3,1b
+	* skip lower sprite part
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,a0
+	dbf		d4,0b
+	movem.l	(a7)+,a0/d2-d4
 	rts
 
 * only reset first slot (the one for the mountains/city colors)
 reset_background_dynamic_colors:
-	movem.l	a0/d2-d3,-(a7)
+	movem.l	a0/d2-d4,-(a7)
 	lea	color_line_copper,a0
-	move.w	#DYNAMIC_COPPER_ROWS-1,d3
+	moveq	#1,d4
 	move.w	#0x1FE,d2
 0:
+	move.w	#HALF_DYNAMIC_COPPER_ROWS-1,d3
+1:
 	move.w	d2,(a0)
 	add.w	#16,a0
-	dbf		d3,0b
-	movem.l	(a7)+,a0/d2-d3
+	dbf		d3,1b
+	* skip lower sprite part
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,a0
+	dbf		d4,0b
+	movem.l	(a7)+,a0/d2-d4
 	rts
 
 
@@ -3613,11 +3643,13 @@ blank_sprite:
 	.long	0
 	.endr
 	
-* store there ATM, we'll multiplex sprites at some point
-sprites_lower_part:
-	DECL_SPRITES
-	
-	* main copperlist
+	* right after that, we leave room to be able to set palette to tiles palette again
+	* (for moon base at start only)
+moonbase_colors:
+	DECL_COLORS	1,TOTAL_NB_COLORS-1	| 15 colors, no bg color change
+
+
+	* main copperlist, get some aspirin!!
 copperlist:
     *.word   0x1801,0xFFFE
 
@@ -3648,7 +3680,7 @@ playfield_colors:
 	
 	
 color_line_copper:
-	.rept	DYNAMIC_COPPER_ROWS
+	.rept	HALF_DYNAMIC_COPPER_ROWS
 	* room for 3 color registers to change dynamically each line
 	.word	0x1FE,0
 	.word	0x1FE,0
@@ -3656,11 +3688,21 @@ color_line_copper:
 	.set    beampos,beampos+0x100
 	.word	beampos,0xFFFE
 	.endr
-	* right after that, we leave room to be able to set palette to tiles palette again
-	* (for moon base at start only)
-moonbase_colors:
-	DECL_COLORS	1,TOTAL_NB_COLORS-1	| 15 colors, no bg color change
+	* multiplex sprites
+sprites_lower_part:
+	DECL_SPRITES
+	* rest of the color line copper stuff. Code knows that it must skip the sprites_lower_part sprite table
+	.rept	HALF_DYNAMIC_COPPER_ROWS
+	* room for 3 color registers to change dynamically each line
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.set    beampos,beampos+0x100
+	.word	beampos,0xFFFE
+	.endr
 
+	* TODO, put back moonbase colors???
+	
 	* then we should wait a bit, and set palette to tiles palette definitely
 	* so scrolling letters have the proper colors TODO
 	
