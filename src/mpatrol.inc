@@ -39,7 +39,7 @@
 	.equ	EXPLOSION_SND,	           1
 	.equ	BOMB_EXPLOSION_SND,        2
 	.equ	PING_SND,                  3
-	.equ	UFO_SHOOT_SND,             4
+	.equ	UFO_EXPLOSION_SND,         4
 	.equ	SHOOT_SND,                 5
 	.equ	COIN_SND,                  6
 	.equ	JEEP_JUMP_SND,             7

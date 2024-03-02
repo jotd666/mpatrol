@@ -2741,8 +2741,8 @@ queue_sound_effect_if_game_playing_0d75:
 	lea	game_status_bits_E046,a0                	| [$0d76: ld   hl,game_status_bits_E046]
 	btst.b	#7,(a0)                         	| [$0d79: bit  7,(hl)]
 	movem.l	(sp)+,a0                        	| [$0d7b: pop  hl]
-	bmi.b	0f                               	| [...]
-	rts                                    	| [$0d7c: ret  p] [...]
+	*bmi.b	0f                               	| [...]
+	*rts                                    	| [$0d7c: ret  p] [...]
 0:
 * stores d0 in E000-E007
 queue_sound_effect_0d7d:
@@ -2772,7 +2772,7 @@ sfx_index_table:
 	dc.b	-1                 | 14
 	dc.b	-1                 | 15
 	dc.b	PING_SND           | 16
-	dc.b	UFO_SHOOT_SND      | 17
+	dc.b	UFO_EXPLOSION_SND  | 17
 	dc.b	SHOOT_SND          | 18
 	dc.b	COIN_SND           | 19
 	dc.b	JEEP_JUMP_SND      | 20
