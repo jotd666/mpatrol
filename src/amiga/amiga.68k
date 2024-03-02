@@ -87,6 +87,7 @@ OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
 
 _custom = 0xDFF000
 
+*ENABLE_MULTIPLEXED_SPRITES = 1
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
@@ -942,18 +943,17 @@ really_update_sprites:
 	lea		sprite_registers,a0
 	st.b	do_upper_part
 	bsr		update_hardware_sprites
+	.ifdef	ENABLE_MULTIPLEXED_SPRITES
 	lea		sprite_registers,a0
 	clr.b	do_upper_part
 	bsr		update_hardware_sprites
+	.endif
 	lea		sprite_registers,a0
 	bsr		update_bobs
 	
 	movem.l	(a7)+,a0-a6/d0-d7
 	rts
 	
-do_upper_part:
-	.byte	0
-	.align	2
 	
 * SPRITE_Y_SPLIT_LIMIT has to be carefully computed from copper pos
 * where second sprite write is done
@@ -1006,6 +1006,8 @@ update_hardware_sprites:
 	beq.b	2f			| Y set to 0: not shown
 	not.b	d1			| negate Y: get normal Y coord!
 	
+	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+	
 	* depending on upper or lower part, filter sprite
 	tst.b	do_upper_part
 	beq.b	21f
@@ -1018,7 +1020,7 @@ update_hardware_sprites:
 	cmp.b	#SPRITE_Y_SPLIT_LIMIT,d1
 	bcs.b	2f		| high sprite: skip
 22:
-	
+	.endif
 	
 *	cmp.b	#255,d1
 *	beq.b	2f			| Y set to 255: not shown	
@@ -1049,10 +1051,13 @@ update_hardware_sprites:
 	* all sprites are allocated: now display them
 	lea		host_sprites(pc),a2		| input structure
 	lea		sprites_upper_part,a3				| copperlist
+	.ifdef	ENABLE_MULTIPLEXED_SPRITES
 	tst.b	do_upper_part
 	bne.b	222f
 	lea		sprites_lower_part,a3
 222:
+	.endif
+	
 	moveq	#0,d6
 10:
 	move.b	(SPRITE_X,a2),d0
@@ -1061,10 +1066,12 @@ update_hardware_sprites:
 	* this doesn't allow that a sprite crosses the SPRITE_Y_SPLIT_LIMIT
 	* boundary but in that case we'll switch for a BOB
 	* (there are potentially too many UFO ships for sprites anyway)
-	move.l	#blank_sprite,d4
-	move.w	d4,(6,a3)
-	swap	d4
-	move.w	d4,(2,a3)
+	move.l	#blank_sprite,d0
+	move.w	d6,d4
+	lsl.w	#3,d4		| times 8 for offset
+	move.w	d0,(6,a3,d4.w)
+	swap	d0
+	move.w	d0,(2,a3,d4.w)
 	jra		30f
 20:
 	* lookup sprite code
@@ -1092,9 +1099,9 @@ update_hardware_sprites:
 *	.endif
 *	
 	move.l	d4,a5
-	move.w	d6,d4
+	move.w	d6,d4					| load sprite index
 	add.w	d4,d4
-	add.w	d4,d4
+	add.w	d4,d4					| sprite index times 4
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
 
@@ -1129,21 +1136,24 @@ update_hardware_sprites:
 	* all black sprites would hide mpatrol sprites & tiles
 	* we want to hide them instead (no need to change palette)
 	* inherited from pengo, probably not required
-	move.l	#blank_sprite,d4
+	move.l	#blank_sprite,d0
 	bra.b	25f
 24:
-	move.l	a5,d4		| sprite pointer
+	move.l	a5,d0		| sprite pointer
 	* d6 is the sprite index: compute/set proper color
 	move.w	d6,d5
 	bclr	#0,d5
 	lsl.w	#2,d5	| times 4*2
 	move.w	d5,d2
 	add.w	d2,d2
-	lea		sprite_upper_cols+6,a5	| sprite palette + 2 (first color skipped)
+	lea		sprites_upper_cols+6,a5	| sprite palette + 2 (first color skipped)
+	.ifdef	ENABLE_MULTIPLEXED_SPRITES
 	tst.b	do_upper_part
 	bne.b	241f
-	lea		sprite_lower_cols+6,a5	| sprite palette + 2 (first color skipped)
+	lea		sprites_lower_cols+6,a5	| sprite palette + 2 (first color skipped)
 241:
+	.endif
+	
 	add.w	d2,a5
 	* copy 3 colors from cached registers into sprite color copperlist
 	move.w	d3,(4,a5)
@@ -1151,13 +1161,13 @@ update_hardware_sprites:
 	move.w	d3,(a5)
 	move.w	d7,(8,a5)
 25:
+	add.w	d4,d4		| index times 8
 	* set sprite in copperlist
-	move.w	d4,(6,a3)
-	swap	d4
-	move.w	d4,(2,a3)	
+	move.w	d0,(6,a3,d4.w)
+	swap	d0
+	move.w	d0,(2,a3,d4.w)	
 30:
 	* next sprite
-	addq.w	#8,a3		| advance in copperlist
 	lea		(SPRITE_SIZEOF,a2),a2
 	addq	#1,d6
 	cmp.w	#NB_HOST_SPRITES,d6
@@ -2249,10 +2259,13 @@ platform_init:
 	* set sprite registers in copperlist for the upper part
 	lea		sprites_upper_part,a0
 	bsr		init_sprite_bank
+	.ifdef	ENABLE_MULTIPLEXED_SPRITES
 	* lower part!
 	lea		sprites_lower_part,a0
 	bsr		init_sprite_bank
-
+	.endif
+	
+	
 	bsr		set_bitplanes
 	
 	bsr		load_palette_in_copperlist
@@ -3501,6 +3514,9 @@ dip_switches_1:
 		.byte	0
 dip_switches_2:
 		.byte	0
+do_upper_part:
+	.byte	0
+
 
 system_vbr:
 	.long	0
@@ -3687,7 +3703,7 @@ panel_bitplanes:
 panel_tiles_colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
 
-sprite_upper_cols:
+sprites_upper_cols:
 	DECL_COLORS	16,16
 sprites_upper_part:
 	DECL_SPRITES
@@ -3698,10 +3714,6 @@ sprites_upper_part:
 	* to change palette
  	.set    beampos,0x5401
     .word  beampos,0xFFFE
-sprite_lower_cols:
-	DECL_COLORS	16,16
-sprites_lower_part:
-	DECL_SPRITES
 
 playfield_colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
@@ -3723,10 +3735,19 @@ color_line_copper:
 	.set    beampos,beampos+0x100
 	.word	beampos,0xFFFE
 	.endr
-	* multiplex sprites
+	* multiplexed sprites
+	.ifdef	ENABLE_MULTIPLEXED_SPRITES
+sprites_lower_cols:
+	DECL_COLORS	16,16
+sprites_lower_part:
+	DECL_SPRITES
+	.else
+	* reserve room
 	.rept	32
 	.word	0x1FE,0
 	.endr
+	.endif
+	
 	* rest of the color line copper stuff. Code knows that it must skip the sprites_lower_part sprite table
 	.rept	HALF_DYNAMIC_COPPER_ROWS
 	* room for 3 color registers to change dynamically each line

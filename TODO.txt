@@ -1,3 +1,4 @@
+- queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
 - after the flat section after rising slope (point R), when nb slope
   tiles change, rightmost scrolling tile is buggy, looks like
   a rodent's head or something... Same when mines...
@@ -10,7 +11,7 @@ graphical issues:
 
 - optimize blit/erase height there are a lot of small objects! (dig out Xevious
   autocrop code)
-- space plant symmetry??? space plant in general looks hard to draw
+- space plant symmetry??? space plant in general looks hard to draw: snapshot the game at this point
 
 - palette:
   status tiles: group first 8 colors
