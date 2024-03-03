@@ -114,6 +114,28 @@ green_background_mountain_color = (0,151,0)
 brown_rock_color = (0x84,0x51,0x00)
 blue_dark_mountain_color = (0,0,0xFF)
 
+bitplane_cache = dict()
+plane_next_index = 0
+
+def generate_bitplanes(bitplanes):
+    global plane_next_index
+    bitplane_size = len(bitplanes)//(NB_BOB_PLANES+1)  # don't forget bob mask!
+    plane_list = []
+    for ci in range(0,len(bitplanes),bitplane_size):
+        plane = bitplanes[ci:ci+bitplane_size]
+        if not any(plane):
+            # only zeroes
+            plane_list.append(None)
+        else:
+            plane_index = bitplane_cache.get(plane)
+            if plane_index is None:
+                bitplane_cache[plane] = plane_next_index
+                plane_index = plane_next_index
+                plane_next_index += 1
+            plane_list.append(plane_index)
+
+    return plane_list
+
 
 def replace_color(img,color,replacement_color):
     rval = Image.new("RGB",img.size)
@@ -125,6 +147,12 @@ def replace_color(img,color,replacement_color):
                 rgb = replacement_color
             rval.putpixel(c,rgb)
     return rval
+
+def bob_color_change(img_to_raw):
+    img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
+    img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
+
+    return img_to_raw
 
 def get_sprite_clut(clut_index):
     return sprite_cluts[clut_index]
@@ -193,6 +221,15 @@ add_sprite_block(0x73,0x75,"space_plant",2,True)  # symmetry??
 add_sprite_block(0x79,0x79,"space_plant",8,True)
 add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
 add_sprite_block(5,8,"jeep_wheel",0,True)
+
+# explosions
+group_vertically(0x64,0x6a)
+group_vertically(0x65,0x6b)
+group_vertically(0x6c,0x6d)
+group_vertically(0x6e,0x6f)
+
+group_vertically(0x68,0x66)
+group_vertically(0x69,0x67)
 
 group_vertically(0x53,0x55)      # bomb digs hole
 group_vertically(0x54,0x56)      # bomb digs hole
@@ -361,11 +398,6 @@ if True:
 
 
 
-
-bitplane_cache = dict()
-plane_next_index = 0
-
-
 for k,sprdat in enumerate(block_dict["sprite"]["data"]):
     if k in attached_sprites:
         sprites[k] = True   # note that sprite is legal but will be ignored
@@ -427,6 +459,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     #
                     cs["bitmap"] = bitplanelib.palette_image2sprite(img,None,spritepal,
                             palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
+                    cs["png"] = img
             if is_bob:
                 if bob_backup:
                     # clone sprite into bob with 0x80 shift (upper 128-255 range isn't normally used)
@@ -440,41 +473,58 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                 # but not all planes are active as game sprites have max 3 colors (+ transparent)
                 if "bitmap" not in cs:
                     cs["bitmap"] = dict()
-
+                    cs["png"] = dict()
                 csb = cs["bitmap"]
+                csp = cs["png"]
 
                 # prior to dump the image to amiga bitplanes, don't forget to replace brown by blue
                 # as we forcefully removed it from the palette to make it fit to 16 colors, don't worry, the
                 # copper will put the proper color back again
-                img_to_raw = replace_color(img,brown_rock_color,blue_dark_mountain_color)
-                img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
+
+                img_to_raw = bob_color_change(img)
 
                 bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
                     palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
-                bitplane_size = len(bitplanes)//(NB_BOB_PLANES+1)  # don't forget bob mask!
 
-                plane_list = []
 
-                for ci in range(0,len(bitplanes),bitplane_size):
-                    plane = bitplanes[ci:ci+bitplane_size]
-                    if not any(plane):
-                        # only zeroes
-                        plane_list.append(None)
-                    else:
-                        plane_index = bitplane_cache.get(plane)
-                        if plane_index is None:
-                            bitplane_cache[plane] = plane_next_index
-                            plane_index = plane_next_index
-                            plane_next_index += 1
-                        plane_list.append(plane_index)
+                plane_list = generate_bitplanes(bitplanes)
 
                 csb[cidx] = plane_list
+                csp[cidx] = img
+
         if dump_sprites:
             scaled = ImageOps.scale(img,2,0)
             if sprconf:
                 scaled.save(os.path.join(dump_sprites_dir,f"{name}_{cidx}.png"))
             else:
                 scaled.save(os.path.join(uncategorized_dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
+
+
+bitmaps = [sprites[i]["png"] for i in range(1,5)]
+jeep_dict = dict()
+# special kludge: group 4 jeep sprites into a big special bob
+for clut in jeep_cluts:
+    jeep_img = Image.new("RGB",(32,32))
+    jeep_img.paste(bitmaps[0][clut],(0,0))
+    jeep_img.paste(bitmaps[1][clut],(16,0))
+    jeep_img.paste(bitmaps[2][clut],(0,16))
+    jeep_img.paste(bitmaps[3][clut],(16,16))
+
+    bitplanes = bitplanelib.palette_image2raw(bob_color_change(jeep_img),None,bob_global_palette,
+                    palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
+    jeep_dict[clut] = generate_bitplanes(bitplanes)
+
+    if dump_sprites:
+        scaled = ImageOps.scale(jeep_img,2,0)
+        scaled.save(os.path.join(dump_sprites_dir,f"jeep_1_{clut}.png"))
+
+
+
+for i in range(2,5):
+    sprites[i] = True  # cancel entry, but let it be seen as legal by the engine (like attached sprites)
+# just replace 16x16 entry by 32x32 entry. The code will do a special operation
+sprites[1]["bitmap"] = jeep_dict
+sprites[1]["hsize"] = 32  # useless but...
 
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
@@ -485,6 +535,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tgreen_mountains\n")
     f.write("\t.global\tgreen_city\n")
     f.write("\t.global\thardware_sprite_flag_table\n")
+
 
     hw_sprite_flag = [0]*256
     for k,v in sprite_config.items():
@@ -655,3 +706,4 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         for z in range(nb_planes):
             f.write(f"\n* plane {z} ({plane_size} bytes)")
             dump_asm_bytes(raw[z*plane_size:(z+1)*plane_size],f)
+
