@@ -150,7 +150,7 @@ def replace_color(img,color,replacement_color):
 
 def bob_color_change(img_to_raw):
     img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
-    img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
+    #img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
 
     return img_to_raw
 
@@ -192,8 +192,7 @@ add_sprite_block(0x45,0x47,"ovoid_ship",7,True,True)
 add_sprite_block(0x38,0x38,"tank",7,True)
 add_sprite_block(0x3A,0x3B,"missile",9,True)
 add_sprite_block(0x7B,0x7C,"missile",9,True)
-add_sprite_block(0x7E,0x7E,"points",{14,15},False)  # 800,1000
-add_sprite_block(0x7D,0x7D,"points",{14,15},False)  # 300,500
+add_sprite_block(0x7D,0x7E,"points",{14,15},True)  # 300,500 800,1000
 
 add_sprite_block(0x31,0x34,"rock_ball",4,False)
 add_sprite_block(0x36,0x37,"rock_ball",4,False)
@@ -337,15 +336,15 @@ elif len(bob_global_palette) < 16:
 # one thing we can't do: change order of colors for first half of bob palette (mountains)
 # for tiles we have no constraints
 #switch_values(tile_global_palette,3,5)
-switch_values(bob_global_palette,14,15)
+#switch_values(bob_global_palette,14,15)
 # same for ground (same pos)
 
-orange_color_index = 12
-switch_values(bob_global_palette,6,orange_color_index)
+#orange_color_index = 12
+#switch_values(bob_global_palette,6,orange_color_index)
 # then remove 0,0,26 color which is very close from another to set orange
-almost_black_color = bob_global_palette[orange_color_index]
-bob_global_palette[orange_color_index] =tile_global_palette[orange_color_index]
-deep_brown_color = bob_global_palette[orange_color_index]
+#almost_black_color = bob_global_palette[orange_color_index]
+#bob_global_palette[orange_color_index] =tile_global_palette[orange_color_index]
+#deep_brown_color = bob_global_palette[orange_color_index]
 # needed to have exactly 16 colors
 tile_global_palette += ((254,22,11),)*(16-len(tile_global_palette))
 
@@ -373,6 +372,10 @@ with open(os.path.join(src_dir,"tiles_palette.68k"),"w") as f:
 with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
     bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
+    rock_color = bitplanelib.to_rgb4_color(brown_rock_color)
+    rock_color_index = bob_global_palette.index(blue_dark_mountain_color)
+    f.write("rock_color:\n\t.word\t0x{:x}\n".format(rock_color))
+    f.write("rock_color_register:\n\t.word\t0x180+{}\n".format(rock_color_index*2))
 character_codes_list = []
 
 if True:
@@ -484,14 +487,15 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                 # copper will put the proper color back again
 
                 img_to_raw = bob_color_change(img)
+                if not name.startswith("jeep_part_"):  # no need to generate data for jeep parts
+                    print(name)
+                    bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
+                        palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
 
-                bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
-                    palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
 
+                    plane_list = generate_bitplanes(bitplanes)
 
-                plane_list = generate_bitplanes(bitplanes)
-
-                csb[cidx] = plane_list
+                    csb[cidx] = plane_list
                 csp[cidx] = img
 
         if dump_sprites:
