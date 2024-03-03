@@ -1309,7 +1309,7 @@ update_bobs:
 	add.w	d4,d4
 	add.w	d4,d4
 	move.l	(a4,d4.w),d4	| test pointer
-	*bmi.b	2f			| hardware sprite: skip (should not happen, pre filtered)
+	jmi		2f			| legal but skipped
 	bne.b	11f
 	.ifndef	RELEASE
 	* not known/registered: we should log that!
@@ -1341,7 +1341,10 @@ update_bobs:
 	add.w	d3,d3
 	move.l	a0,-(a7)
 	move.l	d4,a0
-	move.l	(a0,d3.w),d4
+	move.l	(8,a0,d3.w),d4	| bitplane pointer list
+	move.w	(a0)+,d3		| height
+	move.w	(a0)+,d5		| width
+	addq	#4,a0			| yoffset, stuff... (later)
 	bne.b	12f
 	* bob is valid but wrong clut
 	.ifndef	RELEASE
@@ -1362,12 +1365,11 @@ update_bobs:
 	beq.b	2f		| mask is zero: blank tile => skip
 	move.l	d2,a3
 	moveq	#0,d2	| no y-clip
-	move.w	#16,d3	| height = 16 for all bobs
 	* note down that this bob will have to be erased
-	* TODO: optimize as background usually erases bobs that are
-	* below some point
 	move.w	d0,(a6)+			| store current sprite attributes to previous ones
 	move.w	d1,(a6)+			| store current sprite attributes to previous ones
+	cmp.w	#16,d5
+	bne.b	13f
 	
 	bsr		blit_planes_cookie_cut_16x
 	move.l	(a7)+,a0
@@ -1379,6 +1381,10 @@ update_bobs:
 	dbf		d7,1b
 	
 	rts
+13:
+	bsr		blit_planes_cookie_cut_32x
+	move.l	(a7)+,a0
+	bra.b	3b
 
 * < A5: custom
 * < D0,D1: x,y
@@ -1467,7 +1473,23 @@ clear_planes_any_blitter_internal:
 	
     rts
 
-
+* what: blits 16x? data on one plane, cookie cut
+* args:
+* < A0: pointers on 16x? data
+* < A1: plane  (40 rows)
+* < A3: source mask for cookie cut (16x16)
+* < D0: X
+* < D1: Y
+* < D2: source y-offset
+* < D3: height of data
+* trashes: D0-D1
+blit_planes_cookie_cut_32x:
+    lea _custom,A5
+	move.w	d2,d5
+	move.w	d3,d4
+	moveq	#NB_PLAYFIELD_PLANES,d3		| 4 planes
+    moveq  #6,d2       | 32 pixels + 2 shift bytes
+	jra		blit_planes_any_internal_cookie_cut
 * what: blits 16x? data on one plane, cookie cut
 * args:
 * < A0: pointers on 16x? data
@@ -1564,7 +1586,7 @@ blit_planes_any_internal_cookie_cut:
     move.w  d0,bltcmod(a5)	|C modulo
     move.w  d0,bltdmod(a5)	|D modulo
 					
-	add.w	d5,a3			| apply to mask too
+	add.w	d5,a3			| apply y offset to mask too (y offset looks wrong)
 	subq	#1,d3
 	beq.b	7f
 	subq	#1,d3
@@ -1592,7 +1614,7 @@ start_process_1_plane:
 	move.l (a0)+,d0
 	beq.b	60f
 	move.l	d0,a4
-	add.w	d5,a4
+	add.w	d5,a4		| add Y offset
 	bra.b	61f
 60:
 	* source is 0: just apply mask (less bandwidth lost) and change bltcon

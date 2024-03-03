@@ -419,7 +419,8 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
 
     for cidx in clut_range:
         hsize = 32 if vattached else 16
-        img = Image.new('RGB',(16,hsize),transparent)
+        vsize = 16
+        img = Image.new('RGB',(vsize,hsize),transparent)
         spritepal = get_sprite_clut(cidx)
         spritepal[0] = transparent
         d = iter(sprdat)
@@ -442,7 +443,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         # only consider sprites/cluts which are pre-registered
         if sprconf:
             if k not in sprites:
-                sprites[k] = {"is_sprite":is_sprite,"bob_backup":False,"name":name,"hsize":hsize}
+                sprites[k] = {"is_sprite":is_sprite,"bob_backup":False,"name":name,"hsize":hsize,"vsize":vsize}
             cs = sprites[k]
             is_bob = not is_sprite or bob_backup
             if is_sprite:
@@ -465,7 +466,8 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     # clone sprite into bob with 0x80 shift (upper 128-255 range isn't normally used)
                     if k+0x80 not in sprites:
                         src = sprites[k]
-                        cs = {"is_sprite":False,"bob_backup":False,"name":src["name"]+"_bob","hsize":src["hsize"]}
+                        cs = {"is_sprite":False,"bob_backup":False,"name":src["name"]+"_bob",
+                                "hsize":src["hsize"],"vsize":src["vsize"]}
                         sprites[k+0x80] = cs
 
                 # software sprites (bobs) need one copy of bitmaps per palette setup. There are 3 or 4 planes
@@ -524,7 +526,8 @@ for i in range(2,5):
     sprites[i] = True  # cancel entry, but let it be seen as legal by the engine (like attached sprites)
 # just replace 16x16 entry by 32x32 entry. The code will do a special operation
 sprites[1]["bitmap"] = jeep_dict
-sprites[1]["hsize"] = 32  # useless but...
+sprites[1]["hsize"] = 32
+sprites[1]["vsize"] = 32
 
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
@@ -622,6 +625,9 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             sprite = sprites.get(i)
             f.write(f"{name}:\n")
             csb = sprite["bitmap"]
+            f.write(f"\t.word\t{sprite['hsize']},{sprite['vsize']},0,0\n")
+            #f.write(f"\t.word\t{sprite['yoffset']}\n")
+
             for j in range(16):
                 b = csb.get(j)
                 f.write("\t.long\t")
