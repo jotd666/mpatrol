@@ -1,3 +1,5 @@
+- make sure mountain layer is not refreshed all the time!!
+- ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
 - queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
 - after the flat section after rising slope (point R), when nb slope
   tiles change, rightmost scrolling tile is buggy, looks like
@@ -8,9 +10,6 @@
 
 graphical issues:
 
-- blit & erase jeep in one go (prepare big special bob in python script)
-- optimize blit/erase height there are a lot of small objects! (dig out Xevious
-  autocrop code)
 - space plant symmetry??? space plant in general looks hard to draw: snapshot the game at this point
 - city layer: missing black color, redefine yellow, height issue, erase issue!
 
@@ -46,7 +45,6 @@ graphical issues:
   actually if ground scrolling doesn't move it means that we should
   refresh background all the time (if dual playfield is not necessary after all)  
 - find wrong clut yellow/red flashes
-- ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
 - most ground object colors are wrong
 - insert coin screen: color bands not removed
 - reuse 2 blue mountain colors for 2 lower scenery colors (rocks woulc be ideal!)
@@ -54,7 +52,7 @@ graphical issues:
 - moonbase colors not properly displayed
 - 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
 - re-set tiles palette at some low Y so letters have proper palettes
-- demo: moonbase displayed with trashed colors
+- moonbase displayed with trashed colors
 
 solved if dual playfield used:
 - vertical shot: tile, not sprite, conflicts with background
@@ -63,8 +61,6 @@ solved if dual playfield used:
   probably needs complete rethinking of what's done here / use backbuffer
   blitter refresh. Rest of game seems to run OK! Would require back to dual playfield!
   (object erase need mountains redraw at 50 fps which is probably too much)
-- optimize bob erase below a given Y or within a given Y range
-  (mountains erase, scrolling gound erases)
 - small transparency effect on the tip of the "l" of "Moon Patrol" => BOGUS TITLE NOW
 
 low pri:  

@@ -1,7 +1,7 @@
 import os,re,bitplanelib,ast
 from PIL import Image,ImageOps
 
-
+# ECS version
 import collections
 
 
@@ -465,12 +465,17 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                             palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
                     cs["png"] = img
             if is_bob:
+                orig_img = img
+                yoffset,img = bitplanelib.autocrop_y(img,transparent)
+                # change hsize
+                hsize = img.size[1]
+
                 if bob_backup:
                     # clone sprite into bob with 0x80 shift (upper 128-255 range isn't normally used)
                     if k+0x80 not in sprites:
                         src = sprites[k]
                         cs = {"is_sprite":False,"bob_backup":False,"name":src["name"]+"_bob",
-                                "hsize":src["hsize"],"vsize":src["vsize"]}
+                                "hsize":hsize,"vsize":src["vsize"],"yoffset":yoffset}
                         sprites[k+0x80] = cs
 
                 # software sprites (bobs) need one copy of bitmaps per palette setup. There are 3 or 4 planes
@@ -481,6 +486,8 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     cs["png"] = dict()
                 csb = cs["bitmap"]
                 csp = cs["png"]
+                cs["yoffset"] = yoffset
+                cs["hsize"] = hsize
 
                 # prior to dump the image to amiga bitplanes, don't forget to replace brown by blue
                 # as we forcefully removed it from the palette to make it fit to 16 colors, don't worry, the
@@ -488,7 +495,6 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
 
                 img_to_raw = bob_color_change(img)
                 if not name.startswith("jeep_part_"):  # no need to generate data for jeep parts
-                    print(name)
                     bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
                         palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
 
@@ -496,7 +502,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     plane_list = generate_bitplanes(bitplanes)
 
                     csb[cidx] = plane_list
-                csp[cidx] = img
+                csp[cidx] = orig_img   # store original png so if we want to group tiles it's not broken
 
         if dump_sprites:
             scaled = ImageOps.scale(img,2,0)
@@ -515,7 +521,7 @@ for clut in jeep_cluts:
     jeep_img.paste(bitmaps[1][clut],(16,0))
     jeep_img.paste(bitmaps[2][clut],(0,16))
     jeep_img.paste(bitmaps[3][clut],(16,16))
-
+    y_offset,jeep_img = bitplanelib.autocrop_y(jeep_img,transparent)
     bitplanes = bitplanelib.palette_image2raw(bob_color_change(jeep_img),None,bob_global_palette,
                     palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
     jeep_dict[clut] = generate_bitplanes(bitplanes)
@@ -530,8 +536,8 @@ for i in range(2,5):
     sprites[i] = True  # cancel entry, but let it be seen as legal by the engine (like attached sprites)
 # just replace 16x16 entry by 32x32 entry. The code will do a special operation
 sprites[1]["bitmap"] = jeep_dict
-sprites[1]["hsize"] = 32
-sprites[1]["vsize"] = 32
+sprites[1]["hsize"] = jeep_img.size[1]
+sprites[1]["vsize"] = jeep_img.size[0]
 
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
@@ -630,8 +636,10 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             f.write(f"{name}:\n")
             csb = sprite["bitmap"]
             vsize = sprite['vsize']//8 + 2
-            f.write(f"\t.word\t{sprite['hsize']},{vsize},0,0\n")
-            #f.write(f"\t.word\t{sprite['yoffset']}\n")
+            # useless comment as code is generated but helpful when you're coding the engine...
+            f.write(f"\t* h size, v size in bytes, y offset, pad)\n")
+            f.write(f"\t.word\t{sprite['hsize']},{vsize},{sprite['yoffset']},0\n")
+
 
             for j in range(16):
                 b = csb.get(j)

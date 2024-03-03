@@ -1347,7 +1347,8 @@ update_bobs:
 	move.l	(8,a0,d3.w),d4	| bitplane pointer list
 	move.w	(a0)+,d3		| height
 	move.w	(a0)+,d5		| width
-	addq	#4,a0			| yoffset, stuff... (later)
+	add.w	(a0)+,d1		| add offset to Y
+	addq	#2,a0			| reserved
 	bne.b	12f
 	* bob is valid but wrong clut
 	.ifndef	RELEASE
@@ -1708,7 +1709,7 @@ blit_scrollable_layers:
 	* plane 1
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
@@ -1787,7 +1788,7 @@ blit_scrollable_layers:
 	move.l a0,bltbpt(a5)	|source graphic top left corner
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
@@ -1798,7 +1799,7 @@ blit_scrollable_layers:
 	move.l a0,bltbpt(a5)	|source graphic top left corner
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
@@ -1809,7 +1810,7 @@ blit_scrollable_layers:
 	move.l a0,bltbpt(a5)	|source graphic top left corner
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	* set copper color 0 to green (color 4 of bobs palette)
 	* at the proper row
