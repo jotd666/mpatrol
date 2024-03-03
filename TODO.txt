@@ -1,5 +1,6 @@
-- make sure mountain layer is not refreshed all the time!!
-- ships not appearing is this a double buffering issue / try with immediate blitter: OK!!!
+- slowdowns in cycle exact: too much work between sprite engine & blitter
+  => what does update_bg_tile with the ground?!!!  
+- toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
 - queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
 - after the flat section after rising slope (point R), when nb slope
   tiles change, rightmost scrolling tile is buggy, looks like
@@ -7,60 +8,28 @@
 - continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
 - check hole-making ship animations, look odd
 - save highscore & best course times
+- vertical shot: tile, not sprite, conflicts with background: try to make a special
+  case to erase & update only upper bitplane (special erase char or clut to define too)
 
-graphical issues:
 
 - space plant symmetry??? space plant in general looks hard to draw: snapshot the game at this point
 - city layer: missing black color, redefine yellow, height issue, erase issue!
-
-- palette:
-  status tiles: group first 8 colors
-  change colors afterwards
-  
-  dual playfield
-  * lower layer:
-    - black/blue/green: 0
-    - blue mountain, then change 2 colors for rocks
-	  (recolor rock in those blue colors artficially): 1-2
-	- green mountain, dark green or yellow (mountain/city) 3-4
-	- orange (ground) reuse 3
-	- brown (ground holes) reuse 4
-	- white/yellow/dark red: 5-6-7 bomb explosions 
-	  but pri problem vs jeep sprite, can be a non-problem
-	  depending on the position of the green moutain!
-	- reuse colors for volcanoes close to ground
-	- change point color letters properly (below holes)
-	
-  * upper playfield
-    - 8: wasted (transparent)
-    - 9-10-11: blue/yellow/red for ships
-	- 12: purple (bomb)
-	- 13: white (hole bomb)
-	- 9-10... rear missile is alone, reuse ship colors?
-	- 14: red (explosions)
-	- 15: green (in explosions)
-
 - explosion which creates hole: right part looks wrong	
-- if scrolling stops because player killed, should refresh
-  actually if ground scrolling doesn't move it means that we should
-  refresh background all the time (if dual playfield is not necessary after all)  
-- find wrong clut yellow/red flashes
-- most ground object colors are wrong
+
 - insert coin screen: color bands not removed
-- reuse 2 blue mountain colors for 2 lower scenery colors (rocks woulc be ideal!)
-- remaining color bands (from start platform)
-- moonbase colors not properly displayed
+- reuse 2 blue mountain colors for 2 lower scenery colors (rocks woulc be ideal!): 
+  dark blue still active when the ground is high, hack something if green mountain
+  sufficiently hides the blue mountain
+- moonbase colors not properly displayed => disabled right now!
+  (remaining color bands (from start platform))
+
 - 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
 - re-set tiles palette at some low Y so letters have proper palettes
-- moonbase displayed with trashed colors
 
-solved if dual playfield used:
-- vertical shot: tile, not sprite, conflicts with background
 - (c) IREM not properly displayed
 - when title displays (moon patrol), completely loses real time in cycle exact
   probably needs complete rethinking of what's done here / use backbuffer
-  blitter refresh. Rest of game seems to run OK! Would require back to dual playfield!
-  (object erase need mountains redraw at 50 fps which is probably too much)
+  blitter refresh.
 - small transparency effect on the tip of the "l" of "Moon Patrol" => BOGUS TITLE NOW
 
 low pri:  

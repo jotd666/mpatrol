@@ -160,7 +160,7 @@ def get_sprite_clut(clut_index):
 # creating the sprite configuration in the code is more flexible than with a config file
 
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite,bob_backup=False):
+def add_sprite_block(start,end,prefix,cluts,is_sprite,bob_backup=0):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end+1):
@@ -176,6 +176,9 @@ sprite_config = dict()
 attached_sprites = set()
 jeep_cluts = {0,12}
 
+BB_SHIP = 1
+BB_ROCK = 2
+
 # thanks to sprite multiplexing, a lot of ground objects can
 # be sprites
 # jeep wheels are made of sprites: 3 sprites needed, 4 color slots
@@ -185,17 +188,17 @@ jeep_cluts = {0,12}
 
 add_sprite_block(1,4,"jeep_part",jeep_cluts,False)
 # all ships are sprites with bob backups
-add_sprite_block(0x42,0x42,"saucer",7,True,True)
-add_sprite_block(0x43,0x44,"hole_making_ship",7,True,True)
-add_sprite_block(0x45,0x47,"ovoid_ship",7,True,True)
+add_sprite_block(0x42,0x42,"saucer",7,True,BB_SHIP)
+add_sprite_block(0x43,0x44,"hole_making_ship",7,True,BB_SHIP)
+add_sprite_block(0x45,0x47,"ovoid_ship",7,True,BB_SHIP)
 
 add_sprite_block(0x38,0x38,"tank",7,True)
 add_sprite_block(0x3A,0x3B,"missile",9,True)
 add_sprite_block(0x7B,0x7C,"missile",9,True)
 add_sprite_block(0x7D,0x7E,"points",{14,15},True)  # 300,500 800,1000
 
-add_sprite_block(0x31,0x34,"rock_ball",4,False)
-add_sprite_block(0x36,0x37,"rock_ball",4,False)
+add_sprite_block(0x31,0x34,"rock_ball",4,True,BB_ROCK)
+add_sprite_block(0x36,0x37,"rock_ball",4,True,BB_ROCK)
 add_sprite_block(0x40,0x41,"medium_explosion",1,False)
 add_sprite_block(0x2a,0x2c,"shot_explosion",1,False)
 add_sprite_block(0x2D,0x30,"rock",4,False)
@@ -554,7 +557,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     for k,v in sprite_config.items():
         sprite_type = v["is_sprite"]
         if sprite_type:
-            hw_sprite_flag[k] = 1
+            hw_sprite_flag[k] = 1+v.get("bob_backup",0)
 
 
     f.write("\nhardware_sprite_flag_table:")

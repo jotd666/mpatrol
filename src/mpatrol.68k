@@ -2542,14 +2542,14 @@ l_0c5c:
 	ror.w	#8,d7
 	move.w	d0,-(sp)
 	move.b	d2,d0                         	| [$0c5e: ld   (hl),c]
-	jbsr	osd_w_videoram
+	**jbsr	osd_w_videoram
 	move.w	(sp)+,d0
 	ror.w	#8,d7
 	move.b	#0x87,d7                        	| [$0c5f: ld   h,$87] -  In screen color memory ??
 	ror.w	#8,d7
 	move.w	d0,-(sp)
 	move.b	d1,d0                         	| [$0c61: ld   (hl),b]
-	jbsr	osd_w_colorram
+	**jbsr	osd_w_colorram
 	move.w	(sp)+,d0
 	addq.b	#1,d2                           	| [$0c62: inc  c] next moonbase character
 	addq.b	#1,d7                           	| [$0c63: inc  l]

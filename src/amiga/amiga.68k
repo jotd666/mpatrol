@@ -15,9 +15,12 @@ AFB_68010 = 0
 AFB_68020 = 1
 NO68020 = 1
 
-
+PREVIOUS_SPRITE_SIZE = 8
 BORDERBLANK = 1
 
+* bob backup flags for sprites
+BB_SHIP = 1+1
+BB_ROCK = 2+1
 
 Y_MAX = 252
 
@@ -83,7 +86,7 @@ ONE_TICK = 1
 	.endif
 	
 
-OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
+OPT_ENABLE_DOUBLE_BUFFERING = 1
 
 _custom = 0xDFF000
 
@@ -666,7 +669,7 @@ _vblank:
     addq.w  #1,d0
     cmp.w   #5,d0
     bne.b   22f
-    * update a second time, simulate 60Hz
+    * update a second time, simulate 60Hz (doesn't work right now)
 	moveq	#ONE_TICK*2,d1
 	clr.w d0    
 22:
@@ -677,14 +680,25 @@ _vblank:
 	bne.b	23f
 
 	sub.w	d1,delay_timer
-	
+		
+
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
 	* also set SR accordingly
 	st.b	interrupt_mode
 	jbsr		mpatrol_irq
+	* re-set SR to 0x2300, game calls osd_enable_interrupts from here and if
+	* something is too slow, then game crashes/trashes display because of re-entering
+	* in IRQ! At least with this it just slows down
+	*
+	* we update the graphics now so it's not possible that mpatrol_irq interrupts
+	* itself in the short time of the computations
+	move.w	#0x2300,SR
 	clr.b	interrupt_mode
+	eor.b	#1,toggle
+	beq.b	23f
+	bsr		really_update_sprites
 	
-	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 	bsr		switch_screen_buffers
 	.endif
 23:
@@ -706,7 +720,9 @@ _vblank:
 4:
     rte
 	
-
+toggle:
+	.word	0
+	
 osd_blitz:
 	blitz
 	rts
@@ -794,6 +810,7 @@ clear_background:
 	* compute height
 	moveq	#0,d1
 	move.b	previous_blue_layer_y,d1
+	beq.b	0f		| no previous Y means no clear!
 	move.w	#Y_MAX-32,d4
 	sub.w	d1,d4
 	* now D4 is the full height to clear
@@ -802,6 +819,8 @@ clear_background:
 	moveq	#0,d0			| X=0 (all screen)
 	move.l	bg_drawed_screen_ptr(pc),a1
 	jbsr		clear_planes_any_blitter_internal
+	clr.b	previous_blue_layer_y   | only done once!
+0:
 	movem.l	(A7)+,d0-d7/A0-A6
 	rts
 	
@@ -815,10 +834,12 @@ update_background:
 
 
 	lea		previous_values(pc),a1
-	moveq	#5,d0		| 6 values to compare
+	cmp.b	(a0)+,(a1)+
+	beq.b	1f			| force update if ground is not moving
+	moveq	#5,d0		| 5 values to compare
 0:
 	cmp.b	(a0)+,(a1)+
-	bne.b	1f				| only update if values have changed
+	bne.b	1f			| only update if values have changed
 	dbf		d0,0b
 	rts
 1:
@@ -829,7 +850,6 @@ update_background:
 	moveq	#0,d4     | layer control (0: no layers)
 	moveq	#0,d5     | X position of ground layer
 	
-	move.b	#1,0x200
 	lea		previous_values(pc),a1
 	move.b	(a2)+,d5
 	move.b	d5,(a1)+	| ground layer
@@ -905,12 +925,17 @@ osd_update_sprites:
 	movem.l	a0-a6/d0-d7,-(a7)
 	clr.b	nb_displayed_wheels
 	clr.b	nb_displayed_ships
+	clr.b	nb_displayed_rocks
 	lea		sprite_registers(pc),a1
+	lea		hardware_sprite_flag_table,a2
 	move.w	#NB_TARGET_SPRITES-1,d7
+	moveq	#0,d0
 0:
 	move.b	(TARGET_SPRITE_Y,a0),d1
-	beq.b	ignore_sprite
+	jeq		ignore_sprite
 	move.b	(TARGET_SPRITE_CODE,a0),d0
+	move.b	(a2,d0.w),d3
+	beq.b	2f			| not a hardware sprite, skip
 	cmp.b	#5,d0
 	bcs.b	1f
 	cmp.b	#9,d0
@@ -927,11 +952,11 @@ osd_update_sprites:
 	bcc.b	ignore_sprite
 	bra.b	2f
 1:
+	* now sprites with bob backups
+	cmp.b	#BB_SHIP,d3
+	bcs.b	2f				| not a hardware sprite
+	bne.b	20f
 	* count UFOs
-	cmp.b	#0x42,d0
-	bcs.b	2f
-	cmp.b	#0x47,d0
-	bcc.b	2f
 	* UFO: if too low, convert to bob to avoid conflict
 	not.b	d1		| convert to real coord
 	cmp.b	#SPRITE_Y_SPLIT_LIMIT-16,d1
@@ -943,6 +968,15 @@ osd_update_sprites:
 	move.b	d0,nb_displayed_ships
 	cmp.b	#NB_HOST_SPRITES+1,d0
 	bcc.b	convert_to_bob	| if already 8 sprites, switch to bob copy
+	bra.b	2f
+20:
+	* other case is rolling rocks: no explosions from ufos can happen, no tanks
+	* when they're there so we can use the slots for 4 rocks
+	move.b	nb_displayed_rocks,d0
+	addq.b	#1,d0
+	move.b	d0,nb_displayed_rocks
+	cmp.b	#4+1,d0			| 3 wheels use 4 sprite slots
+	bcc.b	convert_to_bob	| if already 4 rock sprites, switch to bob copy
 2:
 	move.l	(a0)+,(a1)+		| brutal copy
 	dbf		d7,0b
@@ -951,7 +985,6 @@ osd_update_sprites:
 	* copy 6 more values (scroll registers)
 	move.l	(a0)+,(a1)+
 	move.w	(a0)+,(a1)+
-	bsr		really_update_sprites
 	
 	movem.l	(a7)+,a0-a6/d0-d7
 	rts
@@ -1257,10 +1290,11 @@ update_hardware_sprites:
 
 update_bobs:
 
-	lea		bob_previous_positions(pc),a4
+	move.l	bob_previous_drawed_sprites(pc),a4
 	lea		hardware_sprite_flag_table,a6
 	lea		_custom,a5
 	
+
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
@@ -1268,14 +1302,14 @@ update_bobs:
 	beq.b	11f		| y=0: inactive
 	move.w	(a4),d0
 	and.w	#0x1F0,d0		| align on 16 lower bound
-	* clear 16x16 area where the sprite was
+	* clear area where the sprite was
 	move.l	bg_drawed_screen_ptr(pc),a1
 	move.w	#4,d2
 	moveq	#NB_PLAYFIELD_PLANES,d3
 	clr.l	(a4)+ 			| ack deletion
 	move.w	(a4),d2			| width in bytes (16 pixels: 4 bytes)
 	move.w	(2,a4),d4		| height
-	clr.l	(a4)+
+	clr.l	(a4)+			| ack deletion
 	bsr		clear_planes_any_blitter_internal
 	bra.b	12f
 11:
@@ -1289,10 +1323,9 @@ update_bobs:
 	bsr		update_background
 	move.l	(a7)+,a0
 	
-	
     lea _custom,A5
 	lea		hardware_sprite_flag_table,a2
-	lea		bob_previous_positions(pc),a6
+	move.l	bob_previous_drawed_sprites(pc),a6
 	lea		bob_table,a4
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
@@ -1300,8 +1333,8 @@ update_bobs:
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	jeq	2f
-	tst.b	(a2,d2.w)		| is that a hardware sprite?
-	jne	2f					| yes: don't bother!s
+	cmp.b	#1,(a2,d2.w)	| is that a hardware sprite without bob backup?
+	jeq	2f					| yes: don't bother!s
 	
 	
 	moveq	#0,d1
@@ -1662,6 +1695,10 @@ blit_scrollable_layers:
 	lea		mulNB_BYTES_PER_ROW_table,a2
 	movem.l	d0-d5/a1,-(a7)
 	
+	***********
+	* blue part
+	***********
+	
 	lea		blue_mountains,a0
 	
 	move.w	(a0)+,d4		| source height
@@ -1709,7 +1746,8 @@ blit_scrollable_layers:
 	* plane 1
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	* this blits the pale blue layer of the back mountain
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
@@ -1720,7 +1758,9 @@ blit_scrollable_layers:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
+	******************
 	* green part
+	******************
 	
 	movem.l	(a7),d0-d5/a1
 	lea		green_mountains,a0
@@ -1788,7 +1828,7 @@ blit_scrollable_layers:
 	move.l a0,bltbpt(a5)	|source graphic top left corner
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
@@ -1799,7 +1839,7 @@ blit_scrollable_layers:
 	move.l a0,bltbpt(a5)	|source graphic top left corner
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
@@ -1810,7 +1850,7 @@ blit_scrollable_layers:
 	move.l a0,bltbpt(a5)	|source graphic top left corner
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	* set copper color 0 to green (color 4 of bobs palette)
 	* at the proper row
@@ -2171,8 +2211,19 @@ test_sprites:
 .byte  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x00f0
 	.endif
 	
-bob_previous_positions:
-	ds.l	NB_TARGET_SPRITES*2
+bob_previous_positions_1:
+	ds.b	NB_TARGET_SPRITES*PREVIOUS_SPRITE_SIZE
+bob_previous_drawed_sprites:
+	.long	bob_previous_positions_1
+bob_previous_displayed_sprites:
+	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
+	.long	bob_previous_positions_1
+	.else
+	.long	bob_previous_positions_2	
+bob_previous_positions_2:
+	ds.b	NB_TARGET_SPRITES*PREVIOUS_SPRITE_SIZE	
+	.endif
+
 sprite_registers:
 	ds.l	NB_TARGET_SPRITES+2		| we need more room for background scroll regs
 	
@@ -2188,13 +2239,15 @@ osd_sound_stop:
 	rts
 	
 
+switch_screen_buffers:
 
-switch_screen_buffers:	
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	* let's switch screen buffers, background (chars)
 	* toggle fg planes (double buffering)
+	* also toggle previous sprite positions
 	lea		bg_drawed_screen_ptr(pc),a0
-	lea		bg_displayed_screen_ptr(pc),a4
+	lea		bob_previous_positions_1(pc),a2
+	lea		bob_previous_positions_2(pc),a3
 	lea		bg_screen_data_1,a1
 	lea		bg_screen_data_2,a5
 	* also switch previous state memory
@@ -2203,14 +2256,15 @@ switch_screen_buffers:
 	* screen data 1 is displayed screen
 	* set it to drawn screen
 	exg		a1,a5
+	exg		a2,a3
 2:
 	move.l	a1,(a0)
-	move.l	a5,(a4)
+	move.l	a5,bg_displayed_screen_ptr
+	move.l	a2,bob_previous_drawed_sprites
 	jbsr		set_bitplanes
 	.endif
 	
 	rts
-
 	
 store_system:
 	tst.l	_resload
@@ -2508,7 +2562,8 @@ osd_is_vblank_interrupt_enabled:
 	btst	#5,d0			| check vblank interrupt
 	rts
 	
-	
+
+
 * 60Hz VBLANK interrupt (also keyboard)
 osd_enable_interrupts:
 	tst.b	interrupt_mode
@@ -2724,14 +2779,20 @@ update_bg_tile:
 	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
 	move.l	bg_drawed_screen_ptr(pc),a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	move.l	bg_displayed_screen_ptr(pc),a2
+	.endif
+	
 	* D3 = Y
 
 	add.w	d3,d3
 	move.w	(a0,d3.w),d3
 	lsl.w	#3,d3		| times 8
-	add.w	d3,a1
+	add.w	d3,d7
 	add.w	d7,a1
-
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d7,a2
+	.endif
 
 	* optimization when a well-known
 	* empty character is passed (standard charset)
@@ -2760,10 +2821,20 @@ update_bg_tile:
 4:
 	.set	offset,0
 	.rept	8
-	move.b	(a0)+,(offset,a1)	
+	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
+	move.b	(a0)+,(offset,a1)
+	.else
+	move.b	(a0)+,d0
+	move.b	d0,(offset,a1)
+	move.b	d0,(offset,a2)
+	.endif
+
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+	.endif
 	dbf		d4,4b
 0:
 	rts
@@ -2809,9 +2880,15 @@ update_bg_tile:
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	clr.b	(offset,a2)
+	.endif
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+	.endif
 	dbf		d4,111b
 2:
 	rts
@@ -3480,6 +3557,8 @@ handle_keyboard:
 	
 * reset all 3 slots for each line
 reset_dynamic_colors:
+	rts
+	
 	movem.l	a0/d2-d4,-(a7)
 	lea	color_line_copper,a0
 	moveq	#1,d4
@@ -3502,6 +3581,8 @@ reset_dynamic_colors:
 
 * only reset first slot (the one for the mountains/city colors)
 reset_background_dynamic_colors:
+	rts
+	
 	movem.l	a0/d2-d4,-(a7)
 	lea	color_line_copper,a0
 	moveq	#1,d4
@@ -3650,6 +3731,8 @@ nb_displayed_wheels:
 	.byte	0
 nb_displayed_ships:
 	.byte	0
+nb_displayed_rocks:
+	.byte	0
 	.align	2
 
 host_sprites:
@@ -3695,7 +3778,7 @@ upper_sprite_buffers:
 bg_drawed_screen_ptr:
 	.long	bg_screen_data_1
 bg_displayed_screen_ptr:
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	.long	bg_screen_data_2
 	.else
 	.long	bg_screen_data_1
@@ -3907,7 +3990,7 @@ sprites_lower_part:
 bg_screen_data_1:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
-	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 bg_screen_data_2:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
