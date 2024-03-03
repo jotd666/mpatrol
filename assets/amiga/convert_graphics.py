@@ -513,7 +513,7 @@ for clut in jeep_cluts:
     jeep_img.paste(bitmaps[3][clut],(16,16))
 
     bitplanes = bitplanelib.palette_image2raw(bob_color_change(jeep_img),None,bob_global_palette,
-                    palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
+                    palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
     jeep_dict[clut] = generate_bitplanes(bitplanes)
 
     if dump_sprites:
@@ -625,7 +625,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             sprite = sprites.get(i)
             f.write(f"{name}:\n")
             csb = sprite["bitmap"]
-            f.write(f"\t.word\t{sprite['hsize']},{sprite['vsize']},0,0\n")
+            vsize = sprite['vsize']//8 + 2
+            f.write(f"\t.word\t{sprite['hsize']},{vsize},0,0\n")
             #f.write(f"\t.word\t{sprite['yoffset']}\n")
 
             for j in range(16):
