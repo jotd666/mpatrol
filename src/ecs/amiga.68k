@@ -46,6 +46,7 @@ SPRITE_X_CORRECTION = 16
 SCROLLABLE_TILE_Y_START = 24
 SCROLLABLE_STRIP_NB_COLS = 66
 NB_BYTES_PER_SCROLLABLE_STRIP_ROW = SCROLLABLE_STRIP_NB_COLS
+SCROLLABLE_PLANE_SIZE = SCROLLABLE_STRIP_NB_COLS*8*(32-SCROLLABLE_TILE_Y_START)
 
 SCORE_FILE_SIZE = 0x6
 
@@ -656,7 +657,7 @@ _vblank:
 	* ack vbl twice (040/pistorm bug)
 	move.w	#0x20,(intreq,a5)
 	move.w	#0x20,(intreq,a5)	
-	bra.b	3f
+	jra	3f
 1:
 	* has to be copper
 	* we're going to ack copper interrupt now
@@ -694,14 +695,18 @@ _vblank:
 	* itself in the short time of the computations
 	move.w	#0x2300,SR
 	clr.b	interrupt_mode
-	eor.b	#1,toggle
+	eor.b	#1,toggle_blitter_draw
 	beq.b	23f
 	bsr		really_update_sprites
 	
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 	bsr		switch_screen_buffers
 	.endif
+	bra.b	24f
 23:
+	* don't blit, but update hw sprites as it doesn't cost a lot
+	bsr		really_update_hardware_sprites
+24:
 	* now we check copper interrupt again
 	move.w	_custom+intreqr,d0
 	btst	#4,d0
@@ -720,8 +725,6 @@ _vblank:
 4:
     rte
 	
-toggle:
-	.word	0
 	
 osd_blitz:
 	blitz
@@ -1003,9 +1006,9 @@ ignore_sprite:
 	clr.l	(a1)+
 	dbf		d7,0b
 	bra.b	3b
-	
-really_update_sprites:
-	movem.l	a0-a6/d0-d7,-(a7)
+
+really_update_hardware_sprites:
+
 	lea		sprite_registers,a0
 	st.b	do_upper_part
 	bsr		update_hardware_sprites
@@ -1014,10 +1017,15 @@ really_update_sprites:
 	clr.b	do_upper_part
 	bsr		update_hardware_sprites
 	.endif
+
+	rts
+	
+really_update_sprites:
+	jbsr		really_update_hardware_sprites
 	lea		sprite_registers,a0
 	bsr		update_bobs
 	
-	movem.l	(a7)+,a0-a6/d0-d7
+
 	rts
 	
 	
@@ -1768,10 +1776,10 @@ blit_scrollable_layers:
 	
 	movem.l	(a7),d0-d5/a1
 	lea		green_mountains,a0
-	btst.b	#0,d4
-	bne.b	0f
+	*btst.b	#0,d4
+	*bne.b	0f
 	* probably 0xFC (there are invalid/impossible combinations)
-	lea		green_city,a0
+	*lea		green_city,a0
 0:
 	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
@@ -2125,10 +2133,9 @@ alloc_sprite:
 	
 osd_sound_start:
 	movem.l	d0/d1/a0/a6,-(a7)
-	tst.b	d0
-	jeq	7f		| should stop the sound
-	and.w	#0xFF,d0
 	lea		_custom,a6
+	and.w	#0xFF,d0
+	jeq	7f		| should stop the sound
 	
 	
 	lsl.w	#3,d0
@@ -2214,6 +2221,8 @@ osd_sound_start:
 	jra	1b
 
 7:
+	move.w	#3,d0
+	jbsr	_mt_stopfx
 	jra	1b
 	tst.b	music_playing
 	jeq	1b
@@ -2639,7 +2648,6 @@ decode_sprite_data:
 osd_w_videoram_no_update:
     .ifeq OPT_DISABLE_BG_LAYER
 	movem.l	d0-d7/a0-a3,-(a7)
-	
 
 	sub.w	#SCREEN_ADDRESS,d7
 	bcs.b	0f
@@ -2656,7 +2664,7 @@ osd_w_videoram_no_update:
 	lea		bg_videoram,a1
 	add.w	d7,a1
 	
-
+	move.b	(a1),latest_overwritten_tile_code
 	move.b	d0,(a1)	| update logical grid
 
 	movem.l	(a7)+,d0-d7/a0-a3
@@ -2691,7 +2699,7 @@ osd_w_videoram:
 	cmp.b	(a1),d0
 	beq.b	0f		| already the proper value
 3:
-
+	move.b	(a1),latest_overwritten_tile_code
 	move.b	d0,(a1)	| update logical grid
 	lea		bg_colorram,a1
 	move.b	(a1,d7.W),d1
@@ -2830,6 +2838,7 @@ update_bg_tile:
 	tst.w	d0	| empty character
 	jeq	11f
 23:
+	move.b	d0,d2		| store character
 
 	lea		character_table,a0
 	add.w	d0,d0
@@ -2842,6 +2851,10 @@ update_bg_tile:
 	add.w	(a0,d1.w),a0
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
+
+	and.b	#0xF8,d2
+	cmp.b	#0x60,d2
+	jeq		copy_third_plane
 
 	tst.b	d6
 	jne		5f
@@ -2902,7 +2915,10 @@ update_bg_tile:
 	* clear tile
 
 11:
-
+	move.b	latest_overwritten_tile_code,d0
+	and.b	#0xF8,d0
+	cmp.b	#0x60,d0
+	jeq	erase_third_plane
 	tst.b	d6
 	bne.b	2f		| cookie cut of empty char => do nothing
 111:
@@ -2927,7 +2943,57 @@ update_bg_tile:
 	**blitz
 	rts
 
-SCROLLABLE_PLANE_SIZE = SCROLLABLE_STRIP_NB_COLS*8*(32-SCROLLABLE_TILE_Y_START)
+copy_third_plane:
+	.set	offset,0
+	add.w	d5,a1
+	add.w	d5,a1
+	add.w	d5,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+	add.w	d5,a2
+	add.w	d5,a2
+	.endif
+	addq	#8,a0		| non-zero shot bitplane (first bitplane is empty)
+	.set	offset,0
+	.rept	8
+	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
+	move.b	(a0)+,(offset,a1)
+	.else
+	move.b	(a0)+,d0
+	move.b	d0,(offset,a1)
+	move.b	d0,(offset,a2)
+	.endif
+
+	.set	offset,offset+NB_BYTES_PER_ROW
+	.endr
+
+
+0:
+	rts
+	
+erase_third_plane:
+	.set	offset,0
+	add.w	d5,a1
+	add.w	d5,a1
+	add.w	d5,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+	add.w	d5,a2
+	add.w	d5,a2
+	.endif
+	.rept	8
+	clr.b	(offset,a1)
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	clr.b	(offset,a2)
+	.endif
+	.set	offset,offset+NB_BYTES_PER_ROW
+	.endr
+
+	rts
+
+latest_overwritten_tile_code:
+	dc.w	0
+
 
 update_scrollable_bottom:
 	lea		mulNB_BYTES_PER_SCROLLABLE_STRIP_ROW_table(pc),a0
@@ -2952,7 +3018,7 @@ update_scrollable_bottom:
 	* uniform character is passed (standard charset)
 	*cmp.b	#0xF3,d0	| uniform ground
 	
-
+	
 	lea		character_table,a0
 	add.w	d0,d0
 	add.w	d0,d0
@@ -2965,6 +3031,7 @@ update_scrollable_bottom:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
+	
 	* just copy
 4:
 	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
@@ -3586,7 +3653,6 @@ handle_keyboard:
 	
 * reset all 3 slots for each line
 reset_dynamic_colors:
-	rts
 	
 	movem.l	a0/d2-d4,-(a7)
 	lea	color_line_copper,a0
@@ -3610,8 +3676,6 @@ reset_dynamic_colors:
 
 * only reset first slot (the one for the mountains/city colors)
 reset_background_dynamic_colors:
-	rts
-	
 	movem.l	a0/d2-d4,-(a7)
 	lea	color_line_copper,a0
 	moveq	#1,d4
@@ -3745,6 +3809,8 @@ system_vbr:
 	.long	0
 	
 orig_color_4:
+	.word	0
+toggle_blitter_draw:
 	.word	0
 	
 high_score_buffer:

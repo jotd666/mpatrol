@@ -25,18 +25,18 @@ lq_sample_rate = 11025
 
 music_volume = 26
 
-
+loop_channel = 3
 sound_dict = {
 # samples
-"EXPLOSION_SND"             :{"index":1,"channel":3,"sample_rate":lq_sample_rate,"priority":1},
+"EXPLOSION_SND"             :{"index":1,"channel":2,"sample_rate":lq_sample_rate,"priority":1},
 "BOMB_EXPLOSION_SND"        :{"index":2,"channel":2,"sample_rate":hq_sample_rate,"priority":1},  # copy of explosion ATM
 "PING_SND"                  :{"index":3,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"UFO_EXPLOSION_SND"         :{"index":4,"channel":3,"sample_rate":hq_sample_rate,"priority":1},
+"UFO_EXPLOSION_SND"         :{"index":4,"channel":2,"sample_rate":hq_sample_rate,"priority":1,},
 "SHOOT_SND"                 :{"index":5,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "COIN_SND"                  :{"index":6,"channel":3,"sample_rate":lq_sample_rate,"priority":1},
 "JEEP_JUMP_SND"             :{"index":7,"channel":2,"sample_rate":vhq_sample_rate,"priority":1},
-"SPACE_PLANT_SND"           :{"index":8,"channel":0,"sample_rate":hq_sample_rate,"priority":1},
-"UFO_ATTACK_SND"            :{"index":9,"channel":0,"sample_rate":lq_sample_rate,"priority":1},
+"SPACE_PLANT_SND"           :{"index":8,"channel":loop_channel,"sample_rate":hq_sample_rate,"priority":1,"loops":True},
+"UFO_ATTACK_SND"            :{"index":9,"channel":loop_channel,"sample_rate":lq_sample_rate,"priority":1,"loops":True},
 "JEEP_EXPLOSION_SND"        :{"index":14,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 
 # tunes match the MUS defines in donkey_kong.68k source

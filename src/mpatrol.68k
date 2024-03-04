@@ -2520,7 +2520,7 @@ display_moon_base_0c42:
 
 	* ECS: don't display moonbase: colors are trashed, and a band
 	* remains all game long... Plus we optimize by only drawing plane 3 so...
-	jra		skip_moonbase_display_0c7f
+	
 	move.b	#0x40,d0                        	| [$0c47: ld   a,$40] -  Set timer for ...
 	move.b	d0,unknown_E30A                 	| [$0c49: ld   (unknown_E30A),a] -  ... intro song to end
 	* moon base start character
@@ -4299,9 +4299,9 @@ handle_vertical_shot_165d:
 	move.b	d3,d0                           	| [$1679: ld   a,d] -  X coordinate divided by 2
 	roxl.b	#1,d0                           	| [$167a: rla] -  Pull in Y bit to select top (0) or bottom (1) for shot's position in tile
 	and.b	#0x07,d0                         	| [$167b: and  $07] -  Select picture tile 60..67 to match x remainder and y
-	* vertical shot is a character, not a sprite
+	* vertical shot is a character, not a sprite, ranging from 0x60 to 0x67
 	or.b	#0x60,d0                          	| [$167d: or   $60] -  8 shot tile pictures at x=0,2,4,6 for bottom and top of tile
-	jbsr	osd_w_videoram                         	| [$167f: ld   (hl),a] -  Store player shot tile on text screen
+	jbsr	osd_w_videoram             	| [$167f: ld   (hl),a] -  Store player shot tile on text screen
 												| [$1680: ld   de,$0400] -  Offset ...
 	add.w	#0x400,d7                            	| [$1683: add  hl,de] -  ... to tile color
 	exg	d5,d0

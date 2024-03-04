@@ -702,6 +702,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         f.write(f"{b}:\n")
         data = block_dict[b]["data"]
         nb_rows = len(data)
+        is_green = "green" in b
+
         # first write number of rows, then number of bytes total, which differ from one background to another
         # = number of rows * ((512/16)+2) (there's a blit shift mask like all shiftable bobs)
         f.write(f"\t.word\t{nb_rows},{nb_rows*((512//8)+2)}")
@@ -722,7 +724,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         # dump, we don't need a mask for the blue layer as it's behind
 
         raw = bitplanelib.palette_image2raw(img,None,bob_global_palette[:8],forced_nb_planes=3,
-                    palette_precision_mask=0xFF,generate_mask="green" in b,blit_pad=True)
+                    palette_precision_mask=0xFF,generate_mask=is_green,blit_pad=True)
         nb_planes = 4 if "green" in b else 3
         plane_size = len(raw)//nb_planes
         for z in range(nb_planes):

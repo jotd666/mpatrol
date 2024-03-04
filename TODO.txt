@@ -1,5 +1,9 @@
+- mountain displayed lower: erase upper line (using cpu clr.l while blitting is probably ok)
 - set rock color (using same color as mountain dark blue should be tweaked if terrain_height_in_tiles_E514 is high
-- update_bg_tile tweak to only copy last plane for some tiles (shot, ground)
+- change dark brown color position so shots appear whiter on black
+- update_bg_tile tweak to only copy last plane for some tiles (ground)
+- optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
+- 50Hz hardware sprites
 
 - toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
 - queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
@@ -7,20 +11,20 @@
   tiles change, rightmost scrolling tile is buggy, looks like
   a rodent's head or something... Same when mines...
 - continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
-- check hole-making ship animations, look odd
+- check hole-making ship animations, look odd: probably flipx
 - save highscore & best course times
 - vertical shot: tile, not sprite, conflicts with background: try to make a special
   case to erase & update only upper bitplane (special erase char or clut to define too)
 
+- implement flipx int flipx = m_spriteram[offs + 1] & 0x40;
+- check flipy??
 
-- space plant symmetry??? space plant in general looks hard to draw: snapshot the game at this point
-- city layer: missing black color, redefine yellow, height issue, erase issue!
+- space plant flipx space plant in general looks hard to draw: snapshot the game at this point
+- city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again
 - explosion which creates hole: right part looks wrong	
 
 - insert coin screen: color bands not removed
 
-- 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
-- re-set tiles palette at some low Y so letters have proper palettes
 
 - (c) IREM not properly displayed
 - when title displays (moon patrol), completely loses real time in cycle exact
@@ -30,6 +34,7 @@
 
 low pri:  
   
+- re-set tiles palette at some low Y so letters have proper palettes
 - declare tiles & cluts manually (with playfield info) to save memory
 - optim: maybe only 2 planes could be needed for uniform ground
   (but there are letters...)
