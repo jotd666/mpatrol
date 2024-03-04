@@ -818,6 +818,10 @@ clear_background:
 	moveq	#34,d2			| width = 32 (all screen width)
 	moveq	#0,d0			| X=0 (all screen)
 	move.l	bg_drawed_screen_ptr(pc),a1
+	movem.l	d0-d4/A2-A6,-(a7)
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-d4/A2-A6
+	move.l	bg_displayed_screen_ptr(pc),a1
 	jbsr		clear_planes_any_blitter_internal
 	clr.b	previous_blue_layer_y   | only done once!
 0:

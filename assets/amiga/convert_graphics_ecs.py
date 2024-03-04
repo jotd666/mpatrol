@@ -8,7 +8,7 @@ import collections
 transparent = (60,100,200)  # whatever is not a used RGB is ok
 
 this_dir = os.path.dirname(__file__)
-src_dir = os.path.join(this_dir,"../../src/amiga")
+src_dir = os.path.join(this_dir,"../../src/ecs")
 dump_dir = os.path.join(this_dir,"dumps")
 dump_tiles_dir = os.path.join(dump_dir,"tiles")
 dump_palettes_dir = os.path.join(dump_dir,"palettes")
