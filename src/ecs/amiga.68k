@@ -34,7 +34,7 @@ FIX_GROUND_SCROLL = 0
 NO_BACKGROUND_MOUNTAINS = 0
 
 PANEL_MAX_Y = 48
-DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y   | make sure it's even!!!!
+DYNAMIC_COPPER_ROWS = 210-PANEL_MAX_Y   | make sure it's even!!!!
 HALF_DYNAMIC_COPPER_ROWS = DYNAMIC_COPPER_ROWS/2
 SPRITE_COPPERLIST_CHUNK_SIZE = 64+64	| sprite copper (8*2 pointers) + color sprite copper (16 colors)
 SPRITE_Y_SPLIT_LIMIT = 96+PANEL_MAX_Y
@@ -1863,19 +1863,29 @@ blit_scrollable_layers:
 	lea		bobs_palette(pc),a1
 
 	* the line list is not contiguous, we need to check size and skip sprite chunk
-	cmp.w	#DYNAMIC_COPPER_ROWS,d6
-	bcc.b	10f
-	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d6
-	bcs.b	9f
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d6
-9:
-	lsl.w	#4,d6		| times 16
+	bsr		shift_d6_copper_y
+	
 
 	move.w	#color,(A0,d6.w)
 	move.w	(8,a1),(2,a0,d6.w)
+	* set rock color (using same color as mountain dark blue)
 	move.w	rock_color_register,(4,a0,d6.w)
 	move.w	rock_color,(6,a0,d6.w)
 10:
+
+	* is tweaked to follow terrain_height_in_tiles_E514
+	move.w	#DYNAMIC_COPPER_ROWS-2+32,d6
+	moveq	#0,d0
+	move.b	terrain_height_in_tiles_E514,d0
+	lsl.w	#3,d0		| times 8
+	sub.w	d0,d6
+	bsr		shift_d6_copper_y
+	
+	* now change ground color to orange, trying to respect the ground Y
+	move.w	#color+16,(8,a0,d6.w)
+	move.w	#0xF95,(10,a0,d6.w)
+	
+
 	cmp.w	#DYNAMIC_COPPER_ROWS,d7
 	bcc.b	10f
 	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d7
@@ -1889,6 +1899,7 @@ blit_scrollable_layers:
 	move.w	#color,(A0,d7.w)
 	move.w	(6,a1),(2,a0,d7.w)
 10:	
+
 	movem.l	(a7)+,d0-d5/a1
 	.endif
 	
@@ -1931,27 +1942,28 @@ blit_scrollable_layers:
 	move.l d3,bltcon0(a5)	| sets con0 and con1
     move.w  #26,bltamod(a5)	|A modulo: 66 bytes per row - 40 used
     move.w  #0,bltdmod(a5)	|D modulo: 0 full line is drawn
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	*move.l a0,bltapt(a5)	|source graphic top left corner
+	*move.l a1,bltdpt(a5)	|destination top (bottom) left corner
+	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
     * now just wait for blitter ready to write all registers
-	WAIT_BLIT
-	* plane 1
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	* this bitplane is useless
+**	WAIT_BLIT
+**	* plane 1
+**	move.l a0,bltapt(a5)	|source graphic top left corner
+**	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
+**	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
-	WAIT_BLIT
+	*WAIT_BLIT
 	* plane 2
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	*move.l a0,bltapt(a5)	|source graphic top left corner
+	*move.l a1,bltdpt(a5)	|destination top (bottom) left corner
+	*move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
@@ -1987,10 +1999,23 @@ blit_scrollable_layers:
 	dbf		d1,1b
 	add.w	#32-TITLE_NB_COLS,d6
 	dbf		d2,2b
+	* TODO also redraw IREM copyright
 0:
 	rts
 
-
+shift_d6_copper_y:
+	cmp.w	#DYNAMIC_COPPER_ROWS,d6
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d6
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d6
+9:
+	lsl.w	#4,d6		| times 16
+	rts
+10:
+	moveq	#0,d6
+	rts
+	
 	
 * < D0: sprite X
 * < D1: sprite Y
@@ -3969,15 +3994,24 @@ sprites_lower_part:
 	.word	beampos,0xFFFE
 	.endr
 
-	* TODO, put back moonbase colors???
-	
 	* then we should wait a bit, and set palette to tiles palette definitely
 	* so scrolling letters have the proper colors TODO
 	
 	* pal limit
     .word  0xFFDF,0xFFFE       | PAL wait
-    .word	 intreq,0x8010	| no bobs from now on (maybe needs adjustment), get more drawing time
-    .word  0x1401,0xFFFE		| wait more lines to set to black (big holes!)
+	.word	 intreq,0x8010	| no bobs from now on (maybe needs adjustment), get more drawing time
+post_pal_copper_rows:
+	.set    beampos,0x0001
+	.rept	0x14
+	* room for 3 color registers to change dynamically each line
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.set    beampos,beampos+0x100
+	.word	beampos,0xFFFE
+	.endr
+	
+    *.word  0x1401,0xFFFE		| wait more lines to set to black (big holes!)
 	.word	color,0
 	
     *.word   0x1C01,0xFFFE

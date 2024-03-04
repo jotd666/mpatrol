@@ -2490,12 +2490,12 @@ l_0c16:
 	move.b	d1,d0                           	| [$0c16: ld   a,b] -  * J0C13
 	* can write 0 (no layers), FB: green mountain, FC: green city
 	move.b	d0,background_layer_control_E1C5   	| [$0c17: ld   (background_layer_control_E1C5),a]
-	jbsr	l_2981                            	| [$0c1a: call $2981]
+	jbsr	current_point_modulus_26_2981                            	| [$0c1a: call $2981]
 	tst.b	d0                               	| [$0c1d: and  a]
-	jne	l_0c7f                             	| [$0c1e: jr   nz,$0C7F]
+	jne	skip_moonbase_display_0c7f                             	| [$0c1e: jr   nz,$0C7F]
 	lea	moonbase_already_displayed_E50F,a0                	| [$0c20: ld   hl,moonbase_already_displayed_E50F]
 	btst.b	#0,(a0)                         	| [$0c23: bit  0,(hl)]
-	jne	l_0c7f                             	| [$0c25: jr   nz,$0C7F] moonbase already displayed: skip intro
+	jne	skip_moonbase_display_0c7f                             	| [$0c25: jr   nz,$0C7F] moonbase already displayed: skip intro
 	addq.b	#1,(a0)                         	| [$0c27: inc  (hl)]
 	move.b	current_level_E510,d0                	| [$0c28: ld   a,(current_level_E510)] -  Get the course number
 	                               	| [$0c2b: and  a] -  Is this the first time?
@@ -2512,9 +2512,15 @@ l_0c3d:
 	add.b	#0x30,d0                         	| [$0c3d: add  a,$30] -  Convert to number * J0C39
 	move.w	#0x8156,d7
 	jbsr	osd_w_videoram                       	| [$0c3f: ld   ($8156),a] -  Change the "1" in the message just printed to the right number
+	
+	
 display_moon_base_0c42:
 	move.b	#0x1C,d0                        	| [$0c42: ld   a,$1C] -  Play intro ... * J0C8C
-	jbsr	l_0d6f                            	| [$0c44: call $0D6F] -  ... song
+	jbsr	queue_sound_effect_0d6f                            	| [$0c44: call $0D6F] -  ... song
+
+	* ECS: don't display moonbase: colors are trashed, and a band
+	* remains all game long... Plus we optimize by only drawing plane 3 so...
+	jra		skip_moonbase_display_0c7f
 	move.b	#0x40,d0                        	| [$0c47: ld   a,$40] -  Set timer for ...
 	move.b	d0,unknown_E30A                 	| [$0c49: ld   (unknown_E30A),a] -  ... intro song to end
 	* moon base start character
@@ -2564,7 +2570,7 @@ l_0c6a:
 l_0c72:
 	move.b	(a0),d1                         	| [$0c72: ld   b,(hl)] -  * J0C7D
 	btst.b	#7,d1                           	| [$0c73: bit  7,b]
-	jne	l_0c7f                             	| [$0c75: jr   nz,$0C7F]
+	jne	skip_moonbase_display_0c7f                             	| [$0c75: jr   nz,$0C7F]
 l_0c77:
 	move.b	d0,(a1)+                         	| [$0c77: ld   (de),a] -  * J0C79
 	                           	| [$0c78: inc  de]
@@ -2573,7 +2579,7 @@ l_0c77:
 	addq.b	#1,d0                           	| [$0c7b: inc  a]
 	addq.w	#1,a0                           	| [$0c7c: inc  hl]
 	jra	l_0c72                             	| [$0c7d: jr   $0C72]
-l_0c7f:
+skip_moonbase_display_0c7f:
 	lea	game_status_bits_E046,a0                	| [$0c7f: ld   hl,game_status_bits_E046] -  * J0C1E,J0C25,J0C75
 	addq.b	#1,(a0)                         	| [$0c82: inc  (hl)]
 	jra	game_mainloop_026e                             	| [$0c83: jp   $026E] -  ?? Main text loop for game
@@ -2729,7 +2735,7 @@ l_0d64:
     jbsr  osd_enable_interrupts  | [ei]
 	rts                                    	| [$0d6e: ret]
 
-l_0d6f:
+queue_sound_effect_0d6f:
     jbsr  osd_disable_interrupts  | [di]
 	jbsr	queue_sound_effect_if_game_playing_0d75                            	| [$0d70: call $0D75]
     jbsr  osd_enable_interrupts  | [ei]
@@ -2973,7 +2979,7 @@ l_0e55:
 	and.b	#0x1F,d0                         	| [$0e6e: and  $1F]
 	or.b	#0xC0,d0                          	| [$0e70: or   $C0]
 	move.b	d0,d7                           	| [$0e72: ld   l,a]
-	jbsr	l_2981                            	| [$0e73: call $2981]
+	jbsr	current_point_modulus_26_2981                            	| [$0e73: call $2981]
 	add.b	#0x41,d0                         	| [$0e76: add  a,$41]
 	jbsr	osd_w_videoram                         	| [$0e78: ld   (hl),a]
 	
@@ -3676,7 +3682,7 @@ l_12cb:
 l_12cc:
 	move.b	d0,unknown_E1DF                 	| [$12cc: ld   (unknown_E1DF),a] -  * J12DD
 	add.b	#0x15,d0                         	| [$12cf: add  a,$15]
-	jra	l_0d6f                             	| [$12d1: jp   $0D6F] -  Make flying ship sound and out
+	jra	queue_sound_effect_0d6f                             	| [$12d1: jp   $0D6F] -  Make flying ship sound and out
 l_12d4:
 	add.w	d3,a0                            	| [$12d4: add  hl,de] -  * J12B7,J12BF,J12C3
 	subq.b	#1,d1                           	| [...]
@@ -6131,7 +6137,7 @@ l_28f6:
 l_2907:
 	lea	game_rom+0x2B79,a0                      	| [$2907: ld   hl,$2B79] -  "TIME TO REACH POINT " script * J2902
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$290a: call $034E]
-	jbsr	l_2981                            	| [$290d: call $2981]
+	jbsr	current_point_modulus_26_2981                            	| [$290d: call $2981]
 	tst.b	d0                               	| [$2910: and  a]
 	jne	l_2915                             	| [$2911: jr   nz,$2915]
 	move.b	#0x1A,d0                        	| [$2913: ld   a,$1A]
@@ -6191,7 +6197,7 @@ l_2971:
 	      	| [$297d: inc  hl]
 	                   	| [$297e: ld   (hl),$30]
 	rts                                    	| [$2980: ret]
-l_2981:
+current_point_modulus_26_2981:
 	move.b	cur_point_e50e,d0                 	| [$2981: ld   a,(cur_point_e50e)] -  * C0C1A,C0E73,C290D,C29AB
 	cmp.b	#0x1A,d0                         	| [$2984: cp   $1A] point 26 aka Z ?
 	bcc.b	0f                               	| [...]
@@ -6225,7 +6231,7 @@ l_29a3:
 	subq.b	#1,d1                           	| [...]
 	jne	l_29a3                             	| [$29a7: djnz $29A3]
 	WRITE_VIDEORAM	#0x1B                      	| [$29a9: ld   (hl),$1B]
-	jbsr	l_2981                            	| [$29ab: call $2981]
+	jbsr	current_point_modulus_26_2981                            	| [$29ab: call $2981]
 	LOAD_VIDEORAM_ADDRESS	0x80CC                      	| [$29ae: ld   hl,$80CC]
 	move.b	#0x05,d1                        	| [$29b1: ld   b,$05]
 l_29b3:

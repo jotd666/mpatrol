@@ -1,5 +1,6 @@
-- slowdowns in cycle exact: too much work between sprite engine & blitter
-  => what does update_bg_tile with the ground?!!!  
+- set rock color (using same color as mountain dark blue should be tweaked if terrain_height_in_tiles_E514 is high
+- update_bg_tile tweak to only copy last plane for some tiles (shot, ground)
+
 - toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
 - queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
 - after the flat section after rising slope (point R), when nb slope
@@ -17,11 +18,6 @@
 - explosion which creates hole: right part looks wrong	
 
 - insert coin screen: color bands not removed
-- reuse 2 blue mountain colors for 2 lower scenery colors (rocks woulc be ideal!): 
-  dark blue still active when the ground is high, hack something if green mountain
-  sufficiently hides the blue mountain
-- moonbase colors not properly displayed => disabled right now!
-  (remaining color bands (from start platform))
 
 - 8373 contains 8C: use tiles palette, if not then switch, so moonbase has proper colors
 - re-set tiles palette at some low Y so letters have proper palettes
