@@ -113,6 +113,8 @@ green_background_mountain_color = (0,151,0)
 
 brown_rock_color = (0x84,0x51,0x00)
 blue_dark_mountain_color = (0,0,0xFF)
+dark_brown_color = (0x3E,0x37,0)
+yellow_color = (0xC1,0xC8,00)
 
 bitplane_cache = dict()
 plane_next_index = 0
@@ -335,20 +337,11 @@ elif len(bob_global_palette) < 16:
     # can't really happen... but
     bob_global_palette += [(1,2,3)] * (16-len(bob_global_palette))
 
-# hack to make tile & sprite palette partially match for "moon patrol" approx colors
-# one thing we can't do: change order of colors for first half of bob palette (mountains)
-# for tiles we have no constraints
-#switch_values(tile_global_palette,3,5)
-#switch_values(bob_global_palette,14,15)
-# same for ground (same pos)
 
-#orange_color_index = 12
-#switch_values(bob_global_palette,6,orange_color_index)
-# then remove 0,0,26 color which is very close from another to set orange
-#almost_black_color = bob_global_palette[orange_color_index]
-#bob_global_palette[orange_color_index] =tile_global_palette[orange_color_index]
-#deep_brown_color = bob_global_palette[orange_color_index]
-# needed to have exactly 16 colors
+i1 = bob_global_palette.index(dark_brown_color)
+i2 = bob_global_palette.index(yellow_color)
+switch_values(bob_global_palette,i1,i2)
+
 tile_global_palette += ((254,22,11),)*(16-len(tile_global_palette))
 
 

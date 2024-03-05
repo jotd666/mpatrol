@@ -49,6 +49,7 @@
 	.equ	COURSE_START_SND,          11
 	.equ	SECTION_END_SND,           12
 	.equ	COURSE_END_SND,            13
-	.equ	JEEP_EXPLOSION_SND,        14
+	.equ    GAME_OVER_SND,              14
+	.equ	JEEP_EXPLOSION_SND,        15
 
     

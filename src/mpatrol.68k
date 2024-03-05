@@ -2756,6 +2756,10 @@ queue_sound_effect_0d7d:
 	lea		sfx_index_table,a0
 	and.w	#0xFF,d0
 	move.b	(a0,d0.w),d0
+	cmp.b	#JEEP_EXPLOSION_SND,d0
+	bne.b	0f
+	jbsr	osd_sound_stop			| stop music before some sounds
+0:
 	jbsr	osd_sound_start
 	move.l	(sp)+,a0                        	| [$0d8b: pop  hl] -  Restore HL
 	rts                                    	| [$0d8c: ret] -  Done
@@ -2784,11 +2788,11 @@ sfx_index_table:
 	dc.b	JEEP_JUMP_SND      | 20
 	dc.b	STOP_LOOP_SND      | 21
 	dc.b	SPACE_PLANT_SND    | 22
-	dc.b	UFO_ATTACK_SND     | 23
+	dc.b	-1  | UFO_ATTACK_SND     | 23 disabled ATM
 	dc.b	MAIN_TUNE_SND      | 24
 	dc.b	-1                 | 25
 	dc.b	-1                 | 26
-	dc.b	-1                 | 27
+	dc.b	GAME_OVER_SND      | 27
 	dc.b	COURSE_START_SND   | 28
 	dc.b	SECTION_END_SND    | 29
 	dc.b	COURSE_END_SND     | 30

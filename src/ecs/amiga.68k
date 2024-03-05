@@ -1751,6 +1751,10 @@ blit_scrollable_layers:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
+
+	* while it's blitting, let's erase the line above
+	bsr		erase_mountain_line
+	
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
     * now just wait for blitter ready to write all registers
@@ -1762,11 +1766,18 @@ blit_scrollable_layers:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
+
+	* while it's blitting, let's erase the line above
+	bsr		erase_mountain_line
+
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
+	move.l  #0x01000000,d5
 	WAIT_BLIT
 	* plane 2 (all zeroes with the palette we've chosen)
-	move.l a0,bltapt(a5)	|source graphic top left corner
+	* we still have to clear it to remove artifacts from green layer
+	* but we still save bandwidth
+	move.l  d5,bltcon0(a5)   | minterm useD & rect clear (0xA) 
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
@@ -2024,6 +2035,13 @@ shift_d6_copper_y:
 	moveq	#0,d6
 	rts
 	
+erase_mountain_line:
+	sub.w	#NB_BYTES_PER_ROW,a1
+	move.w	#NB_BYTES_PER_ROW/4-1,d0
+0:
+	clr.l	(a1)+
+	dbf		d0,0b
+	rts
 	
 * < D0: sprite X
 * < D1: sprite Y
@@ -2194,7 +2212,7 @@ osd_sound_start:
 	bsr		osd_sound_stop
     lea _custom,a6
  	movem.l	d0/a0,-(a7)
-    *lea	mpatrol_tunes,a0
+    lea	mpatrol_tunes,a0
 	move.b	d1,music_track_start_number
 	move.w	d1,d0
     sub.l   a1,a1		| samples are in the module
@@ -2221,7 +2239,7 @@ osd_sound_start:
 	jra	1b
 
 7:
-	move.w	#3,d0
+	move.w	#0,d0			| channel where loops play
 	jbsr	_mt_stopfx
 	jra	1b
 	tst.b	music_playing

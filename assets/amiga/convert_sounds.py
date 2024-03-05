@@ -20,12 +20,12 @@ outfile = os.path.join(src_dir,"sounds.68k")
 sndfile = os.path.join(src_dir,"sound_entries.68k")
 
 vhq_sample_rate = 22050
-hq_sample_rate = 16000
+hq_sample_rate = 14000
 lq_sample_rate = 11025
 
 music_volume = 26
 
-loop_channel = 3
+loop_channel = 0
 sound_dict = {
 # samples
 "EXPLOSION_SND"             :{"index":1,"channel":2,"sample_rate":lq_sample_rate,"priority":1},
@@ -37,11 +37,15 @@ sound_dict = {
 "JEEP_JUMP_SND"             :{"index":7,"channel":2,"sample_rate":vhq_sample_rate,"priority":1},
 "SPACE_PLANT_SND"           :{"index":8,"channel":loop_channel,"sample_rate":hq_sample_rate,"priority":1,"loops":True},
 "UFO_ATTACK_SND"            :{"index":9,"channel":loop_channel,"sample_rate":lq_sample_rate,"priority":1,"loops":True},
-"JEEP_EXPLOSION_SND"        :{"index":14,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"JEEP_EXPLOSION_SND"        :{"index":15,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+
 
 # tunes match the MUS defines in donkey_kong.68k source
-#"MAIN_TUNE_SND"              :{"index":1,"pattern":1,"loops":True,"volume":40},
-#"LEVEL_TUNE_SND"              :{"index":2,"pattern":2,"loops":False,"volume":32,"ticks":150},
+"MAIN_TUNE_SND"                :{"index":10,"pattern":1,"loops":True,"volume":40},
+"COURSE_START_SND"              :{"index":11,"pattern":0,"loops":False,"volume":40, "ticks":255},
+"SECTION_END_SND"              :{"index":12,"pattern":5,"loops":False,"volume":40,"ticks":250},
+"COURSE_END_SND"              :{"index":13,"pattern":4,"loops":False,"volume":40,"ticks":500},
+"GAME_OVER_SND"              :{"index":14,"pattern":6,"loops":False,"volume":40,"ticks":200},
 
 }
 
@@ -97,7 +101,7 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
     with open(os.path.join(sound_dir,f"{module_name}_conv.mod"),"rb") as f:
         contents = f.read()
     fw.write("{}:".format(music_module_label))
-    #write_asm(contents,fw)
+    write_asm(contents,fw)
     fw.write("\t.align\t8\n")
 
     for wav_file,details in sound_dict.items():
