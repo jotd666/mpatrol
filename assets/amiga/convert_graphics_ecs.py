@@ -44,17 +44,6 @@ if dump_sprites:
 NB_POSSIBLE_SPRITES = 256
 NB_BOB_PLANES = 4
 
-rw_json = os.path.join(this_dir,"used_cluts.json")
-if os.path.exists(rw_json):
-    with open(rw_json) as f:
-        used_cluts = json.load(f)
-    # key as integer, list as set for faster lookup (not that it matters...)
-    used_cluts = {int(k):set(v) for k,v in used_cluts.items()}
-else:
-    print(f"Warning: no {rw_json} file, no tile/clut filter, expect BIG graphics.68k file")
-    used_cluts = None
-
-
 
 def dump_asm_bytes(*args,**kwargs):
     bitplanelib.dump_asm_bytes(*args,**kwargs,mit_format=True)
@@ -373,6 +362,36 @@ with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
     f.write("rock_color:\n\t.word\t0x{:x}\n".format(rock_color))
     f.write("rock_color_register:\n\t.word\t0x180+{}\n".format(rock_color_index*2))
 character_codes_list = []
+
+used_cluts = collections.defaultdict(set)
+# letters beginner
+for i in range(0,0x5C):
+    used_cluts[i].add(1)
+    used_cluts[i].add(0xC)
+# mini-map
+for i in range(4,0x5C):
+    used_cluts[i].add(2)
+
+# blanks for all cluts
+for i in range(0,22):
+    used_cluts[0].add(i)
+
+# letters, champion level
+for i in range(0x40,0x5C):
+    used_cluts[i].add(0x11)
+    used_cluts[i].add(0)
+# digits
+for i in range(0x30,0x3A):
+    used_cluts[i].add(0)
+# ground
+for i in range(0x88,0x110):
+    used_cluts[i].add(0x4)
+# vertical shot
+for i in range(0x60,0x68):
+    used_cluts[i].add(0)
+# moon patrol title
+for i in range(0x1B0,0x200):
+    used_cluts[i].add(0)
 
 if True:
     for k,chardat in enumerate(block_dict["tile"]["data"]):

@@ -814,7 +814,7 @@ clear_background:
 	moveq	#0,d1
 	move.b	previous_blue_layer_y,d1
 	beq.b	0f		| no previous Y means no clear!
-	move.w	#Y_MAX-32,d4
+	move.w	#Y_MAX,d4
 	sub.w	d1,d4
 	* now D4 is the full height to clear
 	move	#NB_PLAYFIELD_PLANES,d3
@@ -2802,7 +2802,10 @@ update_bg_tile:
 
 
 	* color tile
-	and.w	#0xF,d1
+	cmp.w	#22,d1
+	bcs.b	111f
+	moveq	#0,d1		| wrong but default
+111:
 	
 	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y (tile)
@@ -3347,6 +3350,7 @@ osd_read_in_1:
 	btst	#JPB_BTN_UP,d1
 	beq.b	0f
 	bclr	#3,d0
+	bclr	#5,d0		| if up for jump set!
 0:
 	btst	#JPB_BTN_DOWN,d1
 	beq.b	0f
@@ -3362,11 +3366,11 @@ osd_read_in_1:
 0:
 	btst	#JPB_BTN_RED,d1
 	beq.b	0f
-	bclr	#5,d0
+	bclr	#7,d0
 0:
 	btst	#JPB_BTN_BLU,d1
 	beq.b	0f
-	bclr	#7,d0
+	bclr	#5,d0
 0:
 
 	movem.l	(a7)+,a0/d1

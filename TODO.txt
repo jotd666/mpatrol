@@ -1,20 +1,23 @@
-- mountain displayed lower: erase upper line (using cpu clr.l while blitting is probably ok)
-- set rock color (using same color as mountain dark blue should be tweaked if terrain_height_in_tiles_E514 is high
-- change dark brown color position so shots appear whiter on black
+- continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
+- queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
+- declare tiles & cluts manually (with playfield info) to save memory: almost ok
+  missing ":" and pink / champion course status
+- custom2 bit jump with button 2 only
+- when mountains are not showing (clear screen called)
+  remove copper change to let tile palette on the whole screen, set it if
+  not set when displaying mountains
+
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
-- 50Hz hardware sprites
+- allow 2 non-rolling rocks as HW sprites to speed up
+- loop sfx + music issue (ptplayer)
 
 - toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
-- queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
 - after the flat section after rising slope (point R), when nb slope
   tiles change, rightmost scrolling tile is buggy, looks like
   a rodent's head or something... Same when mines...
-- continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
-- check hole-making ship animations, look odd: probably flipx
+- check hole-making ship animations / ovoid ships, look odd: probably flipx
 - save highscore & best course times
-- vertical shot: tile, not sprite, conflicts with background: try to make a special
-  case to erase & update only upper bitplane (special erase char or clut to define too)
 
 - implement flipx int flipx = m_spriteram[offs + 1] & 0x40;
 - check flipy??
@@ -26,18 +29,14 @@
 - insert coin screen: color bands not removed
 
 
-- (c) IREM not properly displayed
-- when title displays (moon patrol), completely loses real time in cycle exact
-  probably needs complete rethinking of what's done here / use backbuffer
-  blitter refresh.
-- small transparency effect on the tip of the "l" of "Moon Patrol" => BOGUS TITLE NOW
+- (c) IREM not properly displayed + small transparency effect on the tip of the "l" of "Moon Patrol"
+=> redraw more tiles!!!
+
 
 low pri:  
   
 - re-set tiles palette at some low Y so letters have proper palettes
-- declare tiles & cluts manually (with playfield info) to save memory
-- optim: maybe only 2 planes could be needed for uniform ground
-  (but there are letters...)
+
 
 
 converter:

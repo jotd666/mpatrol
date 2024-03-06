@@ -20,7 +20,7 @@ outfile = os.path.join(src_dir,"sounds.68k")
 sndfile = os.path.join(src_dir,"sound_entries.68k")
 
 vhq_sample_rate = 22050
-hq_sample_rate = 14000
+hq_sample_rate = 16000
 lq_sample_rate = 11025
 
 music_volume = 26

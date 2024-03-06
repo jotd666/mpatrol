@@ -763,7 +763,7 @@ txt_cmd_02_02fa:
 	LOAD_D5D6_FROM_D5_16
 	bsr		get_rom_address_d5_to_a0
 write_to_screen_possible_typing_effect_300:
-	jbsr	compute_screen_address_03db                            	| [$0300: call $03DB] -  Get screen pointer and color from script * C018D,J0379,C052A,C0548,C074B,C0B47,C0C31,C0C89,C0CEA,C0D06,J1258,C1285,C27EA,C27F3
+	jbsr	compute_screen_address_and_attribute_03db                            	| [$0300: call $03DB] -  Get screen pointer and color from script * C018D,J0379,C052A,C0548,C074B,C0B47,C0C31,C0C89,C0CEA,C0D06,J1258,C1285,C27EA,C27F3
 l_0303:
 	* handle special delay effects that simulate typing
 	* if command is found in input data
@@ -819,7 +819,7 @@ l_0349:
 	
 * < HL pointer to X/Y pos + text
 write_text_to_screen_at_xy_034e:
-	jbsr	compute_screen_address_03db                            	| [$034e: call $03DB] -  Get screen cursor and color
+	jbsr	compute_screen_address_and_attribute_03db                            	| [$034e: call $03DB] -  Get screen cursor and color
 l_0351:
 	jbsr	write_to_screen_03c9                            	| [$0351: call $03C9] -  Process one script command (abort takes us back to caller) * J035F
 	move.b	#0x03,d0                        	| [$0354: ld   a,$03] -  Set ...
@@ -847,7 +847,7 @@ flash_script_0374:
 	btst.b	#4,d0                           	| [$0377: bit  4,a] -  Every 16 interrupts
 	jne	write_to_screen_possible_typing_effect_300                             	| [$0379: jr   nz,$0300] -  Bit set ... print text (bit cleared ... fall into erase)
 erase_script_037b:
-	jbsr	compute_screen_address_03db                            	| [$037b: call $03DB] -  Load cursor and color from script * J0335,J0389,C126D,C1327
+	jbsr	compute_screen_address_and_attribute_03db                            	| [$037b: call $03DB] -  Load cursor and color from script * J0335,J0389,C126D,C1327
 l_037e:
 	move.b	(a0)+,d0                         	| [$037e: ld   a,(hl)] -  Get next character/command * J038E,J0391
 	                           	| [$037f: inc  hl] -  Next in script
@@ -953,9 +953,9 @@ write_to_screen_03c9:
 * < A0: points on screen addresses (little endian)
 * > A1: screen address
 * > A3: corresponding screen attribute address (A1+0x400)
-* > D2: attribute?
+* > D2: attribute
 
-compute_screen_address_03db:
+compute_screen_address_and_attribute_03db:
 	* recompose little endian screen address
 	move.b	(a0)+,d4                         	| [$03db: ld   e,(hl)] -  Load ... * C0300,C034E,C037B
 	                           	| [$03dc: inc  hl] -  ... the ...
@@ -6132,9 +6132,9 @@ l_28f6:
 	move.b	(a0)+,d0                         	| [$28fc: ld   a,(hl)]
 	                          	| [$28fd: inc  hl]
 	move.l	a0,unknown_pointer_E096                 	| [$28fe: ld   (unknown_pointer_E096),hl]
+	LOAD_D1D2_FROM_D1_16
 	or.b	(a0),d0                           	| [$2901: or   (hl)]
 	jne	l_2907                             	| [$2902: jr   nz,$2907]
-	LOAD_D1D2_FROM_D1_16
 	move.b	d1,(a0)                         	| [$2904: ld   (hl),b]
 	                           	| [$2905: dec  hl]
 	move.b	d2,-(a0)                         	| [$2906: ld   (hl),c]
