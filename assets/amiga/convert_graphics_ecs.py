@@ -151,11 +151,11 @@ def get_sprite_clut(clut_index):
 # creating the sprite configuration in the code is more flexible than with a config file
 
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite,bob_backup=0):
+def add_sprite_block(start,end,prefix,cluts,is_sprite,mirror=False,bob_backup=0):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end+1):
-        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"bob_backup":bob_backup}
+        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"bob_backup":bob_backup,"mirror":mirror}
 
 
 
@@ -168,7 +168,7 @@ attached_sprites = set()
 jeep_cluts = {0,12}
 
 BB_SHIP = 1
-BB_ROCK = 2
+BB_ROLLING_ROCK = 2
 
 # thanks to sprite multiplexing, a lot of ground objects can
 # be sprites
@@ -179,17 +179,17 @@ BB_ROCK = 2
 
 add_sprite_block(1,4,"jeep_part",jeep_cluts,False)
 # all ships are sprites with bob backups
-add_sprite_block(0x42,0x42,"saucer",7,True,BB_SHIP)
-add_sprite_block(0x43,0x44,"hole_making_ship",7,True,BB_SHIP)
-add_sprite_block(0x45,0x47,"ovoid_ship",7,True,BB_SHIP)
+add_sprite_block(0x42,0x42,"saucer",7,True,bob_backup=BB_SHIP)
+add_sprite_block(0x43,0x44,"hole_making_ship",7,True,mirror=True,bob_backup=BB_SHIP)
+add_sprite_block(0x45,0x47,"ovoid_ship",7,True,mirror=True,bob_backup=BB_SHIP)
 
 add_sprite_block(0x38,0x38,"tank",7,True)
 add_sprite_block(0x3A,0x3B,"missile",9,True)
 add_sprite_block(0x7B,0x7C,"missile",9,True)
 add_sprite_block(0x7D,0x7E,"points",{14,15},True)  # 300,500 800,1000
 
-add_sprite_block(0x31,0x34,"rock_ball",4,True,BB_ROCK)
-add_sprite_block(0x36,0x37,"rock_ball",4,True,BB_ROCK)
+add_sprite_block(0x31,0x34,"rock_ball",4,True,bob_backup=BB_ROLLING_ROCK)
+add_sprite_block(0x36,0x37,"rock_ball",4,True,bob_backup=BB_ROLLING_ROCK)
 add_sprite_block(0x40,0x41,"medium_explosion",1,False)
 add_sprite_block(0x2a,0x2c,"shot_explosion",1,False)
 add_sprite_block(0x2D,0x30,"rock",4,False)
@@ -210,8 +210,8 @@ add_sprite_block(0x35,0x35,"ground_digging_bomb",{0xA,0xB},False)
 # rather chosen for their special colors than for good performance
 add_sprite_block(0x4E,0x5E,"hole_explosion",1,True)
 add_sprite_block(0x5F,0x60,"hole_explosion",0xD,True)
-add_sprite_block(0x73,0x75,"space_plant",2,True)  # symmetry??
-add_sprite_block(0x79,0x79,"space_plant",8,True)
+add_sprite_block(0x73,0x75,"space_plant",2,True,mirror=True)
+add_sprite_block(0x79,0x79,"space_plant",8,True,mirror=True)
 add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
 add_sprite_block(5,8,"jeep_wheel",0,True)
 
@@ -380,6 +380,9 @@ for i in range(0,22):
 for i in range(0x40,0x5C):
     used_cluts[i].add(0x11)
     used_cluts[i].add(0)
+    #used_cluts[i].add(2)
+    used_cluts[i].add(0xA)
+    used_cluts[i].add(0xD)
 # digits
 for i in range(0x30,0x3A):
     used_cluts[i].add(0)
@@ -392,6 +395,12 @@ for i in range(0x60,0x68):
 # moon patrol title
 for i in range(0x1B0,0x200):
     used_cluts[i].add(0)
+
+# moon base/platform
+for i in range(0x71,0x77):
+    used_cluts[i].add(0X11)
+for i in range(0x77,0x7B):
+    used_cluts[i].add(0X12)
 
 if True:
     for k,chardat in enumerate(block_dict["tile"]["data"]):
@@ -428,12 +437,14 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         is_sprite = sprconf["is_sprite"]
         bob_backup = sprconf["bob_backup"]
         vattached = sprconf.get("vattached")
+        mirror = sprconf.get("mirror")
     else:
         clut_range = range(0,16)
         name = f"unknown_{k:02x}"
         is_sprite = False
         bob_backup = False
         vattached = None
+        mirror = False
 
     for cidx in clut_range:
         hsize = 32 if vattached else 16
@@ -461,7 +472,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         # only consider sprites/cluts which are pre-registered
         if sprconf:
             if k not in sprites:
-                sprites[k] = {"is_sprite":is_sprite,"bob_backup":False,"name":name,"hsize":hsize,"vsize":vsize}
+                sprites[k] = {"is_sprite":is_sprite,"bob_backup":False,"name":name,"hsize":hsize,"vsize":vsize,"mirror":mirror}
             cs = sprites[k]
             is_bob = not is_sprite or bob_backup
             if is_sprite:
@@ -476,7 +487,10 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     # example: pengo all-black enemies. If this case occurs, just omit this dummy config
                     # the amiga engine will manage anyway
                     #
-                    cs["bitmap"] = bitplanelib.palette_image2sprite(img,None,spritepal,
+                    cs["bitmap"] = [bitplanelib.palette_image2sprite(img,None,spritepal,
+                            palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True),None]
+                    if mirror:
+                        cs["bitmap"][1] = bitplanelib.palette_image2sprite(ImageOps.mirror(img),None,spritepal,
                             palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
                     cs["png"] = img
             if is_bob:
@@ -490,7 +504,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     if k+0x80 not in sprites:
                         src = sprites[k]
                         cs = {"is_sprite":False,"bob_backup":False,"name":src["name"]+"_bob",
-                                "hsize":hsize,"vsize":src["vsize"],"yoffset":yoffset}
+                                "hsize":hsize,"vsize":src["vsize"],"yoffset":yoffset,"mirror":mirror}
                         sprites[k+0x80] = cs
 
                 # software sprites (bobs) need one copy of bitmaps per palette setup. There are 3 or 4 planes
@@ -605,26 +619,37 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         f.write("\t.long\t")
         if sprite:
             if sprite == True:
-                f.write("-1")  # not displayed but legal
+                f.write("-1,-1")  # not displayed but legal
             else:
                 if sprite["is_sprite"]:
                     name = sprite['name']
                     sprite_names[i] = name
-                    f.write(name)
+                    f.write(name+"_left,")
+                    if sprite["mirror"]:
+                        f.write(name+"_right")
+                    else:
+                        f.write("0")
                 else:
-                    f.write("0")
+                    f.write("0,0")
         else:
-            f.write("0")
+            f.write("0,0")
         f.write("\n")
 
     for i in range(NB_POSSIBLE_SPRITES):
+        sprite = sprites.get(i)
         name = sprite_names[i]
         if name:
-            f.write(f"{name}:\n")
+            f.write(f"{name}_left:\n")
             for j in range(8):
                 f.write("\t.long\t")
-                f.write(f"{name}_{j}")
+                f.write(f"{name}_{j}_left")
                 f.write("\n")
+            if sprite["mirror"]:
+                f.write(f"{name}_right:\n")
+                for j in range(8):
+                    f.write("\t.long\t")
+                    f.write(f"{name}_{j}_right")
+                    f.write("\n")
 
     f.write("bob_table:\n")
 
@@ -685,17 +710,18 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                         f.write("\n")
 
     f.write("\t.section\t.datachip\n")
-    # sprites
+    # hardware sprites
     for i in range(NB_POSSIBLE_SPRITES):
         name = sprite_names[i]
         if name:
             sprite = sprites.get(i)
-            for j in range(8):
-                # clut is valid for this sprite
-                bitmap = sprite["bitmap"]
-                sprite_label = f"{name}_{j}"
-                f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
-                bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
+            for k,bitmap in zip(("left","right"),sprite["bitmap"]):
+                if bitmap:
+                    for j in range(8):
+                        # clut is valid for this sprite
+                        sprite_label = f"{name}_{j}_{k}"
+                        f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
+                        bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
 
     f.write("\n* bitplanes\n")
     # dump bitplanes

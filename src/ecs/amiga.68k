@@ -20,7 +20,8 @@ BORDERBLANK = 1
 
 * bob backup flags for sprites
 BB_SHIP = 1+1
-BB_ROCK = 2+1
+BB_ROLLING_ROCK = 2+1
+BB_ROCK = 3+1
 
 Y_MAX = 252
 
@@ -65,13 +66,12 @@ ACTIVE_BITPLANE_MASK = 4   | for optimized bitplane erase
 TITLE_NB_COLS = 20
 TITLE_NB_ROWS = 10
 
+* above tile 7: playfield
+PLAYFIELD_TILE_Y_MIN = 7
 * above Y tile = 14, no need to cookie cut chars as mountains
 * aren't drawn above this limit (at least not when chars are drawn there
 * for instance "Moon" of the "Moon Patrol" title doesn't superimpose with mountains
 COOKIE_CUT_TILE_Y_MIN = 14
-
-* if Y >= this value then must wait blitter before writing tile
-WAIT_BLITTER_TILE_Y_MIN = 8
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -1070,8 +1070,7 @@ update_hardware_sprites:
 
 	moveq	#0,d3
 	move.w	d2,d4
-	add.w	d4,d4
-	add.w	d4,d4
+	lsl.w	#3,d4		| times 8
 	tst.l	(a4,d4.w)	| test pointer
 	bmi.b	2f			| attached: skip
 	beq.b	2f			| not a sprite: skip
@@ -1109,7 +1108,12 @@ update_hardware_sprites:
 
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
-	and.b	#0xF,d3	| get attributes
+*	btst	#7,d3
+* test y-flip (happens, ex hole-making ufos)
+*	beq.b	23f
+*	blitz
+*23:
+	and.b	#0x7F,d3	| get attributes, remove flip Y which is not used
 
 * < D2: sprite code & flags
 * < D3: sprite color (clut index)
@@ -1168,25 +1172,27 @@ update_hardware_sprites:
 	move.b	(SPRITE_CODE,a2),d2
 		
 	move.w	d2,d4
-	add.w	d4,d4
-	add.w	d4,d4
+	lsl.w	#3,d4
+	move.b	(SPRITE_CLUT,a2),d3
+	btst	#6,d3		| flip x?
+	beq.b	25f
+	addq.w	#4,d4		| other sprite
+25:
 	move.l	(a4,d4.w),d4	| get pointer
-*   filtering of BOBs & attached sprites has been done
-*   above, let's trust the values to be valid
-*	.ifndef	RELEASE
-*	bne.b	25f
-*	* sprite doesn't exist: blitz and bail out
-*	blitz
-*	move.b	d1,d1
-*	move.b	d2,d2
-*	jra		30f
-*25:
-*	.endif
-*	
+	.ifndef	RELEASE
+	bne.b	26f
+	* sprite doesn't exist (flip bit set but no flipped image)
+	blitz
+	move.b	d1,d1
+	move.b	d2,d2
+	jra		30f
+26:
+	.endif
+	
 	move.l	d4,a5
 	move.w	d6,d4					| load sprite index
 	add.w	d4,d4
-	add.w	d4,d4					| sprite index times 4
+	add.w	d4,d4					| sprite index times 4 (pointer index)
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
 
@@ -1250,6 +1256,7 @@ update_hardware_sprites:
 	moveq	#0,d3
 	move.b	(SPRITE_CLUT,a2),d3
 	bmi.b	25f			| blank sprite with invalid clut: skip color set!
+	and.b	#0xF,d3		| mask color only, ignore flip bits
 	lsl.w	#3,d3		| times 8
 
 	add.w	d3,a6
@@ -1269,7 +1276,8 @@ update_hardware_sprites:
 	* d6 is the sprite index: compute/set proper color
 	move.w	d6,d5
 	bclr	#0,d5
-	lsl.w	#2,d5	| times 4*2
+	add.w	d5,d5
+	add.w	d5,d5	| times 4*2
 	move.w	d5,d2
 	add.w	d2,d2
 	lea		sprites_upper_cols+6,a5	| sprite palette + 2 (first color skipped)
@@ -2806,10 +2814,24 @@ update_bg_tile:
 	bcs.b	111f
 	moveq	#0,d1		| wrong but default
 111:
-	
 	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y (tile)
 	
+	tst		d0
+	bne.b	112f
+	cmp.w	#PLAYFIELD_TILE_Y_MIN,d3	
+	bcs.b	112f
+	* playfield: some hacks are necessary for the clearing
+	* character with some cluts (1: blue,0xC: pink)
+	tst		d0
+	bne.b	112f
+	cmp.b	#1,d1
+	seq		d1
+	jeq		112f
+	cmp.b	#0xC,d1
+	seq		d1
+112:
+
 	moveq	#0,d6		| standard copy mode
 	cmp.w	#COOKIE_CUT_TILE_Y_MIN,d3		| lower Y: remain in standard copy at all times (panel)
 	bcs.b	22f
@@ -3618,13 +3640,13 @@ handle_keyboard:
 	bne.b	0f
 	move.w	#0x0FF,_custom+color
 	st.b	cheat_used
-	
+	st.b	section_completed_flag
 0:
 	cmp.b	#0x51,d0	| F2 key
 	bne.b	0f
 	st.b	cheat_used
 	move.w	#0x0FF,_custom+color
-	eor.b	#1,invincible_flag
+	st.b	course_completed_flag
 	
 0:
 	cmp.b	#0x52,d0	| F3 key
@@ -3636,18 +3658,19 @@ handle_keyboard:
 	bne.b	0f
 	st.b	cheat_used
 	move.w	#0x0FF,_custom+color
+	eor.b	#1,invincible_flag
 0:
-	cmp.b	#0x54,d0	| F5 key
-	bne.b	0f
-	st.b	cheat_used
-	move.w	#0x0FF,_custom+color
-0:
-
-	cmp.b	#0x55,d0	| F6 key
-	bne.b	0f
-	* game over, no lives
-	nop
-0:
+*	cmp.b	#0x54,d0	| F5 key
+*	bne.b	0f
+*	st.b	cheat_used
+*	move.w	#0x0FF,_custom+color
+*0:
+*
+*	cmp.b	#0x55,d0	| F6 key
+*	bne.b	0f
+*	* game over, no lives
+*	nop
+*0:
 10:
 	.ifndef	RELEASE
 	cmp.b	#0x58,d0	| F9 key crashes game (restarts whdload)

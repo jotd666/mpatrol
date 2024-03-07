@@ -1,25 +1,25 @@
+- implement flipy (commented blitz atm) hole making ufos
+- implement flipx for bobs (ATM only for sprites)
+- optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
 - continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
 - queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
 - declare tiles & cluts manually (with playfield info) to save memory: almost ok
-  missing ":" and pink / champion course status
+  missing ":" and quotes (yellow/black)
 - custom2 bit jump with button 2 only
 - when mountains are not showing (clear screen called)
   remove copper change to let tile palette on the whole screen, set it if
   not set when displaying mountains
-
+- add platform at startup even if mono-planar
+- points awarded: 500 points wrong clut...
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
-- optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
-- allow 2 non-rolling rocks as HW sprites to speed up
 - loop sfx + music issue (ptplayer)
 
 - toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
 - after the flat section after rising slope (point R), when nb slope
   tiles change, rightmost scrolling tile is buggy, looks like
   a rodent's head or something... Same when mines...
-- check hole-making ship animations / ovoid ships, look odd: probably flipx
 - save highscore & best course times
 
-- implement flipx int flipx = m_spriteram[offs + 1] & 0x40;
 - check flipy??
 
 - space plant flipx space plant in general looks hard to draw: snapshot the game at this point
@@ -36,7 +36,6 @@
 low pri:  
   
 - re-set tiles palette at some low Y so letters have proper palettes
-
 
 
 converter:

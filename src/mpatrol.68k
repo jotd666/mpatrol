@@ -2548,14 +2548,14 @@ l_0c5c:
 	ror.w	#8,d7
 	move.w	d0,-(sp)
 	move.b	d2,d0                         	| [$0c5e: ld   (hl),c]
-	**jbsr	osd_w_videoram
+	jbsr	osd_w_videoram
 	move.w	(sp)+,d0
 	ror.w	#8,d7
 	move.b	#0x87,d7                        	| [$0c5f: ld   h,$87] -  In screen color memory ??
 	ror.w	#8,d7
 	move.w	d0,-(sp)
 	move.b	d1,d0                         	| [$0c61: ld   (hl),b]
-	**jbsr	osd_w_colorram
+	jbsr	osd_w_colorram
 	move.w	(sp)+,d0
 	addq.b	#1,d2                           	| [$0c62: inc  c] next moonbase character
 	addq.b	#1,d7                           	| [$0c63: inc  l]
@@ -3617,8 +3617,8 @@ l_125b:
 	exg	a1,a0                              	| [$1275: ex   de,hl]
 	move.b	#0x12,(a0)                      	| [$1276: ld   (hl),$12]
 	lea	fine_position_on_track_E50B,a0                	| [$1278: ld   hl,fine_position_on_track_E50B]
-	move.b	(a0),d0                         	| [$127b: ld   a,(hl)]
-	addq.w	#1,a0                           	| [$127c: inc  hl]
+	move.b	(a0)+,d0                         	| [$127b: ld   a,(hl)]
+												| [$127c: inc  hl]
 	sub.b	(a0),d0                          	| [$127d: sub  (hl)]
 	cmp.b	#0x40,d0                         	| [$127e: cp   $40]
 	bcc.b	0f                               	| [...]
@@ -4073,11 +4073,13 @@ l_14df:
 	subq.b	#1,d0                           	| [$1513: dec  a]
 l_1514:
 	subq.b	#0x05,d0                        	| [$1514: sub  $05] -  * J1511,J1519
-	jeq	l_27c0                             	| [$1516: jp   z,$27C0]
+	jeq	section_completed_27c0                             	| [$1516: jp   z,$27C0]
 	subq.b	#1,d1                           	| [...]
 	jne	l_1514                             	| [$1519: djnz $1514]
 	cmp.b	#0x06,d0                         	| [$151b: cp   $06]
-	jeq	l_27c0                             	| [$151d: jp   z,$27C0]
+	jeq	section_completed_27c0                             	| [$151d: jp   z,$27C0]
+	tst.b	section_completed_flag
+	jne		section_completed_27c0
 l_1520:
 	move.b	#0x10,d0                        	| [$1520: ld   a,$10] -  Play ... * J150F
 	jbsr	queue_sound_effect_if_game_playing_0d75                            	| [$1522: call $0D75] -  ... passing point
@@ -5962,12 +5964,18 @@ l_212c:
 	move.b	time_bcd_E511,d0                	| [$213e: ld   a,(time_bcd_E511)]
 	jra	set_character_at_address_03ae                             	| [$2141: jp   $03AE]
 
-l_27c0:
+section_completed_27c0:
+	* section or course completed
 	lea	game_status_bits_E046,a0                	| [$27c0: ld   hl,game_status_bits_E046] -  * J1516,J151D
 	subq.b	#1,(a0)                         	| [$27c3: dec  (hl)]
     jbsr  osd_enable_interrupts  | [ei]
 	move.b	d1,d0                           	| [$27c5: ld   a,b]
 	move.b	d0,unknown_E513                 	| [$27c6: ld   (unknown_E513),a]
+	tst.b	section_completed_flag
+	jne		l_285e
+	clr.b	section_completed_flag
+	clr.b	course_completed_flag
+
 	cmp.b	#0x05,d0                         	| [$27c9: cp   $05]
 	jeq	l_27d2                             	| [$27cb: jp   z,$27D2]
 	tst.b	d0                               	| [$27ce: and  a]
@@ -6049,6 +6057,8 @@ l_284c:
 	jbsr	wait_for_sync_05ea                            	| [$2859: call $05EA]
 	jra	l_2827                             	| [$285c: jr   $2827]
 l_285e:
+	clr.b	section_completed_flag
+	clr.b	course_completed_flag
 	move.b	#0x1D,d0                        	| [$285e: ld   a,$1D] -  Play ... * J27CF
 	jbsr	queue_sound_effect_if_game_playing_0d75                            	| [$2860: call $0D75] -  ... reached goal
 	jbsr	l_29d6                            	| [$2863: call $29D6]
@@ -6144,6 +6154,7 @@ l_2907:
 	jbsr	current_point_modulus_26_2981                            	| [$290d: call $2981]
 	tst.b	d0                               	| [$2910: and  a]
 	jne	l_2915                             	| [$2911: jr   nz,$2915]
+	* point Z!
 	move.b	#0x1A,d0                        	| [$2913: ld   a,$1A]
 l_2915:
 	add.b	#0x40,d0                         	| [$2915: add  a,$40] -  * J2911
