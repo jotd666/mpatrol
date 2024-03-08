@@ -1,3 +1,4 @@
+- champion panel missing tile cluts
 - implement flipy (commented blitz atm) hole making ufos
 - implement flipx for bobs (ATM only for sprites)
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
@@ -6,10 +7,7 @@
 - declare tiles & cluts manually (with playfield info) to save memory: almost ok
   missing ":" and quotes (yellow/black)
 - custom2 bit jump with button 2 only
-- when mountains are not showing (clear screen called)
-  remove copper change to let tile palette on the whole screen, set it if
-  not set when displaying mountains
-- add platform at startup even if mono-planar
+- add platform at startup even if mono-planar: merge all planes for those tiles
 - points awarded: 500 points wrong clut...
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - loop sfx + music issue (ptplayer)
@@ -26,7 +24,7 @@
 - city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again
 - explosion which creates hole: right part looks wrong	
 
-- insert coin screen: color bands not removed
+- insert coin screen: color band not removed
 
 
 - (c) IREM not properly displayed + small transparency effect on the tip of the "l" of "Moon Patrol"

@@ -188,8 +188,8 @@ add_sprite_block(0x3A,0x3B,"missile",9,True)
 add_sprite_block(0x7B,0x7C,"missile",9,True)
 add_sprite_block(0x7D,0x7E,"points",{14,15},True)  # 300,500 800,1000
 
-add_sprite_block(0x31,0x34,"rock_ball",4,True,bob_backup=BB_ROLLING_ROCK)
-add_sprite_block(0x36,0x37,"rock_ball",4,True,bob_backup=BB_ROLLING_ROCK)
+add_sprite_block(0x31,0x34,"rock_ball",4,True,mirror=True,bob_backup=BB_ROLLING_ROCK)
+add_sprite_block(0x36,0x37,"rock_ball",4,True,mirror=True,bob_backup=BB_ROLLING_ROCK)
 add_sprite_block(0x40,0x41,"medium_explosion",1,False)
 add_sprite_block(0x2a,0x2c,"shot_explosion",1,False)
 add_sprite_block(0x2D,0x30,"rock",4,False)
@@ -386,6 +386,12 @@ for i in range(0x40,0x5C):
 # digits
 for i in range(0x30,0x3A):
     used_cluts[i].add(0)
+
+# champion
+for i in range(0x12,0x3F):
+    used_cluts[i].add(8)
+for i in range(0x41,0x5B):
+    used_cluts[i].add(0xB)
 # ground
 for i in range(0x88,0x110):
     used_cluts[i].add(0x4)

@@ -828,6 +828,8 @@ clear_background:
 	jbsr		clear_planes_any_blitter_internal
 	clr.b	previous_blue_layer_y   | only done once!
 0:
+	bsr		load_tiles_palette_in_playfield_copperlist
+	
 	movem.l	(A7)+,d0-d7/A0-A6
 	rts
 	
@@ -838,7 +840,6 @@ update_background:
 	* don't update scroll if title displayed and the values are the same as before
 	jbsr	is_title_displayed
 	beq.b	1f
-
 
 	lea		previous_values(pc),a1
 	cmp.b	(a0)+,(a1)+
@@ -873,7 +874,7 @@ update_background:
 	move.b	d2,(a1)+
 	move.b	(a2)+,d4	 | layer control
 	move.b	d4,(a1)
-	jeq		clear_background
+	jeq		clear_background	| layer control = 0: clear
 	
 	* irem hardware works differently for scroll
 	not.b	d0
@@ -2569,10 +2570,11 @@ load_bobs_palette_in_playfield_copperlist:
 	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
 	
-	bsr		load_moonbase_palette	| TEMP
+**	bsr		load_moonbase_palette	| TEMP
 	
 	rts
 	
+
 * moonbase is shown: set tiles palette low enough so it doesn't
 * interfere with mountains. Jeep is a sprite so it's not affected, and
 * no other bob is shown at this point. We keep being lucky :)
