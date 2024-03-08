@@ -304,7 +304,7 @@ mpatrol_reset:
 	tst.b	break_at_startup_flag
 	beq.b	0f
 	* put anything here that you need to track addresses
-	move.l	#bg_videoram,d7
+	move.l	#game_status_bits_E046,d7
 	jbsr	osd_break
 0:
 	.endif
@@ -524,11 +524,12 @@ l_0176:
 l_0184:
 	jbsr	delay3_sec_05e8                            	| [$0184: call $05E8] -  * J017F
 	jbsr	l_0d29                            	| [$0187: call $0D29]
-	lea	game_rom+0x2A2A,a0                      	| [$018a: ld   hl,$2A2A] -  "TO COUNTINUE GAME" script
+	* write continue prompt (with typo, that I have fixed in ROM)
+	lea	game_rom+0x2A2A,a0                      	| [$018a: ld   hl,$2A2A] -  "TO COUNTINUE GAME" (sic) script
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$018d: call $0300] -  Print it
 	move.b	#0x11,d0                        	| [$0190: ld   a,$11]
 l_0192:
-	                               	| [$0192: and  a] -  * J01AE
+	tst.b	d0                               	| [$0192: and  a] -  * J01AE
 	jeq	l_01d2                             	| [$0193: jr   z,$01D2]
 	moveq	#0,d7
 	sbcd	d7,d0                           	| [$0195: dec  a + daa]
@@ -2515,12 +2516,11 @@ l_0c3d:
 	
 	
 display_moon_base_0c42:
+	* for some reason, intro music doesn't start if sound isn't stopped first...
+	jbsr	osd_sound_stop
 	move.b	#0x1C,d0                        	| [$0c42: ld   a,$1C] -  Play intro ... * J0C8C
 	jbsr	queue_sound_effect_0d6f                            	| [$0c44: call $0D6F] -  ... song
 
-	* ECS: don't display moonbase: colors are trashed, and a band
-	* remains all game long... Plus we optimize by only drawing plane 3 so...
-	
 	move.b	#0x40,d0                        	| [$0c47: ld   a,$40] -  Set timer for ...
 	move.b	d0,unknown_E30A                 	| [$0c49: ld   (unknown_E30A),a] -  ... intro song to end
 	* moon base start character
@@ -2742,13 +2742,12 @@ queue_sound_effect_0d6f:
 	rts                                    	| [$0d74: ret]
 
 queue_sound_effect_if_game_playing_0d75:
-
-	movem.l	a0,-(sp)                        	| [$0d75: push hl] -  Save HL * C014D,C0D70,C132C,C1375,J13E8,C1522,C1571,J174B,C1768,C1D1D,C1DCC,C27D7,C2854,C2860
-	lea	game_status_bits_E046,a0                	| [$0d76: ld   hl,game_status_bits_E046]
-	btst.b	#7,(a0)                         	| [$0d79: bit  7,(hl)]
-	movem.l	(sp)+,a0                        	| [$0d7b: pop  hl]
-	*bmi.b	0f                               	| [...]
-	*rts                                    	| [$0d7c: ret  p] [...]
+	                        	| [$0d75: push hl] -  Save HL * C014D,C0D70,C132C,C1375,J13E8,C1522,C1571,J174B,C1768,C1D1D,C1DCC,C27D7,C2854,C2860
+	                	| [$0d76: ld   hl,game_status_bits_E046]
+	tst.b	game_status_bits_E046                         	| [$0d79: bit  7,(hl)]
+	                        	| [$0d7b: pop  hl]
+	bmi.b	0f                               	| [...]
+	rts                                    	| [$0d7c: ret  p] [...]
 0:
 * stores d0 in E000-E007
 queue_sound_effect_0d7d:
