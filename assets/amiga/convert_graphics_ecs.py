@@ -197,7 +197,7 @@ add_sprite_block(0x3E,0x3F,"explosion",1,False)
 add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
 add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
 add_sprite_block(0x61,0x6F,"ground_explosion",3,True)
-add_sprite_block(0x4B,0x4D,"ship_bomb",1,False)
+add_sprite_block(0x4B,0x4D,"ship_bomb",1,False,mirror=True)
 add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},True)
 add_sprite_block(0x3D,0x3D,"mine",{3,0xA,0xB},False)
 add_sprite_block(0x39,0x39,"tank_shot",4,True)
@@ -524,6 +524,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                 cs["yoffset"] = yoffset
                 cs["hsize"] = hsize
 
+                csb[cidx] = dict()
                 # prior to dump the image to amiga bitplanes, don't forget to replace brown by blue
                 # as we forcefully removed it from the palette to make it fit to 16 colors, don't worry, the
                 # copper will put the proper color back again
@@ -536,7 +537,12 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
 
                     plane_list = generate_bitplanes(bitplanes)
 
-                    csb[cidx] = plane_list
+                    csb[cidx]= [plane_list,None]  # left, no right
+                    if cs["mirror"]:
+                        bitplanes = bitplanelib.palette_image2raw(ImageOps.mirror(img_to_raw),None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
+                            palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
+                        plane_list = generate_bitplanes(bitplanes)
+                        csb[cidx][1] = plane_list
                 csp[cidx] = orig_img   # store original png so if we want to group tiles it's not broken
 
         if dump_sprites:
@@ -559,7 +565,7 @@ for clut in jeep_cluts:
     y_offset,jeep_img = bitplanelib.autocrop_y(jeep_img,transparent)
     bitplanes = bitplanelib.palette_image2raw(bob_color_change(jeep_img),None,bob_global_palette,
                     palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
-    jeep_dict[clut] = generate_bitplanes(bitplanes)
+    jeep_dict[clut] = [generate_bitplanes(bitplanes),None]
 
     if dump_sprites:
         scaled = ImageOps.scale(jeep_img,2,0)
@@ -641,21 +647,19 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             f.write("0,0")
         f.write("\n")
 
+    # pointers to 8/16-group sprites for each pic
     for i in range(NB_POSSIBLE_SPRITES):
         sprite = sprites.get(i)
         name = sprite_names[i]
         if name:
             f.write(f"{name}_left:\n")
             for j in range(8):
-                f.write("\t.long\t")
-                f.write(f"{name}_{j}_left")
-                f.write("\n")
+                f.write(f"\t.long\t{name}_{j}_left\n")
             if sprite["mirror"]:
                 f.write(f"{name}_right:\n")
                 for j in range(8):
-                    f.write("\t.long\t")
-                    f.write(f"{name}_{j}_right")
-                    f.write("\n")
+                    f.write(f"\t.long\t{name}_{j}_right\n")
+
 
     f.write("bob_table:\n")
 
@@ -665,36 +669,42 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         f.write("\t.long\t")
         if sprite:
             if sprite == True or sprite["is_sprite"]:
-                f.write("-1")  # hardware sprite: ignore
+                f.write("-1,-1")  # hardware sprite: ignore
             else:
                 name = sprite["name"]
                 bob_names[i] = name
-                f.write(name)
+                f.write(f"{name}_left,")
+                if sprite["mirror"]:
+                    f.write(f"{name}_right")
+                else:
+                    f.write("0")
 
         else:
-            f.write("0")
+            f.write("0,0")
         f.write("\n")
 
     for i in range(NB_POSSIBLE_SPRITES):
         name = bob_names[i]
         if name:
             sprite = sprites.get(i)
-            f.write(f"{name}:\n")
-            csb = sprite["bitmap"]
-            vsize = sprite['vsize']//8 + 2
-            # useless comment as code is generated but helpful when you're coding the engine...
-            f.write(f"\t* h size, v size in bytes, y offset, pad)\n")
-            f.write(f"\t.word\t{sprite['hsize']},{vsize},{sprite['yoffset']},0\n")
+            for k,dir in enumerate(("left","right")):
+                csb = sprite["bitmap"]
+                if csb:
+                    vsize = sprite['vsize']//8 + 2
+                    f.write(f"{name}_{dir}:\n")
+                    # useless comment as code is generated but helpful when you're coding the engine...
+                    f.write(f"\t* h size, v size in bytes, y offset, pad)\n")
+                    f.write(f"\t.word\t{sprite['hsize']},{vsize},{sprite['yoffset']},0\n")
 
 
-            for j in range(16):
-                b = csb.get(j)
-                f.write("\t.long\t")
-                if b:
-                    f.write(f"{name}_{j}")
-                else:
-                    f.write("0")   # clut not active
-                f.write("\n")
+                for j in range(16):
+                    b = csb.get(j)
+                    f.write("\t.long\t")
+                    if b and b[k]:
+                        f.write(f"{name}_{dir}_{j}")
+                    else:
+                        f.write("0")   # clut not active
+                    f.write("\n")
 
     # blitter objects (bitplanes refs, can be in fastmem)
     for i in range(NB_POSSIBLE_SPRITES):
@@ -702,18 +712,21 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         if name:
             sprite = sprites.get(i)
             bitmap = sprite["bitmap"]
-            for j in range(16):
-                bm = bitmap.get(j)
-                if bm:
-                    sprite_label = f"{name}_{j}"
-                    f.write(f"{sprite_label}:\n")
-                    for plane_id in bm:
-                        f.write("\t.long\t")
-                        if plane_id is None:
-                            f.write("0")
-                        else:
-                            f.write(f"plane_{plane_id}")
-                        f.write("\n")
+
+            for k,dir in enumerate(("left","right")):
+                for j in range(16):
+                    bm = bitmap.get(j)
+                    if bm and bm[k]:
+
+                        sprite_label = f"{name}_{dir}_{j}"
+                        f.write(f"{sprite_label}:\n")
+                        for plane_id in bm[k]:
+                            f.write("\t.long\t")
+                            if plane_id is None:
+                                f.write("0")
+                            else:
+                                f.write(f"plane_{plane_id}")
+                            f.write("\n")
 
     f.write("\t.section\t.datachip\n")
     # hardware sprites

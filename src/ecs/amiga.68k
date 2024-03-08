@@ -1363,15 +1363,17 @@ update_bobs:
 	moveq	#0,d0
 
 	move.w	d2,d4
-	add.w	d4,d4
-	add.w	d4,d4
+	lsl.w	#3,d4		| left+right
+	btst.b	#6,(TARGET_SPRITE_ATTRIBUTES,a0)
+	beq.b	0f
+	addq	#4,d4		| right bob
+0:
 	move.l	(a4,d4.w),d4	| test pointer
 	jmi		2f			| legal but skipped
 	bne.b	11f
 	.ifndef	RELEASE
 	* not known/registered: we should log that!
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
-	and.b	#0xF,d3	| get attributes
 	move.w	#0xF00,0xDFF180
 	.endif
 	bra.b	2f
@@ -1389,7 +1391,8 @@ update_bobs:
 	.endif
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
-	and.b	#0xF,d3	| get attributes
+	* todo yflip
+	and.b	#0x0F,d3	| get attributes
 
 	* < D2: sprite code & flags
 	* < D3: sprite color (clut index)

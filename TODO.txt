@@ -1,6 +1,5 @@
 - champion panel missing tile cluts
 - implement flipy (commented blitz atm) hole making ufos
-- implement flipx for bobs (ATM only for sprites)
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
 - continue screen timer doesn't work properly: time goes to 0 immediately, cannot continue
 - queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
@@ -8,6 +7,7 @@
   missing ":" and quotes (yellow/black)
 - custom2 bit jump with button 2 only
 - add platform at startup even if mono-planar: merge all planes for those tiles
+- 2-player startup doesn't work
 - points awarded: 500 points wrong clut...
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - loop sfx + music issue (ptplayer)
