@@ -1,7 +1,12 @@
 - re-remove color strips on static screen!!!
-- missing ":" and quotes (yellow/black)
+- ground strip seems too low by 1 or 2 pixels or sprites are too high. Compare
+ amiga/arcade on jeep startup
+- sprite issue: multiplexing probably destroyed by constant reset_dynamic colors
+- missing ":" and quotes (yellow/black) and other chars from "insert coin" screen
 - demo section; lots of problems: sprite wheels/explosions too many sprites!
+
   because maybe too high???
+- sprite allocation fail: low/high in message
 - demo section continues even if killed until game over then continue!!!
 - champion panel missing tile cluts: test again!
 - implement flipy (commented blitz atm) hole making ufos

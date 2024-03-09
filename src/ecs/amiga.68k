@@ -299,19 +299,6 @@ _user:
 	move.l	a0,cop1lc(a5)
 
 	
-	move.l	4.W,A6
-	lea graphicsname,a1
-    moveq.l #0,d0
-    jsr _LVOOpenLibrary(a6)
-    move.l  d0,_gfxbase
-    move.l	d0,a6
-	move.l	38(a6),old_syscoplist
-	move.l	34(A6),old_actiview		| gb_ActiView
-
-	sub.l	a1,a1
-	jsr	_LVOLoadView(a6)
-	jsr	_LVOWaitTOF(a6)
-	jsr	_LVOWaitTOF(a6)
 
 	bsr		load_highscores
 
@@ -329,6 +316,7 @@ _user:
     * wait 2 seconds for floppy drive to switch off
     move.l  #100,d1
     jsr     _LVODelay(a6)
+	
 .no_floppy:
 
 .startup:
@@ -336,6 +324,21 @@ _user:
 * no multitask
     tst.l   _resload
     bne.b   .no_forbid
+	
+	move.l	4.W,A6
+	lea graphicsname,a1
+    moveq.l #0,d0
+    jsr _LVOOpenLibrary(a6)
+    move.l  d0,_gfxbase
+    move.l	d0,a6
+	move.l	38(a6),old_syscoplist
+	move.l	34(A6),old_actiview		| gb_ActiView
+
+	sub.l	a1,a1
+	jsr	_LVOLoadView(a6)
+	jsr	_LVOWaitTOF(a6)
+	jsr	_LVOWaitTOF(a6)
+	
     *move.l  _gfxbase(pc),a4
     *move.l StartList(a4),gfxbase_copperlist
 
@@ -350,6 +353,21 @@ _user:
 	move.l	#-1,184(A0)	| pr_WindowPtr: no more system requesters (insert volume, write protected...)
 
 .no_forbid:
+	* align bitplanes
+	lea		bg_screen_buffer_1,a0
+	bsr		align_8
+	move.l	a0,bg_screen_data_1
+	move.l	a0,bg_drawed_screen_ptr
+	move.l	a0,bg_displayed_screen_ptr
+	
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	lea		bg_screen_buffer_2,a0
+	bsr		align_8
+	move.l	a0,bg_screen_data_2
+	move.l	a0,bg_displayed_screen_ptr
+	.endif
+	
+
 	move.l	dip_switch_start_course(pc),d0
 	lsl.b	#3,d0
 	
@@ -410,6 +428,14 @@ lives_table:
 	.byte	3,2,1,1,0
 	.align	2
 
+* so memory is 8-aligned (not trusting .align directives)
+align_8:
+	add.w	#0x10,a0
+	move.l	a0,d0
+	and.b	#0xF8,d0
+	move.l	d0,a0
+	rts
+	
 * < D0: bcpl string (with leading size byte)
 * < A1: dest C string
 bcpl_arg_string_copy:
@@ -701,7 +727,10 @@ _vblank:
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
 	* also set SR accordingly
 	st.b	interrupt_mode
+0:
 	jbsr		mpatrol_irq
+	subq.b	#1,vb_ticks_count		| simulate 60Hz
+	bne.b	0b
 	* re-set SR to 0x2300, game calls osd_enable_interrupts from here and if
 	* something is too slow, then game crashes/trashes display because of re-entering
 	* in IRQ! At least with this it just slows down
@@ -2415,8 +2444,8 @@ switch_screen_buffers:
 	lea		bg_drawed_screen_ptr(pc),a0
 	lea		bob_previous_positions_1(pc),a2
 	lea		bob_previous_positions_2(pc),a3
-	lea		bg_screen_data_1,a1
-	lea		bg_screen_data_2,a5
+	move.l	bg_screen_data_1,a1
+	move.l	bg_screen_data_2,a5
 	* also switch previous state memory
 	cmp.l	(a0),a1
 	bne.b	2f
@@ -2574,17 +2603,30 @@ platform_init:
     move.w #0x1C99,diwstrt(a5)
 	*         VVHH
     move.w #0x2A89,diwstop(a5)
-    move.w #0x0038,ddfstrt(a5)
-    move.w #0x00D0,ddfstop(a5)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 	* AGA-compatible ECS default values
     move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS
     move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
-    move.w #0,fmode(a5)			
-    move.w #0,bplcon1(a5)
 
+	move.l	chiprevbits,d0
+	and.l	#SETCHIPREV_AA,d0
+	beq.b	0f
+	* AGA, enable fast bitplane fetch
+	st		aa_amiga
+    move.w #3,fmode(a5)
+    move.w #0x0030,ddfstrt(a5)
+    move.w #0x00C8,ddfstop(a5)
+	move.w	#-8,d0
+	bra.b	1f
+0:
+	* OCS/ECS
+    move.w #0x0038,ddfstrt(a5)
+    move.w #0x00D0,ddfstop(a5)
+    move.w #0,fmode(a5)			
 	move.w	#0,d0
+ 1:
+    move.w #0,bplcon1(a5)
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
 
@@ -3942,6 +3984,9 @@ return_address:
 	
 	
 _tag:
+		.long	WHDLTAG_CHIPREVBITS_GET
+chiprevbits:
+		.long	0
 		.long	WHDLTAG_CUSTOM1_GET
 cheat_flags:
 		.long	0
@@ -3964,7 +4009,9 @@ do_upper_part:
 	.byte	0
 background_cleared_flag:
 	.byte	0
-
+aa_amiga:
+	.byte	0
+	.align	2
 system_vbr:
 	.long	0
 	
@@ -4028,15 +4075,20 @@ delay_timer:
 	.word	0
 one_out_of_five:
 	.word	0
+bg_screen_data_1:
+	.long	0
+bg_screen_data_2:
+	.long	0
+	
 upper_sprite_buffers:
 	ds.l	8			| 8 pointers to 8 upper sprite end control words
 bg_drawed_screen_ptr:
-	.long	bg_screen_data_1
+	.long	0
 bg_displayed_screen_ptr:
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
-	.long	bg_screen_data_2
+	.long	0
 	.else
-	.long	bg_screen_data_1
+	.long	0
 	.endif
 
 
@@ -4254,13 +4306,15 @@ post_pal_copper_rows:
 	.align	8
 	
 		.section .bsschip
-bg_screen_data_1:
-	ds.b	BG_SCREEN_SIZE
-	ds.b	NB_BYTES_PER_ROW*12*3
+bg_screen_buffer_1:
+	.skip	BG_SCREEN_SIZE
+	.skip	NB_BYTES_PER_ROW*12*3
+	.skip	8
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
-bg_screen_data_2:
-	ds.b	BG_SCREEN_SIZE
-	ds.b	NB_BYTES_PER_ROW*12*3
+bg_screen_buffer_2:
+	.skip	BG_SCREEN_SIZE
+	.skip	NB_BYTES_PER_ROW*12*3
+	.skip	8
 	.endif
 	* draw the rows 24->31 in a buffer to be able
 	* to blit it with scroll effect afterwards
