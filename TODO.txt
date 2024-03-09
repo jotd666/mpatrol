@@ -1,9 +1,12 @@
-- champion panel missing tile cluts
+- re-remove color strips on static screen!!!
+- missing ":" and quotes (yellow/black)
+- demo section; lots of problems: sprite wheels/explosions too many sprites!
+  because maybe too high???
+- demo section continues even if killed until game over then continue!!!
+- champion panel missing tile cluts: test again!
 - implement flipy (commented blitz atm) hole making ufos
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
 - declare tiles & cluts manually (with playfield info) to save memory: almost ok
-  missing ":" and quotes (yellow/black)
-- press start missing colors?
 - custom2 bit jump with button 2 only
 - add platform at startup even if mono-planar: merge all planes for those tiles
 - 2-player startup doesn't work
@@ -15,7 +18,7 @@
   blue mountain do the rest)
 - toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
 - save highscore & best course times
-- credits never displayed (scrollable strip ?)
+
 
 - check flipy??
 

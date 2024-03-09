@@ -671,11 +671,11 @@ _vblank:
 	move.w	#0x10,(intreq,a5)
 	
 	* set now the green & blue background lines. We used to set them
-	* in the mountain blit routine but it seems too late in the frame.
-	* we have to store previous values and set them now.1-off doesn't make
-	* a difference apparently (specially because game is 25 fps not 50!)
-	tst.b	background_layer_control_E1C5
-	beq.b	0f
+	* in the mountain blit routine but it conflicts with double buffering
+	* we have to store previous values and set them now
+	
+	tst.b	background_layer_control_E1C5		| FUCK
+	**beq.b	0f
 	* mountains are active: set colors
 	bsr		set_mountain_dynamic_colors
 0:
@@ -830,7 +830,31 @@ is_moonbase_displayed:
 	movem.l	(a7)+,a1
 	rts
 	
+* brutally redraw everything
+
+refresh_tiles:
+	move.w	#0x3FF,d2
+	moveq	#0,d7
+	lea		bg_videoram,a0
+	lea		bg_colorram,a1
+0:
+	move.b	(a0)+,d0
+	move.b	(a1)+,d1
+	movem.l	a0/a1/d7/d2,-(a7)
+	jbsr		update_bg_tile
+	movem.l	(a7)+,a0/a1/d7/d2
+	addq.w	#1,d7
+	dbf		d2,0b
+	
+	rts
+	
 clear_background:
+	
+	tst.b	background_cleared_flag
+	beq.b	0f
+	* already cleared: don't redo it
+	rts
+0:
 	movem.l	d0-d7/A0-A6,-(a7)
 	
 	bsr		reset_background_dynamic_colors
@@ -853,15 +877,20 @@ clear_background:
 	move.l	bg_displayed_screen_ptr(pc),a1
 	jbsr		clear_planes_any_blitter_internal
 	clr.b	previous_blue_layer_y   | only done once!
+	st		background_cleared_flag
 0:
 	bsr		load_tiles_palette_in_playfield_copperlist
+	
+	WAIT_BLIT
+
+	bsr		refresh_tiles
+	
 	
 	movem.l	(A7)+,d0-d7/A0-A6
 	rts
 	
 * < A0: 
 update_background:
-	
 	move.l	a0,a2		| a2 points to shadow mem E1C0
 	* don't update scroll if title displayed and the values are the same as before
 	jbsr	is_title_displayed
@@ -904,7 +933,7 @@ update_background:
 	move.b	d2,(a1)+
 	move.b	(a2)+,d4	 | layer control
 	move.b	d4,(a1)
-	jeq		clear_background	| layer control = 0: clear
+	jeq		clear_background	| layer control = 0 + ground was moving: clear
 	
 	* irem hardware works differently for scroll
 	not.b	d0
@@ -919,11 +948,6 @@ update_background:
 
 	move.b	d2,previous_blue_layer_y
 	* Y just went 0: no more mountains or game playfield (only status text)
-	* set tiles palette for all screen
-	* well, we used to do that here, but it conflicts with the "insert coin"
-	* message because it's cleared while tiles are updating from non-interrupt
-	* so we "help" the game erase properly by adding a osd_clear_background call
-	* which is called in the proper context (not interrupts!)
 	rts
 0:
 	tst.b	previous_blue_layer_y
@@ -1775,6 +1799,23 @@ set_mountain_dynamic_colors:
 10:	
 	rts
 	
+clear_credits_remaining_bitmap:
+	movem.l	d0-a6,-(a7)
+	move.w	#Y_MAX-16,d1
+	move.w	#16,d4
+	move	#NB_PLAYFIELD_PLANES,d3
+	moveq	#10,d2			| width = 10
+	move.w	#22*8,d0
+	move.l	bg_drawed_screen_ptr(pc),a1
+	move.l	bg_drawed_screen_ptr(pc),a1
+	movem.l	d0-d4/A2-A6,-(a7)
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-d4/A2-A6
+	move.l	bg_displayed_screen_ptr(pc),a1
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-a6
+	rts
+	
 * blit the blue mountains + green layer
 * blue mountains is blit using blitter copy
 * green mountains is blit using cookie cut over blue mountains
@@ -1791,8 +1832,15 @@ set_mountain_dynamic_colors:
 	
 * it also changes black background to the relevant background (blue or green)
 blit_scrollable_layers:
-
-	
+	* background is going to be non-zero
+	tst.b		background_cleared_flag
+	beq.b	0f
+	clr.b		background_cleared_flag
+	* scrollable layer just enabled
+	* "CREDIT xx" string is still in the bottom right corner
+	* remove it
+	bsr		clear_credits_remaining_bitmap
+0:
 	.ifeq	NO_BACKGROUND_MOUNTAINS
 	sub.w	#PANEL_MAX_Y+8,d2
 	sub.w	#PANEL_MAX_Y+8,d3
@@ -2906,12 +2954,18 @@ update_bg_tile:
 	* always wait for blitter operation before writing to chip with CPU
 	WAIT_BLIT
 23:
-
-	.ifeq	FIX_GROUND_SCROLL
+	* do special stuff for tiles that go into scrollable strip
+	cmp.w	#0x100,d0
+	bcc.b	230f
+	cmp.w	#0x68,d0
+	jcc	update_scrollable_bottom
+	
+	* for 0 char we have to decide according to Y tile
+	tst.b	d0
+	bne.b	230f
 	cmp.w	#SCROLLABLE_TILE_Y_START,d3
 	bcc		update_scrollable_bottom
-	.endif
-	
+230:
 	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
 	move.l	bg_drawed_screen_ptr(pc),a1
@@ -3018,6 +3072,8 @@ update_bg_tile:
 	and.b	#0xF8,d0
 	cmp.b	#0x60,d0
 	jeq	erase_third_plane
+	tst.b	background_layer_control_E1C5
+	beq.b	111f	| no background: no cookie cut
 	tst.b	d6
 	bne.b	2f		| cookie cut of empty char => do nothing
 111:
@@ -3906,7 +3962,8 @@ dip_switches_2:
 		.byte	0
 do_upper_part:
 	.byte	0
-
+background_cleared_flag:
+	.byte	0
 
 system_vbr:
 	.long	0

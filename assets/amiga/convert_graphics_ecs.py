@@ -383,6 +383,7 @@ for i in range(0x40,0x5C):
     #used_cluts[i].add(2)
     used_cluts[i].add(0xA)
     used_cluts[i].add(0xD)
+
 # digits
 for i in range(0x30,0x3A):
     used_cluts[i].add(0)
@@ -391,6 +392,8 @@ for i in range(0x30,0x3A):
 for i in range(0x12,0x3F):
     used_cluts[i].add(8)
 for i in range(0x41,0x5B):
+    used_cluts[i].add(0xB)
+for i in range(0xE,0x1C):
     used_cluts[i].add(0xB)
 # ground
 for i in range(0x88,0x110):
