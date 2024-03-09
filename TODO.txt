@@ -1,9 +1,9 @@
 - champion panel missing tile cluts
 - implement flipy (commented blitz atm) hole making ufos
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
-- queue_sound_effect_if_game_playing_0d75: game status bits not set properly!
 - declare tiles & cluts manually (with playfield info) to save memory: almost ok
   missing ":" and quotes (yellow/black)
+- press start missing colors?
 - custom2 bit jump with button 2 only
 - add platform at startup even if mono-planar: merge all planes for those tiles
 - 2-player startup doesn't work
@@ -11,11 +11,11 @@
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - loop sfx + music issue (ptplayer)
 - start lives is wrong
-- green mountain not properly erased
-- blue mountain copper effect done too late? line flashing when jeep changes Y, ex after point R
-  when going down slope, or at start
+- green mountain not properly erased, we should erase at least lower part (let
+  blue mountain do the rest)
 - toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
 - save highscore & best course times
+- credits never displayed (scrollable strip ?)
 
 - check flipy??
 

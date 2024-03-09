@@ -670,6 +670,16 @@ _vblank:
 	move.w	#0x10,(intreq,a5)
 	move.w	#0x10,(intreq,a5)
 	
+	* set now the green & blue background lines. We used to set them
+	* in the mountain blit routine but it seems too late in the frame.
+	* we have to store previous values and set them now.1-off doesn't make
+	* a difference apparently (specially because game is 25 fps not 50!)
+	tst.b	background_layer_control_E1C5
+	beq.b	0f
+	* mountains are active: set colors
+	bsr		set_mountain_dynamic_colors
+0:
+
 	moveq	#ONE_TICK,d1
     move.w  vbl_counter(pc),d0
     addq.w  #1,d0
@@ -1711,6 +1721,60 @@ start_process_1_plane:
 	move.l	a4,bltbpt(a5)	|source graphic top left corner
 	rts
 
+* uses green_y_end blue_y_end
+set_mountain_dynamic_colors:
+	* systematically reset dynamic colors as heights can change
+	bsr		reset_background_dynamic_colors
+	
+	move.w	green_y_end,d6			| Y pos to change color 0 for green
+	beq.b	10f				| in case it's not set
+	
+	* set copper color 0 to green (color 4 of bobs palette)
+	* at the proper row
+	lea		color_line_copper,a0
+	* Y minus panel Y max times 16 (3 longwords per line in copperlist + wait)
+	lea		bobs_palette(pc),a1
+
+	* the line list is not contiguous, we need to check size and skip sprite chunk
+	bsr		shift_d6_copper_y
+	
+
+	move.w	#color,(A0,d6.w)
+	move.w	(8,a1),(2,a0,d6.w)
+	* set rock color (using same color as mountain dark blue)
+	move.w	rock_color_register,(4,a0,d6.w)
+	move.w	rock_color,(6,a0,d6.w)
+
+	* is tweaked to follow terrain_height_in_tiles_E514
+	move.w	#DYNAMIC_COPPER_ROWS-2+32,d6
+	moveq	#0,d0
+	move.b	terrain_height_in_tiles_E514,d0
+	lsl.w	#3,d0		| times 8
+	sub.w	d0,d6
+	bsr		shift_d6_copper_y
+	
+	* now change ground color to orange, trying to respect the ground Y
+	move.w	#color+16,(8,a0,d6.w)
+	move.w	#0xF95,(10,a0,d6.w)
+	
+	* now blue
+	move.w	blue_y_end,d7
+	
+	cmp.w	#DYNAMIC_COPPER_ROWS,d7
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d7
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d7
+9:
+
+	lsl.w	#4,d7
+	
+
+	move.w	#color,(A0,d7.w)
+	move.w	(6,a1),(2,a0,d7.w)
+10:	
+	rts
+	
 * blit the blue mountains + green layer
 * blue mountains is blit using blitter copy
 * green mountains is blit using cookie cut over blue mountains
@@ -1727,9 +1791,8 @@ start_process_1_plane:
 	
 * it also changes black background to the relevant background (blue or green)
 blit_scrollable_layers:
-	* systematically reset dynamic colors as heights can change
-	bsr		reset_background_dynamic_colors
 
+	
 	.ifeq	NO_BACKGROUND_MOUNTAINS
 	sub.w	#PANEL_MAX_Y+8,d2
 	sub.w	#PANEL_MAX_Y+8,d3
@@ -1748,7 +1811,8 @@ blit_scrollable_layers:
 	move.w	(a0)+,d4		| source height
 	move.w	(a0)+,d5		| number of bytes for the image (height * 66)
 	move.w	d4,d7
-	add.w	d2,d7			| Y position to set blue color as color 0
+	add.w	d2,d7			| D7=Y position to set blue color as color 0
+	
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
@@ -1770,6 +1834,7 @@ blit_scrollable_layers:
     or.l    d0,d3
     * always the same settings
 
+
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
     
@@ -1783,7 +1848,7 @@ blit_scrollable_layers:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
-
+	
 	* while it's blitting, let's erase the line above
 	bsr		erase_mountain_line
 	
@@ -1818,18 +1883,17 @@ blit_scrollable_layers:
 	******************
 	
 	movem.l	(a7),d0-d5/a1
-	lea		green_mountains,a0
-	*btst.b	#0,d4
-	*bne.b	0f
-	* probably 0xFC (there are invalid/impossible combinations)
-	*lea		green_city,a0
-0:
+	bsr		get_green_mountains_data
+	
 	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
 
 	move.w	(a0)+,d4		| source height
 	move.w	d4,d6
 	add.w	d3,d6			| Y pos to change color 0 for green
+	move.w	d6,green_y_end		| save green Y end
+	move.w	d7,blue_y_end		| save blue Y end
+
 	
 	move.w	(a0)+,d5		| number of bytes for the plane (height * 66)
 
@@ -1907,49 +1971,7 @@ blit_scrollable_layers:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
-	* set copper color 0 to green (color 4 of bobs palette)
-	* at the proper row
-	lea		color_line_copper,a0
-	* Y minus panel Y max times 16 (3 longwords per line in copperlist + wait)
-	lea		bobs_palette(pc),a1
 
-	* the line list is not contiguous, we need to check size and skip sprite chunk
-	bsr		shift_d6_copper_y
-	
-
-	move.w	#color,(A0,d6.w)
-	move.w	(8,a1),(2,a0,d6.w)
-	* set rock color (using same color as mountain dark blue)
-	move.w	rock_color_register,(4,a0,d6.w)
-	move.w	rock_color,(6,a0,d6.w)
-10:
-
-	* is tweaked to follow terrain_height_in_tiles_E514
-	move.w	#DYNAMIC_COPPER_ROWS-2+32,d6
-	moveq	#0,d0
-	move.b	terrain_height_in_tiles_E514,d0
-	lsl.w	#3,d0		| times 8
-	sub.w	d0,d6
-	bsr		shift_d6_copper_y
-	
-	* now change ground color to orange, trying to respect the ground Y
-	move.w	#color+16,(8,a0,d6.w)
-	move.w	#0xF95,(10,a0,d6.w)
-	
-
-	cmp.w	#DYNAMIC_COPPER_ROWS,d7
-	bcc.b	10f
-	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d7
-	bcs.b	9f
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d7
-9:
-
-	lsl.w	#4,d7
-	
-
-	move.w	#color,(A0,d7.w)
-	move.w	(6,a1),(2,a0,d7.w)
-10:	
 
 	movem.l	(a7)+,d0-d5/a1
 	.endif
@@ -2054,6 +2076,15 @@ blit_scrollable_layers:
 0:
 	rts
 
+get_green_mountains_data:
+	lea		green_mountains,a0
+	*btst.b	#0,d4
+	*bne.b	0f
+	* probably 0xFC (there are invalid/impossible combinations)
+	*lea		green_city,a0
+0:
+	rts
+	
 shift_d6_copper_y:
 	cmp.w	#DYNAMIC_COPPER_ROWS,d6
 	bcc.b	10f
@@ -3954,7 +3985,10 @@ bg_displayed_screen_ptr:
 
 	.include	"sound_entries.68k"
 
-	
+green_y_end:
+	.word	0
+blue_y_end:
+	.word	0
 _keyexit:
 	.byte	0x45	| ESC by default unless whdload overwrites it
 music_loops:
