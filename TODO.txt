@@ -1,21 +1,17 @@
-- re-remove color strips on static screen!!!
+- sprite issue: multiplexing probably destroyed by constant reset_dynamic colors:
+  rocks blink at start!!! reset_background_dynamic_colors/shift_d6_copper_y
+  lwoer sprite copper area wrongly computed/wrongly skipped
 - ground strip seems too low by 1 or 2 pixels or sprites are too high. Compare
  amiga/arcade on jeep startup
-- sprite issue: multiplexing probably destroyed by constant reset_dynamic colors
-- missing ":" and quotes (yellow/black) and other chars from "insert coin" screen
-- demo section; lots of problems: sprite wheels/explosions too many sprites!
-
-  because maybe too high???
+- continue timer doesn't decrease!
 - sprite allocation fail: low/high in message
 - demo section continues even if killed until game over then continue!!!
 - champion panel missing tile cluts: test again!
 - implement flipy (commented blitz atm) hole making ufos
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
-- declare tiles & cluts manually (with playfield info) to save memory: almost ok
 - custom2 bit jump with button 2 only
 - add platform at startup even if mono-planar: merge all planes for those tiles
 - 2-player startup doesn't work
-- points awarded: 500 points wrong clut/wrong transcription because black color in clut...
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - loop sfx + music issue (ptplayer)
 - start lives is wrong
@@ -24,24 +20,18 @@
 - toggle 25Hz if ECS, maybe 50Hz if AGA with fmode=3 and fastmem?
 - save highscore & best course times
 
+- write letter to 83DE: write into another buffer, then blit it at the proper location
+  when blitting ground strip
 
 - check flipy??
 
-- space plant flipx space plant in general looks hard to draw: snapshot the game at this point
 - city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again
-- explosion which creates hole: right part looks wrong	
-
-- insert coin screen: color band not removed
-
 
 - (c) IREM not properly displayed + small transparency effect on the tip of the "l" of "Moon Patrol"
 => redraw more tiles!!!
 
-
-low pri:  
-  
-- re-set tiles palette at some low Y so letters have proper palettes
-
+- points awarded: 500 points wrong clut/wrong transcription because black color
+  in sprite => set in background, OK as BOB
 
 converter:
 

@@ -2984,6 +2984,7 @@ l_0e55:
 	move.b	d0,d7                           	| [$0e72: ld   l,a]
 	jbsr	current_point_modulus_26_2981                            	| [$0e73: call $2981]
 	add.b	#0x41,d0                         	| [$0e76: add  a,$41]
+	* write current point letter into scroll strip (at $83DE)
 	jbsr	osd_w_videoram                         	| [$0e78: ld   (hl),a]
 	
 	move.w	d7,screen_address_E1DA                 	| [$0e79: ld   (screen_address_E1DA),hl]
