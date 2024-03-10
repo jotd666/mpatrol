@@ -744,7 +744,7 @@ _vblank:
 	* AGA/AA: fmode=3 allows much faster blitter operation
 	* allowing 50 fps without a hitch :)
 	tst.b	aa_amiga
-	beq.b	0f
+	bne.b	0f
 	eor.b	#1,toggle_blitter_draw
 	beq.b	23f
 0:
@@ -1873,6 +1873,7 @@ clear_credits_remaining_bitmap:
 	
 * it also changes black background to the relevant background (blue or green)
 blit_scrollable_layers:
+	
 	addq.b	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
 	addq.b	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
 	
@@ -2849,6 +2850,7 @@ osd_w_videoram_no_update:
 
 	sub.w	#SCREEN_ADDRESS,d7
 	bcs.b	0f
+	.ifndef	RELEASE
 	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
@@ -2857,7 +2859,7 @@ osd_w_videoram_no_update:
 	jbsr	osd_break
 	nop	
 	bra.b	0f
-	
+	.endif
 1:
 	lea		bg_videoram,a1
 	add.w	d7,a1
@@ -2881,6 +2883,7 @@ osd_w_videoram:
 
 	sub.w	#SCREEN_ADDRESS,d7
 	bcs.b	0f
+	.ifndef	RELEASE
 	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
@@ -2889,7 +2892,7 @@ osd_w_videoram:
 	jbsr	osd_break
 	nop	
 	bra.b	0f
-	
+	.endif
 1:
 	lea		bg_videoram,a1
 	add.w	d7,a1
@@ -2918,6 +2921,7 @@ osd_w_colorram:
 	movem.l	d0-d7/a0-a3,-(a7)
 	sub.w	#SCREEN_ADDRESS+0x400,d7
 	bcs.b	0f
+	.ifndef	RELEASE
 	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
@@ -2926,6 +2930,7 @@ osd_w_colorram:
 	jbsr	osd_break
 	nop	
 	bra.b	0f
+	.endif
 1:
 	lea		bg_colorram,a1
 	add.w	d7,a1
@@ -3435,6 +3440,7 @@ osd_r_videoram:
 	movem.l	a0/d7,-(a7)
 	sub.w	#SCREEN_ADDRESS,d7
 	bmi.b	0f
+	.ifndef	RELEASE
 	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
@@ -3445,6 +3451,7 @@ osd_r_videoram:
 	move.b	D1,d1
 	nop
 	bra.b	2f
+	.endif
 1:
 	lea		bg_videoram,a0
 	move.b	(a0,d7.w),d0
@@ -3816,6 +3823,7 @@ reset_dynamic_colors:
 
 * only reset first slot (the one for the mountains/city colors)
 reset_background_dynamic_colors:
+	
 	movem.l	a0/d2-d4,-(a7)
 	lea	color_line_copper,a0
 	moveq	#1,d4

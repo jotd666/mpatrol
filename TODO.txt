@@ -1,10 +1,8 @@
-- insert coin: clear screen not complete remaining 4 lines of ground strip
-- cycle exact sprite issue: multiplexing probably destroyed by constant reset_dynamic colors:
-  rocks blink at start!!! reset_background_dynamic_colors/shift_d6_copper_y
-  lwoer sprite copper area wrongly computed/wrongly skipped????
+- cycle exact: rock sprites sometimes blink
 - two player mode makes game completely bogus
-- 68000 test!
-- continue timer doesn't decrease!
+- 68000 test: crashes after first section in the middle of an instruction:
+  debug with chip slave
+- sometimes typewriter text effect freezes on a letter, then resumes...
 - demo section continues even if killed until game over then continue!!!
 - champion panel missing tile cluts
 - implement flipy (commented blitz atm) ex: hole making ufos
@@ -13,6 +11,7 @@
 - loop sfx + music issue (ptplayer)
 - start lives is wrong
 - save highscore & best course times
+- colons not erased
 
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip

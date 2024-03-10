@@ -285,6 +285,7 @@ demo_fake_inputs_pointer_E0F7:
 	ds.l	1
 champ_colors_e0f9:
 	ds.b	0x10-0x9
+	.align	2
 sprite_shadow_E100:
 	ds.b	0x72
 unknown_E172:
