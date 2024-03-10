@@ -31,12 +31,12 @@ sound_dict = {
 "EXPLOSION_SND"             :{"index":1,"channel":2,"sample_rate":lq_sample_rate,"priority":1},
 "BOMB_EXPLOSION_SND"        :{"index":2,"channel":2,"sample_rate":hq_sample_rate,"priority":1},  # copy of explosion ATM
 "PING_SND"                  :{"index":3,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"UFO_EXPLOSION_SND"         :{"index":4,"channel":2,"sample_rate":hq_sample_rate,"priority":1,},
+"UFO_EXPLOSION_SND"         :{"index":4,"channel":2,"sample_rate":hq_sample_rate,"priority":1},
 "SHOOT_SND"                 :{"index":5,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "COIN_SND"                  :{"index":6,"channel":3,"sample_rate":lq_sample_rate,"priority":1},
 "JEEP_JUMP_SND"             :{"index":7,"channel":2,"sample_rate":vhq_sample_rate,"priority":1},
-"SPACE_PLANT_SND"           :{"index":8,"channel":loop_channel,"sample_rate":hq_sample_rate,"priority":1,"loops":True},
-"UFO_ATTACK_SND"            :{"index":9,"channel":loop_channel,"sample_rate":lq_sample_rate,"priority":1,"loops":True},
+"SPACE_PLANT_SND"           :{"index":8,"channel":loop_channel,"sample_rate":hq_sample_rate,"priority":1,"loops":False},  # loop can't be done right now
+"UFO_ATTACK_SND"            :{"index":9,"channel":loop_channel,"sample_rate":lq_sample_rate,"priority":1,"loops":False},
 "JEEP_EXPLOSION_SND"        :{"index":15,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 
 

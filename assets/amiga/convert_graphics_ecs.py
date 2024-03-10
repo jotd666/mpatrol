@@ -23,7 +23,7 @@ def ensure_empty(sd):
     else:
         os.mkdir(sd)
 
-dump_tiles = False
+dump_tiles = True
 dump_sprites = True
 dump_palettes = True
 
@@ -138,6 +138,16 @@ def replace_color(img,color,replacement_color):
                 rgb = replacement_color
             rval.putpixel(c,rgb)
     return rval
+def replace_nonblack_by(img,replacement_color):
+    rval = Image.new("RGB",img.size)
+    for x in range(img.size[0]):
+        for y in range(img.size[1]):
+            c = (x,y)
+            rgb = img.getpixel(c)
+            if rgb != (0,0,0):
+                rgb = replacement_color
+            rval.putpixel(c,rgb)
+    return rval
 
 def bob_color_change(img_to_raw):
     img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
@@ -151,11 +161,11 @@ def get_sprite_clut(clut_index):
 # creating the sprite configuration in the code is more flexible than with a config file
 
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite,mirror=False,bob_backup=0):
+def add_sprite_block(start,end,prefix,cluts,is_sprite,mirror=False,flip=False,bob_backup=0):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end+1):
-        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"bob_backup":bob_backup,"mirror":mirror}
+        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"bob_backup":bob_backup,"mirror":mirror,"flip":flip}
 
 
 
@@ -181,7 +191,7 @@ BB_WHEEL = 3
 add_sprite_block(1,4,"jeep_part",jeep_cluts,False)
 # all ships are sprites with bob backups
 add_sprite_block(0x42,0x42,"saucer",7,True,bob_backup=BB_SHIP)
-add_sprite_block(0x43,0x44,"hole_making_ship",7,True,mirror=True,bob_backup=BB_SHIP)
+add_sprite_block(0x43,0x44,"hole_making_ship",7,True,mirror=True,flip=True,bob_backup=BB_SHIP)
 add_sprite_block(0x45,0x47,"ovoid_ship",7,True,mirror=True,bob_backup=BB_SHIP)
 
 add_sprite_block(0x38,0x38,"tank",7,True)
@@ -189,8 +199,8 @@ add_sprite_block(0x3A,0x3B,"missile",9,True)
 add_sprite_block(0x7B,0x7C,"missile",9,True)
 add_sprite_block(0x7D,0x7E,"points",{14,15},False)  # 300,500 800,1000
 
-add_sprite_block(0x31,0x34,"rock_ball",4,True,mirror=True,bob_backup=BB_ROLLING_ROCK)
-add_sprite_block(0x36,0x37,"rock_ball",4,True,mirror=True,bob_backup=BB_ROLLING_ROCK)
+add_sprite_block(0x31,0x34,"rock_ball",4,True,mirror=True,flip=True,bob_backup=BB_ROLLING_ROCK)
+add_sprite_block(0x36,0x37,"rock_ball",4,True,mirror=True,flip=True,bob_backup=BB_ROLLING_ROCK)
 add_sprite_block(0x40,0x41,"medium_explosion",1,False)
 add_sprite_block(0x2a,0x2c,"shot_explosion",1,False)
 add_sprite_block(0x2D,0x30,"rock",4,True)
@@ -407,10 +417,20 @@ for i in range(0x1B0,0x200):
     used_cluts[i].add(0)
 
 # moon base/platform
+for i in range(0x68,0x71):
+    used_cluts[i].add(0)
+for i in range(0x81,0x85):
+    used_cluts[i].add(0x13)
+for i in range(0x7C,0x81):
+    used_cluts[i].add(0x10)
 for i in range(0x71,0x77):
     used_cluts[i].add(0X11)
-for i in range(0x77,0x7B):
+for i in range(0x77,0x7C):
     used_cluts[i].add(0X12)
+for i in range(0x87,0x8D):
+    used_cluts[i].add(0X12)
+used_cluts[85].add(0xF)
+used_cluts[86].add(0x14)
 
 if True:
     for k,chardat in enumerate(block_dict["tile"]["data"]):
@@ -425,12 +445,15 @@ if True:
                     for j in range(8):
                         v = next(d)
                         img.putpixel((j,i),colors[v])
+                if 0x68 <= k <= 0x91:
+                    # moon base: make all tiles single plane with color 15 to enable all bitplanes
+                    img = replace_nonblack_by(img,tile_global_palette[15])
                 character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette,generate_mask=True))
+                if dump_tiles:
+                    scaled = ImageOps.scale(img,5,0)
+                    scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}_{cidx}.png"))
             else:
                 character_codes.append(None)
-            if dump_tiles:
-                scaled = ImageOps.scale(img,5,0)
-                scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}_{cidx}.png"))
         character_codes_list.append(character_codes)
 
 
@@ -448,6 +471,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         bob_backup = sprconf["bob_backup"]
         vattached = sprconf.get("vattached")
         mirror = sprconf.get("mirror")
+        flip = sprconf.get("flip")
     else:
         clut_range = range(0,16)
         name = f"unknown_{k:02x}"
@@ -482,7 +506,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         # only consider sprites/cluts which are pre-registered
         if sprconf:
             if k not in sprites:
-                sprites[k] = {"is_sprite":is_sprite,"bob_backup":False,"name":name,"hsize":hsize,"vsize":vsize,"mirror":mirror}
+                sprites[k] = {"is_sprite":is_sprite,"bob_backup":False,"name":name,"hsize":hsize,"vsize":vsize,"mirror":mirror,"flip":flip}
             cs = sprites[k]
             is_bob = not is_sprite or bob_backup
             if is_sprite:
@@ -498,10 +522,17 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     # the amiga engine will manage anyway
                     #
                     cs["bitmap"] = [bitplanelib.palette_image2sprite(img,None,spritepal,
-                            palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True),None]
+                            palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True),None,None,None]
                     if mirror:
                         cs["bitmap"][1] = bitplanelib.palette_image2sprite(ImageOps.mirror(img),None,spritepal,
                             palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
+                    if flip:
+                        cs["bitmap"][2] = bitplanelib.palette_image2sprite(ImageOps.flip(img),None,spritepal,
+                            palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
+                        if mirror:
+                            cs["bitmap"][3] = bitplanelib.palette_image2sprite(ImageOps.mirror(ImageOps.flip(img)),None,spritepal,
+                                palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
+
                     cs["png"] = img
             if is_bob:
                 orig_img = img
@@ -514,7 +545,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                     if k+0x80 not in sprites:
                         src = sprites[k]
                         cs = {"is_sprite":False,"bob_backup":False,"name":src["name"]+"_bob",
-                                "hsize":hsize,"vsize":src["vsize"],"yoffset":yoffset,"mirror":mirror}
+                                "hsize":hsize,"vsize":src["vsize"],"yoffset":yoffset,"mirror":mirror,"flip":flip}
                         sprites[k+0x80] = cs
 
                 # software sprites (bobs) need one copy of bitmaps per palette setup. There are 3 or 4 planes
@@ -635,18 +666,26 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         f.write("\t.long\t")
         if sprite:
             if sprite == True:
-                f.write("-1,-1")  # not displayed but legal
+                f.write("-1,-1,-1,-1")  # not displayed but legal
             else:
                 if sprite["is_sprite"]:
                     name = sprite['name']
                     sprite_names[i] = name
                     f.write(name+"_left,")
                     if sprite["mirror"]:
-                        f.write(name+"_right")
+                        f.write(name+"_right,")
                     else:
-                        f.write("0")
+                        f.write("0,")
+                    if sprite["flip"]:
+                        f.write(name+"_flip_left,")
+                        if sprite["mirror"]:
+                            f.write(name+"_flip_right")
+                        else:
+                            f.write("0")
+                    else:
+                        f.write("0,0")
                 else:
-                    f.write("0,0")
+                    f.write("0,0,0,0")
         else:
             f.write("0,0")
         f.write("\n")
@@ -663,6 +702,14 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                 f.write(f"{name}_right:\n")
                 for j in range(8):
                     f.write(f"\t.long\t{name}_{j}_right\n")
+            if sprite["flip"]:
+                f.write(f"{name}_flip_left:\n")
+                for j in range(8):
+                    f.write(f"\t.long\t{name}_{j}_flip_left\n")
+                if sprite["mirror"]:
+                    f.write(f"{name}_flip_right:\n")
+                    for j in range(8):
+                        f.write(f"\t.long\t{name}_{j}_flip_right\n")
 
 
     f.write("bob_table:\n")
@@ -738,7 +785,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         name = sprite_names[i]
         if name:
             sprite = sprites.get(i)
-            for k,bitmap in zip(("left","right"),sprite["bitmap"]):
+            for k,bitmap in zip(("left","right","flip_left","flip_right"),sprite["bitmap"]):
                 if bitmap:
                     for j in range(8):
                         # clut is valid for this sprite

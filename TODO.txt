@@ -1,13 +1,16 @@
-- cycle exact: rock sprites sometimes blink
 - two player mode makes game completely bogus
+- point E champion: sprite alloc error why? 8 sprites (2 space plants) should be ok
+  if problem, replace blue color from plant base and change it with copper like
+  done with ground
 - 68000 test: crashes after first section in the middle of an instruction:
   debug with chip slave
+- dying & resuming with different mountain height! should erase blue mountain
+  if previous y - y > 1 we should use blitter to clear zone
 - sometimes typewriter text effect freezes on a letter, then resumes...
 - demo section continues even if killed until game over then continue!!!
-- champion panel missing tile cluts
-- implement flipy (commented blitz atm) ex: hole making ufos
+- champion panel still missing tile cluts
 - custom2 bit jump with button 2 only
-- add platform at startup even if mono-planar: merge all planes for those tiles
+- continue screen: should accept "up" to start game too
 - loop sfx + music issue (ptplayer)
 - start lives is wrong
 - save highscore & best course times
@@ -15,6 +18,7 @@
 
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
+- cycle exact: rock sprites sometimes blink
 
 
 - city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again

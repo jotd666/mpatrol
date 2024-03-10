@@ -23,7 +23,7 @@ BB_SHIP = 1+1
 BB_ROLLING_ROCK = 2+1
 BB_ROCK = 3+1
 
-Y_MAX = 252
+Y_MAX = 260
 
 BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x8000
@@ -1165,7 +1165,7 @@ update_hardware_sprites:
 
 	moveq	#0,d3
 	move.w	d2,d4
-	lsl.w	#3,d4		| times 8
+	lsl.w	#4,d4		| times 16
 	tst.l	(a4,d4.w)	| test pointer
 	bmi.b	2f			| attached: skip
 	beq.b	2f			| not a sprite: skip
@@ -1208,7 +1208,6 @@ update_hardware_sprites:
 *	beq.b	23f
 *	blitz
 *23:
-	and.b	#0x7F,d3	| get attributes, remove flip Y which is not used
 
 * < D2: sprite code & flags
 * < D3: sprite color (clut index)
@@ -1267,12 +1266,16 @@ update_hardware_sprites:
 	move.b	(SPRITE_CODE,a2),d2
 		
 	move.w	d2,d4
-	lsl.w	#3,d4
+	lsl.w	#4,d4
 	move.b	(SPRITE_CLUT,a2),d3
 	btst	#6,d3		| flip x?
 	beq.b	25f
 	addq.w	#4,d4		| other sprite
 25:
+	btst	#7,d3		| flip y?
+	beq.b	251f
+	addq.w	#8,d4		| other sprite
+251:
 	move.l	(a4,d4.w),d4	| get pointer
 	.ifndef	RELEASE
 	bne.b	26f
@@ -1338,6 +1341,7 @@ update_hardware_sprites:
 	* what happens is: sprite DMA stumbles on non-zero control word and waits for the beam to
 	* reach the given X/Y pos. In the meantime, we have plenty of time to change sprite pointer
 	* so when sprite DMA resumes, the pointer points on the lower sprite data!
+	*
 	addq	#4,a5			| skip second sprite control word
 	lea		upper_sprite_buffers(pc),a1
 	move.l	(a1,d4.w),a1
@@ -1842,7 +1846,7 @@ set_mountain_dynamic_colors:
 	
 clear_credits_remaining_bitmap:
 	movem.l	d0-a6,-(a7)
-	move.w	#Y_MAX-16,d1
+	move.w	#Y_MAX-24,d1
 	move.w	#16,d4
 	move	#NB_PLAYFIELD_PLANES,d3
 	moveq	#10,d2			| width = 10
@@ -4228,7 +4232,7 @@ sprites_lower_part:
 	.word	 intreq,0x8010	| no bobs from now on (maybe needs adjustment), get more drawing time
 post_pal_copper_rows:
 	.set    beampos,0x0001
-	.rept	0x14
+	.rept	0x15
 	* room for 3 color registers to change dynamically each line
 	.word	0x1FE,0
 	.word	0x1FE,0
