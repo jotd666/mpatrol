@@ -261,7 +261,7 @@ mpatrol_irq_0038:
 01D4: 32 46 E0    ld   (unknown_E046),a
 01D7: C3 68 00    jp   $0068
 
-01DA: 3A 40 E0    ld   a,(per_credit_e040)    ; * C01C6,C01C9
+01DA: 3A 40 E0    ld   a,(lives_per_credit_e040)    ; * C01C6,C01C9
 01DD: 32 15 E5    ld   (nb_lives_E515),a
 01E0: 21 00 00    ld   hl,$0000
 01E3: 22 00 E5    ld   (cur_score_e500),hl
@@ -958,7 +958,7 @@ clear_area_05fa:
 06F0: 3C          inc  a
 06F1: C9          ret
 
-06F2: 21 40 E0    ld   hl,per_credit_e040     ; Holds lives-per-credit * C0010
+06F2: 21 40 E0    ld   hl,lives_per_credit_e040     ; Holds lives-per-credit * C0010
 06F5: 3A 03 D0    ld   a,($D003)                  ; Read the number of lives-per-credit
 06F8: 47          ld   b,a                        ; Hold original in B
 06F9: 3C          inc  a                          ; Value is now 1,2,3, 4
@@ -1689,7 +1689,7 @@ display_status_bar_0b8a:
 0C9B: 01 16 00    ld   bc,$0016
 0C9E: CD FA 05    call clear_area_05fa            ; * J0CBD
 0CA1: 32 0F E5    ld   (unknown_E50F),a
-0CA4: 3A 40 E0    ld   a,(per_credit_e040)
+0CA4: 3A 40 E0    ld   a,(lives_per_credit_e040)
 0CA7: 32 15 E5    ld   (nb_lives_E515),a
 0CAA: 21 62 21    ld   hl,$2162
 0CAD: 22 16 E5    ld   (unknown_E516),hl

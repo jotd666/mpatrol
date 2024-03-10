@@ -41,8 +41,10 @@ SPRITE_COPPERLIST_CHUNK_SIZE = 64+64	| sprite copper (8*2 pointers) + color spri
 SPRITE_Y_SPLIT_LIMIT = 96+PANEL_MAX_Y
 
 * with those, buggy wheels match perfectly the ground!
-SPRITE_Y_CORRECTION = -16
-SPRITE_X_CORRECTION = 16
+SPRITE_Y_CORRECTION = -14
+SPRITE_X_CORRECTION = 17
+* exact match at 
+BACKGROUND_X_CORRECTION = 4
 
 SCROLLABLE_TILE_Y_START = 24
 SCROLLABLE_STRIP_NB_COLS = 66
@@ -369,7 +371,7 @@ _user:
 	
 
 	move.l	dip_switch_start_course(pc),d0
-	lsl.b	#3,d0
+	move.b	d0,start_level_flag
 	
 	move.b	dip_switch_start_lives+3(pc),d1
 	bne.b	1f
@@ -729,8 +731,6 @@ _vblank:
 	st.b	interrupt_mode
 0:
 	jbsr		mpatrol_irq
-	subq.b	#1,vb_ticks_count		| simulate 60Hz
-	bne.b	0b
 	* re-set SR to 0x2300, game calls osd_enable_interrupts from here and if
 	* something is too slow, then game crashes/trashes display because of re-entering
 	* in IRQ! At least with this it just slows down
@@ -738,9 +738,16 @@ _vblank:
 	* we update the graphics now so it's not possible that mpatrol_irq interrupts
 	* itself in the short time of the computations
 	move.w	#0x2300,SR
+	subq.b	#1,vb_ticks_count		| simulate 60Hz
+	bne.b	0b
 	clr.b	interrupt_mode
+	* AGA/AA: fmode=3 allows much faster blitter operation
+	* allowing 50 fps without a hitch :)
+	tst.b	aa_amiga
+	beq.b	0f
 	eor.b	#1,toggle_blitter_draw
 	beq.b	23f
+0:
 	bsr		really_update_sprites
 	
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
@@ -1103,6 +1110,11 @@ really_update_hardware_sprites:
 
 	rts
 	
+is_game_playing:
+	btst.b	#7,game_status_bits_E046
+	rts
+	
+
 really_update_sprites:
 	jbsr		really_update_hardware_sprites
 	lea		sprite_registers,a0
@@ -1861,6 +1873,9 @@ clear_credits_remaining_bitmap:
 	
 * it also changes black background to the relevant background (blue or green)
 blit_scrollable_layers:
+	addq.b	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
+	addq.b	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
+	
 	* background is going to be non-zero
 	tst.b		background_cleared_flag
 	beq.b	0f
@@ -1961,6 +1976,23 @@ blit_scrollable_layers:
 	
 	movem.l	(a7),d0-d5/a1
 	bsr		get_green_mountains_data
+	
+	* clear the lower part of the mountain else some dark green remains
+	* and it's ugly. We'll optimize as most of the time blue mountain erases
+	* green mountain top, but at lowest level it can't erase all
+	
+	movem.l	d0-d4/A1-A6,-(a7)
+	move.w	d2,d1				| Y blue
+	add.w	blue_mountains,d1				| Y height
+	add.w	#PANEL_MAX_Y+8,d1
+	move	#NB_PLAYFIELD_PLANES-2,d3
+	move.w	#NB_BYTES_PER_ROW,d2			| width = all screen width
+	moveq	#0,d0			| X=0 (all screen)
+	move.l	bg_drawed_screen_ptr(pc),a1
+	move.w	#26,d4		| empiric
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-d4/A1-A6
+
 	
 	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
@@ -2329,12 +2361,6 @@ osd_sound_start:
 	bra.b	1b
 	* music
 4:
-	* don't play if game not in play
-	* could have been handled at generic mpatrol.68k level
-	* but it's way simpler here. I suppose than the real game
-	* just turns music volume off to get away with it
-	*tst.b	game_playing_8817
-	*beq.b	1b
 	
 	* don't play if already playing
 	* (music_tick value is not important for looped tunes
@@ -2602,7 +2628,7 @@ platform_init:
 	* restrict borders: we don't see bobs on the borders!
     move.w #0x1C99,diwstrt(a5)
 	*         VVHH
-    move.w #0x2A89,diwstop(a5)
+    move.w #0x2289,diwstop(a5)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 	* AGA-compatible ECS default values
@@ -3481,24 +3507,11 @@ osd_read_in_2:
 osd_read_in_1:
 	moveq	#-1,d0
 	movem.l	a0/d1,-(a7)
+
+
+
 	lea		keyboard_table(pc),a0
-	* misc control keys
-	tst.b	(6,a0)		| "6" key like in MAME
-	beq.b	0f
-	bclr	#1,d0
-0:	
-	tst.b	(5,a0)		| "5" key like in MAME
-	beq.b	0f
-	bclr	#0,d0
-0:
-	tst.b	(1,a0)		| "1" key like in MAME
-	beq.b	0f
-	bclr	#2,d0
-0:
-	tst.b	(2,a0)		| "2" key like in MAME
-	beq.b	0f
-	bclr	#10,d0
-0:	
+
 	tst.b	(0x4C,a0)		| "up" key
 	beq.b	0f
 	bclr	#3,d0
@@ -3555,24 +3568,55 @@ osd_read_in_1:
 	movem.l	(a7)+,a0/d1
 	rts
 	
-	
+BIT_INSERT_COIN = 3
+BIT_START_1P = 0
+BIT_START_2P = 1
+
 osd_read_in_0:
 	moveq	#-1,d0
+		
 	movem.l	a0/d1,-(a7)
+
+	bsr		is_game_playing
+	bne.b	2f
+	* if game not playing, consider "fire" as insert coin
+	move.l	_joypad_state(pc),d1
+	* save prev state as game loops within vblank
+	* pushing fire would either lockup the game
+	* or insert a lot of credits simulatenously
+
+	* game not in play, accept start 1P game with "up"
+	btst	#JPB_BTN_UP,d1
+	beq.b	0f
+	bclr	#BIT_START_1P,d0
+0:
+	* game not in play, accept start 2P game with "down"
+	* temp: disabled ATM, 2P mode is buggy!
+	btst	#JPB_BTN_DOWN,d1
+*	beq.b	0f
+*	bclr	#BIT_START_2P,d0
+*0:
+	btst	#JPB_BTN_RED,d1
+	beq.b	1f
+	* game not in play, accept insert coin with fire
+	bclr	#BIT_INSERT_COIN,d0
+1:
+2:
+
 	lea		keyboard_table(pc),a0
 	* misc control keys
 	tst.b	(5,a0)		| "5" key like in MAME
 	beq.b	0f
-	bclr	#3,d0		| insert coin
+	bclr	#BIT_INSERT_COIN,d0		| insert coin
 0:
 	tst.b	(1,a0)		| "1" key like in MAME
 	beq.b	0f
-	bclr	#0,d0
+	bclr	#BIT_START_1P,d0
 0:
-	tst.b	(2,a0)		| "2" key like in MAME
-	beq.b	0f
-	bclr	#1,d0
-0:	
+*	tst.b	(2,a0)		| "2" key like in MAME
+*	beq.b	0f
+*	bclr	#BIT_START_2P,d0
+*0:	
 	movem.l	(a7)+,a0/d1
 
 	rts
@@ -3593,112 +3637,6 @@ osd_read_dsw_2:
 
 	rts
 	
-* reads most inputs in one call
-* bits 0-1    coins
-* bit 2: start game 1 player
-* bit 10: (added) start game 2 players
-
-osd_read_inputs:
-	moveq	#-1,d0
-	movem.l	a0/d1,-(a7)
-	lea		keyboard_table(pc),a0
-	* misc control keys
-	tst.b	(6,a0)		| "6" key like in MAME
-	beq.b	0f
-	bclr	#1,d0
-0:	
-	tst.b	(5,a0)		| "5" key like in MAME
-	beq.b	0f
-	bclr	#0,d0
-0:
-	tst.b	(1,a0)		| "1" key like in MAME
-	beq.b	0f
-	bclr	#2,d0
-0:
-	tst.b	(2,a0)		| "2" key like in MAME
-	beq.b	0f
-	bclr	#10,d0
-0:	
-	tst.b	(0x4F,a0)		| "<-" key
-	beq.b	0f
-	bclr	#3,d0
-0:
-	tst.b	(0x4E,a0)		| "->" key
-	beq.b	0f
-	bclr	#4,d0
-0:
-	tst.b	(0x4C,a0)		| "up" key
-	beq.b	0f
-	bclr	#5,d0
-0:
-	tst.b	(0x4D,a0)		| "down" key
-	beq.b	0f
-	bclr	#6,d0
-0:
-	tst.b	(0x63,a0)		| "ctrl" key
-	beq.b	0f
-	bclr	#7,d0
-0:
-	* directions + fire
-	move.l	_joypad_state(pc),d1
-	btst	#JPB_BTN_UP,d1
-	beq.b	0f
-	bclr	#5,d0
-0:
-	btst	#JPB_BTN_DOWN,d1
-	beq.b	0f
-	bclr	#6,d0
-0:
-	btst	#JPB_BTN_LEFT,d1
-	beq.b	0f
-	bclr	#3,d0
-0:
-	btst	#JPB_BTN_RIGHT,d1
-	beq.b	0f
-	bclr	#4,d0
-0:
-	btst	#JPB_BTN_RED,d1
-	beq.b	0f
-	bclr	#7,d0
-0:
-	* test all those flags to see if normal controls
-	* could be used to insert coins/start game
-*	tst.b	gameplay_allowed_6054
-*	beq.b	1f			| demo mode: enable
-*	tst.b	check_scenery_disabled_61ED		| intro: enable
-*	bne.b	1f
-*	tst.b	game_locked_6053		| start screen: enable
-*	beq.b	3f
-*1:
-	move.l	d2,-(a7)
-	move.l	_previous_joypad_state(pc),d2
-	* save prev state as game loops within vblank
-	* pushing fire would either lockup the game
-	* or insert a lot of credits simulatenously
-	move.l	d1,_previous_joypad_state
-	
-	* game not in play, accept start 1P game with "up"
-	btst	#JPB_BTN_UP,d1
-	beq.b	0f
-	bclr	#2,d0
-0:
-	* game not in play, accept start 2P game with "down"
-	btst	#JPB_BTN_DOWN,d1
-	beq.b	0f
-	bclr	#10,d0
-0:
-	btst	#JPB_BTN_RED,d1
-	beq.b	0f
-	btst	#JPB_BTN_RED,d2
-	bne.b	0f
-	* game not in play, accept insert coin with fire
-	bclr	#0,d0
-0:
-	move.l	(a7)+,d2
-3:
-
-	movem.l	(a7)+,a0/d1
-	rts
 	
 
 
@@ -3897,12 +3835,8 @@ reset_background_dynamic_colors:
 
 toggle_pause:
 	* pause only within game
-*	tst.b	gameplay_allowed_6054
-*	beq.b	0f
-*	tst.b	check_scenery_disabled_61ED
-*	bne.b	0f
-*	tst.b	game_locked_6053
-*	bne.b	0f
+	jbsr		is_game_playing
+	beq.b	0f
 	eor.b   #1,pause_flag
 0:
 	rts
@@ -4294,9 +4228,9 @@ post_pal_copper_rows:
 	.set    beampos,beampos+0x100
 	.word	beampos,0xFFFE
 	.endr
+	.word	color,0
 	
     *.word  0x1401,0xFFFE		| wait more lines to set to black (big holes!)
-	.word	color,0
 	
     *.word   0x1C01,0xFFFE
 	

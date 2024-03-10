@@ -12,6 +12,7 @@
 	.global stack_top_E800
 	.global	section_completed_flag
 	.global	course_completed_flag
+	.global start_level_flag
 	.ifdef	__amiga__
 	
 	.ascii	"RAM_STRT"
@@ -62,6 +63,8 @@ start_level:
 section_completed_flag:
 	.byte	0
 course_completed_flag:
+	.byte	0
+start_level_flag:
 	.byte	0
 highscores_need_saving:
 	.byte	0

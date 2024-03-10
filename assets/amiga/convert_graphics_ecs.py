@@ -380,7 +380,7 @@ for i in range(0,22):
     used_cluts[0].add(i)
 
 # letters, champion level
-for i in range(0x40,0x60):
+for i in range(0x30,0x60):
     used_cluts[i].add(0x11)
     used_cluts[i].add(0)
     #used_cluts[i].add(2)
@@ -394,10 +394,8 @@ for i in range(0x30,0x3A):
 # champion
 for i in range(0x12,0x3F):
     used_cluts[i].add(8)
-for i in range(0x41,0x5B):
-    used_cluts[i].add(0xB)
 for i in range(0xE,0x1C):
-    used_cluts[i].add(0xB)
+    used_cluts[i].add(0xD)
 # ground
 for i in range(0x88,0x110):
     used_cluts[i].add(0x4)

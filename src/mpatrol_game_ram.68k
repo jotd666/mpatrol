@@ -7,7 +7,7 @@
 	.global x_scroll_horizon_e03d
 	.global	unknown_E03E
 	.global	unknown_E03F
-	.global	per_credit_e040
+	.global	lives_per_credit_e040
 	.global	free_play_E041
 	.global	slot_modeB_e042
 	.global	cocktail_mode_E043
@@ -25,7 +25,7 @@
 	.global	isr_count4_e051
 	.global	unknown_E052
 	.global	coin_start_e053
-	.global	unknown_16bit_E054
+	.global	continue_timer_E054
 	.global	unknown_E057
 	.global	unknown_E05B
 	.global	unknown_E05F
@@ -143,7 +143,7 @@
 	.global	terrain_height_in_tiles_E514
 	.global	nb_lives_E515
 	.global	track_events_data_pointer_E516
-	.global	unknown_E518
+	.global	other_player_data_E518
 	.global	unknown_E523
 	.global	unknown_pointer_E52E
 	.global	unknown_E700
@@ -181,7 +181,7 @@ unknown_E03E:
 	ds.b	1
 unknown_E03F:
 	ds.b	1
-per_credit_e040:
+lives_per_credit_e040:
 	ds.b	1
 free_play_E041:
 	ds.b	1
@@ -221,7 +221,7 @@ unknown_E052:
 	ds.b	1
 coin_start_e053:
 	ds.b	1
-unknown_16bit_E054:
+continue_timer_E054:
 	ds.b	3
 unknown_E057:
 	ds.b	4
@@ -428,6 +428,9 @@ unknown_E400:
 	ds.b	240
 unknown_E4F0:
 	ds.b	16
+	
+	* leave that memory contiguous!!
+
 player_score_E500:
 	ds.b	1
 cur_score1_e501:
@@ -467,13 +470,18 @@ nb_lives_E515:
 	.align	2
 track_events_data_pointer_E516:
 	ds.l	1
-unknown_E518:
+	* end
+	
+	* leave that memory contiguous!!
+other_player_data_E518:
 	ds.b	11
 unknown_E523:
 	ds.b	11
 	.align	2
 unknown_pointer_E52E:
 	ds.l	1
+	* end
+	
 	ds.b	462
 unknown_E600:
 	ds.b	0x100

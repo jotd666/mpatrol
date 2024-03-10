@@ -405,7 +405,7 @@ l_0093:
 	jbsr	osd_read_in_0                       	| [$0096: ld   a,($D000)] -  Coins and start
 	not.b	d0                               	| [$0099: cpl] -  Active high
 	move.b	d0,coin_start_e053                 	| [$009a: ld   (coin_start_e053),a] -  Hold for whoever wants it
-	* player 1 start
+	* player 2 start
 	btst.b	#1,d0                           	| [$009d: bit  1,a] -  Start-2 pressed?
 	jeq	l_00b6                             	| [$009f: jr   z,$00B6] -  No ... move on
 	jbsr	osd_read_dsw_2                       	| [$00a1: ld   a,($D004)] -  DSW2
@@ -425,7 +425,7 @@ l_00b6:
 	jne	l_00c3                             	| [$00bb: jr   nz,$00C3] -  Not flipped ... move on
 	lea	unknown_E0F3,a0                	| [$00bd: ld   hl,unknown_E0F3] -  Bump ...
 	addq.b	#1,(a0)                         	| [$00c0: inc  (hl)] -  ... ?? mysterious counter
-	*btst.b	#0,(a0)                         	| [$00c1: bit  0,(hl)] -  ?? Old code left behind? The flags are never used
+	                         	| [$00c1: bit  0,(hl)] -  ?? Old code left behind? The flags are never used
 l_00c3:
 
 	move.l	a3,-(sp)                        	| [$00c3: push iy] -  Preserve these ... * J00BB,J05B7
@@ -527,13 +527,13 @@ l_0184:
 	* write continue prompt (with typo, that I have fixed in ROM)
 	lea	game_rom+0x2A2A,a0                      	| [$018a: ld   hl,$2A2A] -  "TO COUNTINUE GAME" (sic) script
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$018d: call $0300] -  Print it
-	move.b	#0x11,d0                        	| [$0190: ld   a,$11]
+	move.b	#0x11,d0                        	| [$0190: ld   a,$11]  number of seconds of timer
 l_0192:
 	tst.b	d0                               	| [$0192: and  a] -  * J01AE
 	jeq	l_01d2                             	| [$0193: jr   z,$01D2]
-	moveq	#0,d7
+	moveq	#1,d7
 	sbcd	d7,d0                           	| [$0195: dec  a + daa]
-	move.b	d0,unknown_16bit_E054                 	| [$0197: ld   (unknown_16bit_E054),a]
+	move.b	d0,continue_timer_E054                 	| [$0197: ld   (continue_timer_E054),a]
 	lea	0x8233,a1                      	| [$019a: ld   de,$8233]
 	move.b	#0x02,d2                        	| [$019d: ld   c,$02]
 	jbsr	set_character_at_address_03ae                            	| [$019f: call $03AE]
@@ -541,7 +541,7 @@ l_0192:
 	move.b	d0,sync_flag_E050                 	| [$01a4: ld   (sync_flag_E050),a]
 l_01a7:
 	                               	| [$01aa: and  a]
-	move.b	unknown_16bit_E054,d0                 	| [$01ab: ld   a,(unknown_16bit_E054)]
+	move.b	continue_timer_E054,d0                 	| [$01ab: ld   a,(continue_timer_E054)]
 	tst.b	sync_flag_E050                 	| [$01a7: ld   a,(sync_flag_E050)] -  * J01BF,J01C4
 	jeq	l_0192                             	| [$01ae: jr   z,$0192]
 	move.b	credits_e048,d0              	| [$01b0: ld   a,(credits_e048)]
@@ -566,7 +566,7 @@ l_01d2:
 	jra	startup_cont_0068                             	| [$01d7: jp   $0068]
 
 l_01da:
-	move.b	per_credit_e040,d0                 	| [$01da: ld   a,(per_credit_e040)] -  * C01C6,C01C9
+	move.b	lives_per_credit_e040,d0                 	| [$01da: ld   a,(lives_per_credit_e040)] -  * C01C6,C01C9
 	move.b	d0,nb_lives_E515                	| [$01dd: ld   (nb_lives_E515),a]
 	                      	| [$01e0: ld   hl,$0000] 0
 	clr.w	player_score_E500                 	| [$01e3: ld   (player_score_E500),hl]
@@ -1262,24 +1262,26 @@ l_0533:
 	lea	game_rom+0x2A97,a0                      	| [$0545: ld   hl,$2A97] -  "1 OR 2 PLAYERS" script
 l_0548:
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0548: call $0300] -  Print it * J0543
+	* which start button was pressed
 	move.b	coin_start_e053,d0                 	| [$054b: ld   a,(coin_start_e053)]
 	and.b	#0x03,d0                         	| [$054e: and  $03]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$0550: ret  z] [...]
 0:
-	ror.b	#1,d0                           	| [$0551: rra]
+	move.b	#0x80,d1                        	| [$0555: ld   b,$80]
+	roxr.b	#1,d0                           	| [$0551: rra]
 	jcs	l_055f                             	| [$0557: jr   c,$055F]
 	move.b	credits_e048,d0              	| [$0552: ld   a,(credits_e048)]
-	move.b	#0x80,d1                        	| [$0555: ld   b,$80]
+	* 1-player game
 	moveq	#1,d7
 	sbcd	d7,d0                        	| [$0559: sub  $01 + daa]
 	bne.b	0f                               	| [...]
 	rts                                    	| [$055c: ret  z] [...]
 0:
+	* 2-player game
 	move.b	#0x90,d1                        	| [$055d: ld   b,$90]
 l_055f:
 	move.b	credits_e048,d0              	| [$0552: ld   a,(credits_e048)]
-	move.b	#0x80,d1                        	| [$0555: ld   b,$80]
 	moveq	#1,d7
 	sbcd	d7,d0                        	| [$055f: sub  $01 + daa] -  * J0557
     jbsr  osd_disable_interrupts  | [di]
@@ -1424,8 +1426,8 @@ swap_players_0603:
 	eor.b	#0x08,d0                         	| [$0607: xor  $08] -  Change ...
 	move.b	d0,(a0)                         	| [$0609: ld   (hl),a] -  ... players
 	lea	player_score_E500,a0                	| [$060a: ld   hl,player_score_E500] -  Pointer to current player
-	lea	unknown_E518,a1                	| [$060d: ld   de,unknown_E518] -  Pointer to "other" player
-	move.b	#0x18,d1                        	| [$0610: ld   b,$18] -  24 bytes to swap
+	lea	other_player_data_E518,a1                	| [$060d: ld   de,other_player_data_E518] -  Pointer to "other" player
+	move.b	#0x18+2,d1                        	| [$0610: ld   b,$18] -  24 bytes to swap + 2 there's a 32 bit pointer
 l_0612:
 	move.b	(a1),d0                         	| [$0612: ld   a,(de)] -  From other player * J0619
 	move.b	d0,d2                           	| [$0613: ld   c,a] -  Now in C
@@ -1599,7 +1601,7 @@ write_to_screen_and_inc_x_and_char_06ec:
 	rts                                    	| [$06f1: ret]
 
 read_settings_06f2:
-	lea	per_credit_e040,a0                	| [$06f2: ld   hl,per_credit_e040] -  Holds lives-per-credit * C0010
+	lea	lives_per_credit_e040,a0                	| [$06f2: ld   hl,lives_per_credit_e040] -  Holds lives-per-credit * C0010
 	jbsr	osd_read_dsw_1                       	| [$06f5: ld   a,($D003)] -  Read the number of lives-per-credit
 	move.b	d0,d1                           	| [$06f8: ld   b,a] -  Hold original in B
 	addq.b	#1,d0                           	| [$06f9: inc  a] -  Value is now 1,2,3, 4
@@ -1669,7 +1671,7 @@ l_0745:
 	* "INSERT COIN" text
 	lea	game_rom+0x2C57,a0                      	| [$0751: ld   hl,$2C57] -  "INSERT COIN" script
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$0754: call $034E]
-	lea	unknown_16bit_E054,a1                	| [$0757: ld   de,unknown_16bit_E054]
+	lea	continue_timer_E054,a1                	| [$0757: ld   de,continue_timer_E054]
 	move.w	#0x20,d1                        	| [$075a: ld   bc,$0020] 32
 	move.b	slot_mode_e044,d0                 	| [$075d: ld   a,(slot_mode_e044)]
 	                               	| [$0760: and  a]
@@ -1695,7 +1697,7 @@ l_0745:
 l_0787:
 	move.b	d0,(a0)                         	| [$0787: ld   (hl),a] -  * J077F
 l_0788:
-	lea	unknown_16bit_E054,a0                	| [$0788: ld   hl,unknown_16bit_E054] -  * J079D
+	lea	continue_timer_E054,a0                	| [$0788: ld   hl,continue_timer_E054] -  * J079D
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$078b: call $034E]
 l_078e:
 	move.b	cnt_till_cred_e047,d0                 	| [$078e: ld   a,(cnt_till_cred_e047)] -  * J076C,J0792
@@ -1750,12 +1752,12 @@ l_07dd:
 	move.b	slot_modeB_e042,d0                 	| [$07e3: ld   a,(slot_modeB_e042)]
 	jra	l_07aa                             	| [$07e6: jr   $07AA]
 l_07e8:
-	lea	unknown_16bit_E054,a0                	| [$07e8: ld   hl,unknown_16bit_E054] -  * C0766,C07DD
+	lea	continue_timer_E054,a0                	| [$07e8: ld   hl,continue_timer_E054] -  * C0766,C07DD
 	jbsr	write_text_to_screen_at_xy_034e                            	| [$07eb: call $034E]
-	LOAD_LEW	unknown_16bit_E054,d5             	| [$07ee: ld   hl,(unknown_16bit_E054)]
+	LOAD_LEW	continue_timer_E054,d5             	| [$07ee: ld   hl,(continue_timer_E054)]
 	                      	| [$07f1: ld   de,$0040] 64
 	add.w	#0x40,d5                            	| [$07f4: add  hl,de]
-	STORE_LEW	d5,unknown_16bit_E054                 	| [$07f5: ld   (unknown_16bit_E054),hl]
+	STORE_LEW	d5,continue_timer_E054                 	| [$07f5: ld   (continue_timer_E054),hl]
 	lea	unknown_E057,a0                	| [$07f8: ld   hl,unknown_E057]
 	addq.b	#1,(a0)                         	| [$07fb: inc  (hl)]
 	rts                                    	| [$07fc: ret]
@@ -2593,12 +2595,19 @@ l_0c8e:
 	jbsr	l_0c95                            	| [$0c92: call $0C95]
 l_0c95:
 	jbsr	swap_players_0603                            	| [$0c95: call $0603] -  * C0C92
+	* reset player score, level ...
 	lea	player_score_E500,a0                	| [$0c98: ld   hl,player_score_E500]
 	move.w	#0x16,d1                        	| [$0c9b: ld   bc,$0016] 22
 l_0c9e:
 	jbsr	clear_area_05fa                   	| [$0c9e: call clear_area_05fa] -  * J0CBD
 	clr.b	moonbase_already_displayed_E50F   | [$0ca1: ld   (moonbase_already_displayed_E50F),a] reuse zeroed a value after clear_area_05fa, bad!!!!
-	move.b	per_credit_e040,d0                 	| [$0ca4: ld   a,(per_credit_e040)]
+	move.b	start_level_flag,d0
+	beq.b	0f
+	* start level not zero
+	move.b	#0x1A,cur_point_e50e
+	move.b	d0,current_level_E510
+0:
+	move.b	lives_per_credit_e040,d0                 	| [$0ca4: ld   a,(lives_per_credit_e040)]
 	move.b	d0,nb_lives_E515                	| [$0ca7: ld   (nb_lives_E515),a]
 	lea	game_rom+0x2162,a0                      	| [$0caa: ld   hl,$2162]
 	move.l	a0,track_events_data_pointer_E516                 	| [$0cad: ld   (track_events_data_pointer_E516),hl]
@@ -2854,7 +2863,7 @@ l_0db7:
 	add.w	d3,d7                            	| [$0dbb: add  hl,de]
 	jra	l_0db7                             	| [$0dbc: jr   $0DB7]
 l_0dbe:
-	STORE_LEW	d7,unknown_16bit_E054                 	| [$0dbe: ld   (unknown_16bit_E054),hl] -  * J0DB9,J0DD4,J0DDA
+	STORE_LEW	d7,continue_timer_E054                 	| [$0dbe: ld   (continue_timer_E054),hl] -  * J0DB9,J0DD4,J0DDA
 l_0dc1:
 	move.b	(a4)+,d0                         	| [$0dc1: ld   a,(bc)] -  * J0DCB
 												| [$0dc2: inc   bc]
@@ -2868,7 +2877,7 @@ l_0dc1:
 	add.w	d3,d7                            	| [$0dca: add  hl,de]
 	jra	l_0dc1                             	| [$0dcb: jr   $0DC1]
 l_0dcd:
-	move.b	unknown_16bit_E054,d0                 	| [$0dcd: ld   a,(unknown_16bit_E054)] -  * J0DC5
+	move.b	continue_timer_E054,d0                 	| [$0dcd: ld   a,(continue_timer_E054)] -  * J0DC5
 	addq.b	#1,d0                           	| [$0dd0: inc  a]
 	move.b	d0,d7                           	| [$0dd1: ld   l,a]
 	and.b	#0x1F,d0                         	| [$0dd2: and  $1F]

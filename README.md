@@ -7,6 +7,7 @@ Credits:
 - http://www.computerarcheology.com/Arcade/MoonPatrol/ help with reverse-engineering
   (merged their comments & variable names after having started my RE)
 - no9: amiga music
+- PascalDe73: icon
 
 Amiga version:
 
