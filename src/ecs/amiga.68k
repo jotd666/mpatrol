@@ -3588,9 +3588,13 @@ osd_read_in_0:
 		
 	movem.l	a0/d1,-(a7)
 
+	tst.b	in_continue_loop_flag
+	bne.b	0f
 	bsr		is_game_playing
 	bne.b	2f
-	* if game not playing, consider "fire" as insert coin
+0:
+	* if game not playing, or within "continue" loop
+	* consider "fire" as insert coin
 	move.l	_joypad_state(pc),d1
 	* save prev state as game loops within vblank
 	* pushing fire would either lockup the game
@@ -3604,9 +3608,9 @@ osd_read_in_0:
 	* game not in play, accept start 2P game with "down"
 	* temp: disabled ATM, 2P mode is buggy!
 	btst	#JPB_BTN_DOWN,d1
-*	beq.b	0f
-*	bclr	#BIT_START_2P,d0
-*0:
+	beq.b	0f
+	bclr	#BIT_START_2P,d0
+0:
 	btst	#JPB_BTN_RED,d1
 	beq.b	1f
 	* game not in play, accept insert coin with fire
@@ -3624,10 +3628,10 @@ osd_read_in_0:
 	beq.b	0f
 	bclr	#BIT_START_1P,d0
 0:
-*	tst.b	(2,a0)		| "2" key like in MAME
-*	beq.b	0f
-*	bclr	#BIT_START_2P,d0
-*0:	
+	tst.b	(2,a0)		| "2" key like in MAME
+	beq.b	0f
+	bclr	#BIT_START_2P,d0
+0:	
 	movem.l	(a7)+,a0/d1
 
 	rts

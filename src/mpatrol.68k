@@ -489,7 +489,7 @@ l_0118:
 	jeq	l_014b                             	| [$012e: jr   z,$014B]
 	jbsr	display_nb_lives_06d5                            	| [$0130: call $06D5]
 	lea	game_status_bits_E046,a0                	| [$0133: ld   hl,game_status_bits_E046]
-	btst.b	#4,(a0)                         	| [$0136: bit  4,(hl)]
+	btst.b	#4,(a0)                         	| [$0136: bit  4,(hl)]  player 2?
 	jeq	start_new_section_0bb7                             	| [$0138: jp   z,$0BB7]
 	jbsr	swap_players_0603                            	| [$013b: call $0603]
 	move.b	nb_lives_E515,d0                	| [$013e: ld   a,(nb_lives_E515)]
@@ -539,6 +539,7 @@ l_0192:
 	jbsr	set_character_at_address_03ae                            	| [$019f: call $03AE]
 	move.b	#0x40,d0                        	| [$01a2: ld   a,$40]
 	move.b	d0,sync_flag_E050                 	| [$01a4: ld   (sync_flag_E050),a]
+	st.b	in_continue_loop_flag
 l_01a7:
 	                               	| [$01aa: and  a]
 	move.b	continue_timer_E054,d0                 	| [$01ab: ld   a,(continue_timer_E054)]
@@ -552,8 +553,10 @@ l_01a7:
 	jbsr	print_creds_0527                            	| [$01bc: call $0527]
 	jra	l_01a7                             	| [$01bf: jr   $01A7]
 l_01c1:
+	* test if start button pressed
 	jbsr	l_0533                            	| [$01c1: call $0533] -  * J01B4
 	jeq	l_01a7                             	| [$01c4: jr   z,$01A7]
+	clr.b	in_continue_loop_flag
 	jbsr	l_01da                            	| [$01c6: call $01DA]
 	jbsr	l_01da                            	| [$01c9: call $01DA]
 	jbsr	l_0cbf                            	| [$01cc: call $0CBF]
@@ -971,9 +974,9 @@ l_03e5:
 	move.b	(a0)+,d2                         	| [$03e5: ld   c,(hl)] -  Load color ... * J03D1
 	                           	| [$03e6: inc  hl] -  ... from script
 
-* > d2: ??
+* d2: in/out: ink color, changed in champion mode depending on the value
 trans_color_03e7:
-	move.b	champ_colors_e0f9,d0                 	| [$03e7: ld   a,(champ_colors_e0f9)] -  Get champion-color flag * C0678,C06A9,C0CD7,C2135,C2993
+	tst.b	champ_colors_e0f9                 	| [$03e7: ld   a,(champ_colors_e0f9)] -  Get champion-color flag * C0678,C06A9,C0CD7,C2135,C2993
 	                               	| [$03ea: and  a] -  If 0 ...
 	bne.b	0f                               	| [...]
 	rts                                    	| [$03eb: ret  z] [...] -  ... skip color translation
@@ -1109,13 +1112,14 @@ get_inputs_047a:
 	rol.b	#1,d0                            	| [$047d: rlca] -  ??Are we in demo mode?
 	jcc	get_current_input_04db                             	| [$047e: jr   nc,$04DB] -  ??Yes ... go get demo inputs
 	move.w	#0xD001,a1                      	| [$0480: ld   de,$D001] fake signpost address -  Player 1 inputs
-	btst.b	#4,d0                           	| [$0483: bit  4,a]
-	jeq	l_048e                             	| [$0485: jr   z,$048E]
-	move.b	cocktail_mode_E043,d0                 	| [$0487: ld   a,(cocktail_mode_E043)] -  Cabinet type
-	subq.b	#1,d0                           	| [$048a: dec  a] -  Upright?
-	jeq	l_048e                             	| [$048b: jr   z,$048E] -  Yes ... use player 1
-	* other port to read inputs
-	addq.w	#1,a1                           	| [$048d: inc  de] -  Cocktail ... use player 2
+* skipped player 2 + cocktail
+*	btst.b	#4,d0                           	| [$0483: bit  4,a]
+*	jeq	l_048e                             	| [$0485: jr   z,$048E]
+*	move.b	cocktail_mode_E043,d0                 	| [$0487: ld   a,(cocktail_mode_E043)] -  Cabinet type
+*	subq.b	#1,d0                           	| [$048a: dec  a] -  Upright?
+*	jeq	l_048e                             	| [$048b: jr   z,$048E] -  Yes ... use player 1
+*	* other port to read inputs
+*	addq.w	#1,a1                           	| [$048d: inc  de] -  Cocktail ... use player 2
 l_048e:
 	lea	current_input_E04A,a0                	| [$048e: ld   hl,current_input_E04A] -  Get last ... * J0485,J048B,J04B3
 	move.b	(a0),d0                         	| [$0491: ld   a,(hl)] -  ... inputs
@@ -1128,11 +1132,11 @@ l_048e:
 	jbsr	osd_read_in_1
 	bra.b	1f
 0:
-	cmp.w	#0xD002,a1
-	bne.b	0f
-	jbsr	osd_read_in_2
-	bra.b	1f
-0:
+*	cmp.w	#0xD002,a1
+*	bne.b	0f
+*	jbsr	osd_read_in_2
+*	bra.b	1f
+*0:
 	move.b	(a1),d0                         	| [$0495: ld   a,(de)] -  Get inputs from D001 or D002
 1:
 	not.b	d0                               	| [$0496: cpl] -  Active high
@@ -1423,14 +1427,15 @@ clear_area_05fa:
 swap_players_0603:
 	lea	game_status_bits_E046,a0                	| [$0603: ld   hl,game_status_bits_E046] -  Game mode * C013B,C0145,C0169,C0181,J01E9,C0C95,C0CFA,C0D00
 	move.b	(a0),d0                         	| [$0606: ld   a,(hl)] -  Get game mode
+	* toggle current player
 	eor.b	#0x08,d0                         	| [$0607: xor  $08] -  Change ...
 	move.b	d0,(a0)                         	| [$0609: ld   (hl),a] -  ... players
 	lea	player_score_E500,a0                	| [$060a: ld   hl,player_score_E500] -  Pointer to current player
 	lea	other_player_data_E518,a1                	| [$060d: ld   de,other_player_data_E518] -  Pointer to "other" player
 	move.b	#0x18+2,d1                        	| [$0610: ld   b,$18] -  24 bytes to swap + 2 there's a 32 bit pointer
 l_0612:
-	move.b	(a1),d0                         	| [$0612: ld   a,(de)] -  From other player * J0619
-	move.b	d0,d2                           	| [$0613: ld   c,a] -  Now in C
+	move.b	(a1),d2                         	| [$0612: ld   a,(de)] -  From other player * J0619
+	                           	| [$0613: ld   c,a] -  Now in C
 	move.b	(a0),d0                         	| [$0614: ld   a,(hl)] -  From current player
 	move.b	d0,(a1)+                         	| [$0615: ld   (de),a] -  Swap current ...
 	move.b	d2,(a0)+                         	| [$0616: ld   (hl),c] -  ... and other player data
@@ -1473,18 +1478,18 @@ l_0637:
 	                           	| [$063c: inc  hl] -  Next in offset
 	dbf		d1,l_0637                             	| [$063d: djnz $0637] -  Do all digits, preserve X flag!
 	jbsr	check_ext_play_06af                            	| [$063f: call $06AF] -  Check and handle extended play
-	move.b	#0x03,d1                        	| [$0642: ld   b,$03] -  Three bytes (six digits)
+	move.w	#0x03-1,d1                        	| [$0642: ld   b,$03] -  Three bytes (six digits)
 	lea	player_score_E500,a1                	| [$0644: ld   de,player_score_E500] -  Current score
 	lea	high_score_e008,a0                	| [$0647: ld   hl,high_score_e008] -  High Score
-	tst.b	d0                               	| [$064a: and  a] -  Start with clear carry
+	CLEAR_XC_FLAGS                               	| [$064a: and  a] -  Start with clear carry
 l_064b:
-	move.b	(a1),d0                         	| [$064b: ld   a,(de)] -  Compare current ... * J064F
+	move.b	(a1)+,d0                         	| [$064b: ld   a,(de)] -  Compare current ... * J064F
 	move.b	(a0)+,d7
 	subx.b	d7,d0                         	| [$064c: sbc  a,(hl)] -  ... to high score
-	                           	| [$064d: inc  hl] -  Next in high
-	addq.w	#1,a1                           	| [$064e: inc  de] -  Next in current
-	subq.b	#1,d1                           	| [...]
-	jne	l_064b                             	| [$064f: djnz $064B] -  Compare all digits
+											| [$064d: inc  hl] -  Next in high
+											| [$064e: inc  de] -  Next in current
+	                           	| [...]
+	dbf	d1,l_064b                             	| [$064f: djnz $064B] -  Compare all digits
 	jcs	display_score_0668                             	| [$0651: jr   c,$0668] -  Current score is lower ... don't update high score
 	move.w	player_score_E500,high_score_e008             	| [$0653: ld   hl,(player_score_E500)] -  Copy ...
 	                 	| [$0656: ld   (high_score_e008),hl] -  ... current score ...
@@ -1639,7 +1644,7 @@ l_071f:
 	move.b	d0,d1                           	| [$0726: ld   b,a] -  Hold new value
 	and.b	#0x01,d0                         	| [$0727: and  $01] -  Cabinet mode
 	addq.w	#1,a0                           	| [$0729: inc  hl] -  Store cabinet mode ...
-	move.b	d0,(a0)                         	| [$072a: ld   (hl),a] -  ... to E043
+	move.b	d0,(a0)	                         	| [$072a: ld   (hl),a] -  ... to E043
 	move.b	d1,d0                           	| [$072b: ld   a,b] -  Original value
 	ror.b	#1,d0                           	| [$072c: rra] -  Skip the "cabinet" bit
 	and.b	#0x01,d0                         	| [$072d: and  $01] -  Slot mode
@@ -2663,7 +2668,8 @@ l_0cde:
 	jbsr	print_high_0685                            	| [$0cf0: call $0685]
 	move.b	game_status_bits_E046,d0                 	| [$0cf3: ld   a,(game_status_bits_E046)]
 	btst.b	#4,d0                           	| [$0cf6: bit  4,a]
-	jeq	l_0d09                             	| [$0cf8: jr   z,$0D09]
+	jeq	l_0d09                             	| [$0cf8: jr   z,$0D09] only one player
+	* 2 players: display player 2 score
 	jbsr	swap_players_0603                            	| [$0cfa: call $0603]
 	jbsr	display_score_0668                            	| [$0cfd: call $0668]
 	jbsr	swap_players_0603                            	| [$0d00: call $0603]
@@ -2671,8 +2677,8 @@ l_0cde:
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$0d06: call $0300]
 l_0d09:
 	jbsr	display_nb_lives_06d5                            	| [$0d09: call $06D5] -  * J0CF8
-	jbsr	l_212c                            	| [$0d0c: call $212C]
-	jbsr	l_298a                            	| [$0d0f: call $298A]
+	jbsr	display_time_212c                            	| [$0d0c: call $212C]
+	jbsr	display_position_298a                            	| [$0d0f: call $298A]
 l_0d12:
 	move.b	cur_point_e50e,d0                 	| [$0d12: ld   a,(cur_point_e50e)] -  * C0B85,J152B,C2866
 	move.b	#0x02,d2                        	| [$0d15: ld   c,$02]
@@ -4301,6 +4307,7 @@ init_vertical_shot_1649:
 	rts                                    	| [$165c: ret] -  Done
 handle_vertical_shot_165d:
 	move.b	jeep_params_E300,d0                 	| [$165d: ld   a,(jeep_params_E300)] -  Moon buggy command
+	move.b	#0,0x200
 	cmp.b	#STATE_FALL_IN_HOLE_06,d0                         	| [$1660: cp   $06] -  Is buggy crashing?
 	jcc	clear_vertical_shot_168f                             	| [$1662: jr   nc,$168F] -  Yes ... command 6 or greater ... remove shot from active duty
 	move.b	(obj_y,a2),d0                    	| [$1664: ld   a,(ix+$07)] -  Get shot Y coordinate
@@ -5963,7 +5970,7 @@ handle_time_210d:
 l_2127:
 	move.b	#0x37,d0                        	| [$2127: ld   a,$37] -  * J2114
 	move.b	d0,isr_count4_e051                 	| [$2129: ld   (isr_count4_e051),a]
-l_212c:
+display_time_212c:
 	lea	0x8090,a1                      	| [$212c: ld   de,$8090] -  * C0D0C
 	lea	0x8490,a3                      	| [$212f: ld   iy,$8490]
 	move.b	#0x02,d2                        	| [$2133: ld   c,$02]
@@ -6229,7 +6236,7 @@ current_point_modulus_26_2981:
 0:
 	sub.b	#0x1A,d0                         	| [$2987: sub  $1A]
 	rts                                    	| [$2989: ret]
-l_298a:
+display_position_298a:
 	LOAD_VIDEORAM_ADDRESS	0x80CC                      	| [$298a: ld   hl,$80CC] -  * C0D0F
 	move.w	#0x84CC,d3                      	| [$298d: ld   de,$84CC]
 	move.b	#0x10,d1                        	| [$2990: ld   bc,$1002] 4098
@@ -6287,28 +6294,31 @@ l_29cf:
 	sub.b	#0x08,d0                         	| [$29d2: sub  $08]
 	jra	l_29c8                             	| [$29d4: jr   $29C8]
 l_29d6:
-	move.l	unknown_pointer_E0F4,a0             	| [$29d6: ld   hl,(unknown_pointer_E0F4)] -  * C0E03,C2863
+	move.w	screen_address_E0F4,d7             	| [$29d6: ld   hl,(screen_address_E0F4)] -  * C0E03,C2863
 	move.b	unknown_E0F6,d0                 	| [$29d9: ld   a,(unknown_E0F6)]
 l_29dc:
 	addq.b	#1,d0                           	| [$29dc: inc  a] -  * J29CA
 	move.b	d0,d3                           	| [$29dd: ld   d,a]
 	add.b	#0x21,d0                         	| [$29de: add  a,$21]
-	btst.b	#4,(a0)                         	| [$29e0: bit  4,(hl)]
+	move.w	d0,-(a7)
+	jbsr	osd_r_videoram
+	btst.b	#4,d0                         	| [$29e0: bit  4,(hl)]
+	movem.w	(a7)+,d0
 	jeq	l_29eb                             	| [$29e2: jr   z,$29EB]
 	subq.b	#0x06,d0                        	| [$29e4: sub  $06]
 	cmp.b	#0x20,d0                         	| [$29e6: cp   $20]
 	jne	l_29eb                             	| [$29e8: jr   nz,$29EB]
 	subq.b	#1,d0                           	| [$29ea: dec  a]
 l_29eb:
-	move.b	d0,(a0)                         	| [$29eb: ld   (hl),a] -  * J29E2,J29E8
+	jbsr	osd_w_videoram                         	| [$29eb: ld   (hl),a] -  * J29E2,J29E8
 	move.b	d3,d0                           	| [$29ec: ld   a,d]
 	cmp.b	#0x08,d0                         	| [$29ed: cp   $08]
 	jcs	l_29f3                             	| [$29ef: jr   c,$29F3]
 	clr.b	d0                               	| [$29f1: xor  a]
-	addq.w	#1,a0                           	| [$29f2: inc  l]
+	addq.w	#1,d7                           	| [$29f2: inc  l]
 l_29f3:
 	move.b	d0,unknown_E0F6                 	| [$29f3: ld   (unknown_E0F6),a] -  * J29EF
-	move.l	a0,unknown_pointer_E0F4                 	| [$29f6: ld   (unknown_pointer_E0F4),hl]
+	move.w	d7,screen_address_E0F4                 	| [$29f6: ld   (screen_address_E0F4),hl]
 	rts                                    	| [$29f9: ret]
 l_29fa:
 	move.w	#0x80CC,d7                      	| [$29fa: ld   hl,$80CC] -  * C27D2

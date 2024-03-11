@@ -13,6 +13,7 @@
 	.global	section_completed_flag
 	.global	course_completed_flag
 	.global start_level_flag
+	.global in_continue_loop_flag
 	.ifdef	__amiga__
 	
 	.ascii	"RAM_STRT"
@@ -65,6 +66,8 @@ section_completed_flag:
 course_completed_flag:
 	.byte	0
 start_level_flag:
+	.byte	0
+in_continue_loop_flag:
 	.byte	0
 highscores_need_saving:
 	.byte	0

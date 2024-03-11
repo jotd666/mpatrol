@@ -1,20 +1,21 @@
-- two player mode makes game completely bogus
+- access fault when displaying ufos hardware sprites (and ovoid UFO crashing on player)
+- continue screen: should accept "up" to start game too: to test
 - point E champion: sprite alloc error why? 8 sprites (2 space plants) should be ok
   if problem, replace blue color from plant base and change it with copper like
   done with ground
-- 68000 test: crashes after first section in the middle of an instruction:
+- 68000 test: crashes after first section in the middle of an instruction: re-test
   debug with chip slave
 - dying & resuming with different mountain height! should erase blue mountain
-  if previous y - y > 1 we should use blitter to clear zone
-- sometimes typewriter text effect freezes on a letter, then resumes...
+  if previous y - y > 1 we should use blitter to clear zone or just
+  better: clear top of screen if ground strip not moving
+  
 - demo section continues even if killed until game over then continue!!!
 - champion panel still missing tile cluts
 - custom2 bit jump with button 2 only
-- continue screen: should accept "up" to start game too
 - loop sfx + music issue (ptplayer)
 - start lives is wrong
 - save highscore & best course times
-- colons not erased
+- colons not erased: erase all planes when switching to mountains
 
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
@@ -28,6 +29,7 @@
 
 low pri:
 
+- sometimes typewriter text effect freezes on a letter, then resumes...: re-test, maybe fixed
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
 - points awarded: 500 points wrong clut/wrong transcription because black color
   in sprite => set in background, OK as BOB

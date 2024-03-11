@@ -11,6 +11,8 @@ Credits:
 
 Amiga version:
 
+Uses AGA fast DMA mode if found and runs at 50fps on AGA, 25 fps on ECS
+
 Controls:
 
 - joystick left/right: brake/accelerate
