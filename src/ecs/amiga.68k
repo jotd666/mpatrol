@@ -1822,9 +1822,16 @@ set_mountain_dynamic_colors:
 	sub.w	d0,d6
 	bsr		shift_d6_copper_y
 	
+	* change a dark red color (why not) by dark green used
+	* by space plant base. We put that here but we could even
+	* put it a few lines below, as the plant base is lower (lowest
+	* object). This saves just enough colors for a 16 color playfield
+	* display, if we use HW sprites for some objects (shoehorned!!)
+	move.w	plant_color_register,(4,a0,d6.w)
+	move.w	plant_color,(6,a0,d6.w)
 	* now change ground color to orange, trying to respect the ground Y
-	move.w	#color+16,(8,a0,d6.w)
-	move.w	#0xF95,(10,a0,d6.w)
+	move.l	#((color+16)<<16)+0xF95,(8,a0,d6.w)
+	* now change red to dark green (space plant)
 	
 	* now blue
 	move.w	blue_y_end,d7
@@ -2319,6 +2326,9 @@ alloc_sprite:
 	* hopefully if we save buffer in A1 we can reproduce the issue at will!
 	.ifndef	RELEASE
 	lea			sprite_allocation_error,a0
+	lea		sprite_registers,a1
+	lea		host_sprites(pc),a2
+	
 	jbsr	osd_break
 	.endif
 	* in release mode, just discard this sprite, maybe we'll get away with it!

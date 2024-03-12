@@ -180,6 +180,11 @@ obj_absolute_x = 0xF		| for ground objects
 1:
 	.endm
 	
+	.macro	CLR_W	address
+	clr.b	\address
+	clr.b	\address+1
+	.endm
+	
 	.macro  LOAD_LEW	address,reg
 	move.b	\address+1,\reg
 	rol.w	#8,\reg
@@ -2614,7 +2619,13 @@ l_0c9e:
 0:
 	move.b	lives_per_credit_e040,d0                 	| [$0ca4: ld   a,(lives_per_credit_e040)]
 	move.b	d0,nb_lives_E515                	| [$0ca7: ld   (nb_lives_E515),a]
+	* beginner course data
 	lea	game_rom+0x2162,a0                      	| [$0caa: ld   hl,$2162]
+	tst.b	start_level_flag
+	beq.b	0f
+	* better cheat than MAME: REALLY selects champion course, not just red car
+	lea	game_rom+0x23A2,a0
+0:
 	move.l	a0,track_events_data_pointer_E516                 	| [$0cad: ld   (track_events_data_pointer_E516),hl]
 	rts                                    	| [$0cb0: ret]
 l_0cb1:
@@ -6022,7 +6033,7 @@ l_27f9:
 	add.w	#0x100,d5                           	| [$2804: inc  h]
 l_2805:
 	STORE_LEW	d5,unknown_16bit_E098                 	| [$2805: ld   (unknown_16bit_E098),hl] -  * J2802
-	jbsr	l_2971                            	| [$2808: call $2971]
+	jbsr	display_good_bonus_points_2971                            	| [$2808: call $2971]
 	move.l	unknown_pointer_E096,a0             	| [$280b: ld   hl,(unknown_pointer_E096)]
 	move.b	(a0),d3                         	| [$280e: ld   d,(hl)]
 	                           	| [$280f: dec  hl]
@@ -6066,7 +6077,7 @@ l_2836:
 	add.w	#0x100,d5                           	| [$284b: inc  h]
 l_284c:
 	STORE_LEW	d5,unknown_16bit_E098                 	| [$284c: ld   (unknown_16bit_E098),hl] -  * J2849
-	jbsr	l_2971                            	| [$284f: call $2971]
+	jbsr	display_good_bonus_points_2971                            	| [$284f: call $2971]
 	move.b	#0x10,d0                        	| [$2852: ld   a,$10] -  Play
 	jbsr	queue_sound_effect_if_game_playing_0d75                            	| [$2854: call $0D75] -  ... passing point
 	move.b	#0x0C,d0                        	| [$2857: ld   a,$0C]
@@ -6104,12 +6115,13 @@ l_288e:
 	jbsr	l_0636                            	| [$2899: call $0636]
 l_289c:
 										| [$289c: ld   hl,$0000] 0 -  * J288C
-	clr.w	time_bcd_E511                	| [$289f: ld   (time_bcd_E511),hl]
+	CLR_W	time_bcd_E511                	| [$289f: ld   (time_bcd_E511),hl]
 	lea	unknown_E513,a0                	| [$28a2: ld   hl,unknown_E513]
 	move.b	(a0),d0                         	| [$28a5: ld   a,(hl)]
 	                               	| [$28a6: and  a]
 	jne	start_new_section_0bb7                             	| [$28a7: jp   nz,$0BB7]
 	move.b	#0x05,(a0)                      	| [$28aa: ld   (hl),$05]
+	* champion track data
 	lea	game_rom+0x23A2,a0                      	| [$28ac: ld   hl,$23A2]
 	move.l	a0,track_events_data_pointer_E516                 	| [$28af: ld   (track_events_data_pointer_E516),hl]
 	move.b	#0x1A,d0                        	| [$28b2: ld   a,$1A]
@@ -6215,7 +6227,7 @@ write_course_section_record_2968:
 	move.w	#0x81D9,a1                      	| [$2968: ld   de,$81D9] -  * C283E,C292D
 	lea	course_section_record_E094+1,a0                	| [$296b: ld   hl,unknown_E095]
 	jra	write_2_digits_to_screen_039a                             	| [$296e: jp   $039A]
-l_2971:
+display_good_bonus_points_2971:
 	lea	unknown_E099,a0                	| [$2971: ld   hl,unknown_E099] -  * C2808,C284F
 	move.w	#0x8297,a1                      	| [$2974: ld   de,$8297]
 	jbsr	write_2_digits_to_screen_0393                            	| [$2977: call $0393]

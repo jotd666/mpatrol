@@ -1,16 +1,14 @@
 - access fault when displaying ufos hardware sprites (and ovoid UFO crashing on player)
-- continue screen: should accept "up" to start game too: to test
-- point E champion: sprite alloc error why? 8 sprites (2 space plants) should be ok
-  if problem, replace blue color from plant base and change it with copper like
-  done with ground
+- champion cheat: car becomes pink sometimes
 - 68000 test: crashes after first section in the middle of an instruction: re-test
   debug with chip slave
+- 10000 points bonus carry issue 10 of 10000 is trashed!
 - dying & resuming with different mountain height! should erase blue mountain
   if previous y - y > 1 we should use blitter to clear zone or just
   better: clear top of screen if ground strip not moving
   
 - demo section continues even if killed until game over then continue!!!
-- champion panel still missing tile cluts
+- champion panel still missing tile cluts! trans_color function working???
 - custom2 bit jump with button 2 only
 - loop sfx + music issue (ptplayer)
 - start lives is wrong
@@ -20,6 +18,7 @@
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
 - cycle exact: rock sprites sometimes blink
+- sometimes typewriter text effect freezes on a letter, then resumes
 
 
 - city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again
@@ -29,7 +28,6 @@
 
 low pri:
 
-- sometimes typewriter text effect freezes on a letter, then resumes...: re-test, maybe fixed
 - optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
 - points awarded: 500 points wrong clut/wrong transcription because black color
   in sprite => set in background, OK as BOB

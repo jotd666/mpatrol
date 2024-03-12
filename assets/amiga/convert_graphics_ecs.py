@@ -104,6 +104,8 @@ brown_rock_color = (0x84,0x51,0x00)
 blue_dark_mountain_color = (0,0,0xFF)
 dark_brown_color = (0x3E,0x37,0)
 yellow_color = (0xC1,0xC8,00)
+dark_green_color = (0,81,0)  # in space plant base
+red_color = (132, 0, 0)
 
 bitplane_cache = dict()
 plane_next_index = 0
@@ -151,7 +153,7 @@ def replace_nonblack_by(img,replacement_color):
 
 def bob_color_change(img_to_raw):
     img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
-    #img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
+    img_to_raw = replace_color(img_to_raw,dark_green_color,red_color)
 
     return img_to_raw
 
@@ -203,7 +205,7 @@ add_sprite_block(0x31,0x34,"rock_ball",4,True,mirror=True,flip=True,bob_backup=B
 add_sprite_block(0x36,0x37,"rock_ball",4,True,mirror=True,flip=True,bob_backup=BB_ROLLING_ROCK)
 add_sprite_block(0x40,0x41,"medium_explosion",1,False)
 add_sprite_block(0x2a,0x2c,"shot_explosion",1,False)
-add_sprite_block(0x2D,0x30,"rock",4,True)
+add_sprite_block(0x2D,0x30,"rock",4,False)
 add_sprite_block(0x3E,0x3F,"explosion",1,False)
 add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
 add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
@@ -223,8 +225,8 @@ add_sprite_block(0x4E,0x5E,"hole_explosion",1,True)
 add_sprite_block(0x5F,0x60,"hole_explosion",0xD,True)
 add_sprite_block(0x73,0x75,"space_plant",2,True,mirror=True)
 add_sprite_block(0x70,0x70,"space_plant_flat",2,True,mirror=True)
-add_sprite_block(0x71,0x72,"space_plant_base",8,True)
-add_sprite_block(0x76,0x79,"space_plant_base",8,True)
+add_sprite_block(0x71,0x72,"space_plant_base",8,False)
+add_sprite_block(0x76,0x79,"space_plant_base",8,False)
 add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
 add_sprite_block(5,8,"jeep_wheel",0,False)  #True,bob_backup=BB_WHEEL)
 
@@ -299,6 +301,10 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                             if bob_backup:
                                 bobs_used_colors[color] += 1
                         else:
+                            # dark green color is going to be replaced by red:
+                            # don't count it (else it would make too many colors)
+                            if color == dark_green_color:
+                                color = red_color
                             bobs_used_colors[color] += 1
             if vattached:
                 d = iter(vattached)
@@ -371,9 +377,13 @@ with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
     bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
     rock_color = bitplanelib.to_rgb4_color(brown_rock_color)
+    plant_color = bitplanelib.to_rgb4_color(dark_green_color)
     rock_color_index = bob_global_palette.index(blue_dark_mountain_color)
+    plant_color_index = bob_global_palette.index(red_color)
     f.write("rock_color:\n\t.word\t0x{:x}\n".format(rock_color))
     f.write("rock_color_register:\n\t.word\t0x180+{}\n".format(rock_color_index*2))
+    f.write("plant_color:\n\t.word\t0x{:x}\n".format(plant_color))
+    f.write("plant_color_register:\n\t.word\t0x180+{}\n".format(plant_color_index*2))
 character_codes_list = []
 
 used_cluts = collections.defaultdict(set)
