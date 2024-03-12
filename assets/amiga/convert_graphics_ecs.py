@@ -412,10 +412,18 @@ for i in range(0x30,0x3A):
     used_cluts[i].add(0)
 
 # champion
-for i in range(0x12,0x3F):
+for i in range(0x12,0x40):
     used_cluts[i].add(8)
+    used_cluts[i].add(0xE)
 for i in range(0xE,0x1C):
     used_cluts[i].add(0xD)
+
+# map bar, beginner,champion
+for c in [2,0xD]:
+    for i in [5,7,9,0x1B]:
+        used_cluts[i].add(c)  # map letters
+    for i in range(0x21,0x29):
+        used_cluts[i].add(c)  # map progress rectangles
 # ground
 for i in range(0x88,0x110):
     used_cluts[i].add(0x4)

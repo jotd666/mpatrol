@@ -309,7 +309,7 @@ mpatrol_reset:
 	tst.b	break_at_startup_flag
 	beq.b	0f
 	* put anything here that you need to track addresses
-	move.l	#game_status_bits_E046,d7
+	move.l	#bg_videoram,d7
 	jbsr	osd_break
 0:
 	.endif

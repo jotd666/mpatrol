@@ -1,14 +1,19 @@
+- still floor tile missing after a slope
+- sprite allocation error: ship_sprite_regs (would be better to dump unmodified sprite regs)
+- champion E: 10000 points (check on MAME on snapshot!!) bonus carry issue 10 of 10000 is trashed!
 - access fault when displaying ufos hardware sprites (and ovoid UFO crashing on player)
 - champion cheat: car becomes pink sometimes
 - 68000 test: crashes after first section in the middle of an instruction: re-test
   debug with chip slave
-- 10000 points bonus carry issue 10 of 10000 is trashed!
+- ignore bob with y flip (hole making ship) instead of disappearing
+  display normal bob
+- map progress buggy: 1 out of 8 not drawn, then after section completed no
+  redraw of completed section
 - dying & resuming with different mountain height! should erase blue mountain
   if previous y - y > 1 we should use blitter to clear zone or just
   better: clear top of screen if ground strip not moving
   
 - demo section continues even if killed until game over then continue!!!
-- champion panel still missing tile cluts! trans_color function working???
 - custom2 bit jump with button 2 only
 - loop sfx + music issue (ptplayer)
 - start lives is wrong
@@ -17,7 +22,6 @@
 
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
-- cycle exact: rock sprites sometimes blink
 - sometimes typewriter text effect freezes on a letter, then resumes
 
 
