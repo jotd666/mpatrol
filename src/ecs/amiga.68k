@@ -1020,6 +1020,7 @@ osd_update_sprites:
 	* first pre-filter/remove stuff (for instance if too many jeep wheels
 	* when exploding
 	movem.l	a0-a6/d0-d7,-(a7)
+
 	clr.b	nb_displayed_wheels
 	clr.b	nb_displayed_ships
 	clr.b	nb_displayed_rocks
@@ -1033,22 +1034,24 @@ osd_update_sprites:
 	move.b	(TARGET_SPRITE_CODE,a0),d0
 	move.b	(a2,d0.w),d3
 	beq.b	2f			| not a hardware sprite, skip
-	cmp.b	#5,d0
-	bcs.b	1f
-	cmp.b	#9,d0
-	bcc.b	1f
-	* jeep wheel: count how many we have
-	* briefly when the jeep explodes there are 6 wheels
-	* which is too much for the sprite engine to handle
-	* (and it's not visible anyway)
-	move.b	nb_displayed_wheels,d0
-	addq.b	#1,d0
-	move.b	d0,nb_displayed_wheels
 	
-	cmp.b	#4,d0
-	bcc.b	ignore_sprite
-	bra.b	2f
-1:
+* jeep wheels are no longer hw sprites
+*	cmp.b	#5,d0
+*	bcs.b	1f
+*	cmp.b	#9,d0
+*	bcc.b	1f
+*	* jeep wheel: count how many we have
+*	* briefly when the jeep explodes there are 6 wheels
+*	* which is too much for the sprite engine to handle
+*	* (and it's not visible anyway)
+*	move.b	nb_displayed_wheels,d0
+*	addq.b	#1,d0
+*	move.b	d0,nb_displayed_wheels
+*	
+*	cmp.b	#4,d0
+*	bcc.b	ignore_sprite
+*	bra.b	2f
+*1:
 	* now sprites with bob backups
 	cmp.b	#BB_SHIP,d3
 	bcs.b	2f				| not a hardware sprite
@@ -1088,6 +1091,7 @@ osd_update_sprites:
 	
 convert_to_bob:
 	* more than 8 ships: convert to sprite, now it's a bob
+	* (bob mirror has been conveniently created 128 slots after)
 	add.b	#0x80,(TARGET_SPRITE_CODE,a0)
 	bra.b	2b
 	
@@ -1146,6 +1150,7 @@ update_hardware_sprites:
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	beq.b	2f
+	bmi.b	2f			| fake sprite converted to bob => skip
 	* check if real/attached sprite
 	* this part is needed when mixing sprites & bobs
 	* or when using "attached" sprites
@@ -2347,7 +2352,7 @@ osd_sound_start:
 	lea		sound_table,a0
 
 	move.w	(a0,d0.w),d1	| sound type
-	beq.b	0f		| no sound
+	beq.b	1f		| no sound
 
 2:
 	cmp.w	#1,d1
@@ -2359,21 +2364,13 @@ osd_sound_start:
 	beq.b	3f
 	* looped sound
 	jsr		_mt_loopfx
-	beq.b	1f
+	bra.b	1f
 3:
 	jsr		_mt_playfx
 1:
 	movem.l	(a7)+,d0/d1/a0/a6
 	rts
-0:
-	* some sounds seem to be missing/blank in the real game
-	lsr.w	#3,d0
-	cmp.b	#0x14,d0	| when hatching
-	beq.b	1b
-	cmp.b	#0x6,d0		| game over
-	beq.b	1b
-	
-	bra.b	1b
+
 	* music
 4:
 	
@@ -2420,7 +2417,7 @@ osd_sound_start:
 	jra	1b
 
 7:
-	move.w	#0,d0			| channel where loops play
+	move.w	#3,d0			| channel where loops play
 	jbsr	_mt_stopfx
 	jra	1b
 	tst.b	music_playing

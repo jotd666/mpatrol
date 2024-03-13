@@ -1,7 +1,9 @@
+- loop sfx space plant: seems to play over and over???? to test again
 - still floor tile missing after a slope
-- sprite allocation error: ship_sprite_regs (would be better to dump unmodified sprite regs)
+- check all "CLR.W memory"
+- missile: miss front part if ships still in the sky (multiplexing sprite issue??)
 - champion E: 10000 points (check on MAME on snapshot!!) bonus carry issue 10 of 10000 is trashed!
-- access fault when displaying ufos hardware sprites (and ovoid UFO crashing on player)
+- 50 fps only if fast+AGA
 - champion cheat: car becomes pink sometimes
 - 68000 test: crashes after first section in the middle of an instruction: re-test
   debug with chip slave
@@ -12,10 +14,9 @@
 - dying & resuming with different mountain height! should erase blue mountain
   if previous y - y > 1 we should use blitter to clear zone or just
   better: clear top of screen if ground strip not moving
-  
+- "TIME TO REACH..." sometimes locks up a few seconds at the first T  
 - demo section continues even if killed until game over then continue!!!
 - custom2 bit jump with button 2 only
-- loop sfx + music issue (ptplayer)
 - start lives is wrong
 - save highscore & best course times
 - colons not erased: erase all planes when switching to mountains

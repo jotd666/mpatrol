@@ -2812,8 +2812,8 @@ sfx_index_table:
 	dc.b	COIN_SND           | 19
 	dc.b	JEEP_JUMP_SND      | 20
 	dc.b	STOP_LOOP_SND      | 21
-	dc.b	SPACE_PLANT_SND    | 22
-	dc.b	-1  | UFO_ATTACK_SND     | 23 disabled ATM
+	dc.b	-1  | SPACE_PLANT_SND    | 22 disabled ATM
+	dc.b	UFO_ATTACK_SND     | 23
 	dc.b	MAIN_TUNE_SND      | 24
 	dc.b	-1                 | 25
 	dc.b	-1                 | 26
