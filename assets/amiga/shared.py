@@ -69,13 +69,10 @@ def get_used_tile_cluts():
     for i in range(0,22):
         used_cluts[0].add(i)
 
-    # letters, champion level
+    # letters, champion level, stupidly lots of cluts
     for i in range(0x30,0x60):
-        used_cluts[i].add(0x11)
-        used_cluts[i].add(0)
-        #used_cluts[i].add(2)
-        used_cluts[i].add(0xA)
-        used_cluts[i].add(0xD)
+        for c in [0,10,13,7,17,11]:
+            used_cluts[i].add(c)
 
     # digits
     for i in range(0x30,0x3A):
@@ -92,7 +89,7 @@ def get_used_tile_cluts():
     for c in [2,0xD]:
         for i in [5,7,9,0x1B]:
             used_cluts[i].add(c)  # map letters
-        for i in range(0x21,0x29):
+        for i in range(0x21,0x30):
             used_cluts[i].add(c)  # map progress rectangles
     # ground
     for i in range(0x88,0x110):

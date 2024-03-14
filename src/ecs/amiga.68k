@@ -2362,7 +2362,11 @@ osd_sound_start:
 	lea		_custom,a6
 	tst.w	d1
 	beq.b	3f
+	tst.b	looped_sound_enabled
+	bne.b	3f			| else problem with space plant sound
 	* looped sound
+	st.b	looped_sound_enabled
+	move.w	#0xF00,0xDFF180
 	jsr		_mt_loopfx
 	bra.b	1f
 3:
@@ -2418,6 +2422,7 @@ osd_sound_start:
 
 7:
 	move.w	#3,d0			| channel where loops play
+	clr.b	looped_sound_enabled
 	jbsr	_mt_stopfx
 	jra	1b
 	tst.b	music_playing
@@ -2467,6 +2472,7 @@ osd_sound_stop:
 	move.b	#-1,music_track_start_number
     clr.w   music_tick   | not playing anymore
 	clr.b	music_playing
+	clr.b	looped_sound_enabled
     jsr		_mt_end
 0:
 	movem.l	(a7)+,d0/a0/a6
@@ -4065,6 +4071,8 @@ music_loops:
 music_volume:
 	.byte	0
 music_playing:
+	.byte	0
+looped_sound_enabled:
 	.byte	0
 music_muted:
 	.byte	0

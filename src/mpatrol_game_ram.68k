@@ -50,8 +50,8 @@
 	.global	unknown_16bit_E0EF
 	.global	unknown_16bit_E0F1
 	.global	unknown_E0F3
-	.global	screen_address_E0F4
-	.global	unknown_E0F6
+	.global	progress_map_next_char_address_E0F4
+	.global	progress_map_fine_increment_E0F6
 	.global	champ_colors_e0f9
 	.global	sprite_shadow_E100
 	.global	unknown_E172
@@ -276,9 +276,9 @@ unknown_16bit_E0F1:
 unknown_E0F3:
 	ds.b	1
 	.align	2
-screen_address_E0F4:
+progress_map_next_char_address_E0F4:
 	ds.l	1
-unknown_E0F6:
+progress_map_fine_increment_E0F6:
 	ds.b	1
 	.align	2
 demo_fake_inputs_pointer_E0F7:

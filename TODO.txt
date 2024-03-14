@@ -1,6 +1,3 @@
-- loop sfx space plant: seems to play over and over???? to test again
-- still floor tile missing after a slope
-- check all "CLR.W memory"
 - missile: miss front part if ships still in the sky (multiplexing sprite issue??)
 - champion E: 10000 points (check on MAME on snapshot!!) bonus carry issue 10 of 10000 is trashed!
 - 50 fps only if fast+AGA
@@ -9,8 +6,6 @@
   debug with chip slave
 - ignore bob with y flip (hole making ship) instead of disappearing
   display normal bob
-- map progress buggy: 1 out of 8 not drawn, then after section completed no
-  redraw of completed section
 - dying & resuming with different mountain height! should erase blue mountain
   if previous y - y > 1 we should use blitter to clear zone or just
   better: clear top of screen if ground strip not moving
@@ -23,7 +18,6 @@
 
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
-- sometimes typewriter text effect freezes on a letter, then resumes
 
 
 - city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again
@@ -38,6 +32,7 @@ low pri:
   in sprite => set in background, OK as BOB
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - sprite allocation fail: low/high in message
+- still floor tile missing after a slope
 
 converter:
 

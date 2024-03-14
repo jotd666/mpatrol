@@ -241,6 +241,7 @@ obj_absolute_x = 0xF		| for ground objects
 	jbsr	osd_w_videoram
 	move.w	(sp)+,d0
 	.endm
+
 	
 assert_failed:
 	jra		osd_break
@@ -509,7 +510,7 @@ l_014b:
 	btst.b	#4,(a0)                         	| [$0153: bit  4,(hl)]
 	jeq	l_0176                             	| [$0155: jr   z,$0176]
 	lea	game_rom+0x2AED,a0                      	| [$0157: ld   hl,$2AED] -  "GAME OVER PLAYER " script
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$015a: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$015a: call $034E]
 	move.b	game_status_bits_E046,d0                 	| [$015d: ld   a,(game_status_bits_E046)]
 	ror.b	#3,d0                           	| [$0160: rra] * 3
 	and.b	#0x01,d0                         	| [$0163: and  $01]
@@ -522,7 +523,7 @@ l_014b:
 	jne	start_new_section_0bb7                             	| [$0173: jp   nz,$0BB7]
 l_0176:
 	lea	game_rom+0x2B02,a0                      	| [$0176: ld   hl,$2B02] -  "GAME OVER" script * J0155
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$0179: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$0179: call $034E]
 	jbsr	is_player_2_061c                            	| [$017c: call $061C]
 	jeq	l_0184                             	| [$017f: jr   z,$0184]
 	jbsr	swap_players_0603                            	| [$0181: call $0603]
@@ -577,8 +578,8 @@ l_01da:
 	move.b	lives_per_credit_e040,d0                 	| [$01da: ld   a,(lives_per_credit_e040)] -  * C01C6,C01C9
 	move.b	d0,nb_lives_E515                	| [$01dd: ld   (nb_lives_E515),a]
 	                      	| [$01e0: ld   hl,$0000] 0
-	clr.w	player_score_E500                 	| [$01e3: ld   (player_score_E500),hl]
-	clr.w	cur_score2_e502                 	| [$01e6: ld   (cur_score2_e502),hl]
+	CLR_W	player_score_E500                 	| [$01e3: ld   (player_score_E500),hl]
+	CLR_W	cur_score2_e502                 	| [$01e6: ld   (cur_score2_e502),hl]
 	jra	swap_players_0603                             	| [$01e9: jp   $0603]
 
 
@@ -754,7 +755,7 @@ jump_table_02D3:
 	.long	l_0322
 	.long	txt_cmd_05_032f
 	.long	l_0367
-	.long	l_0361
+	.long	wait_for_sync_0361
 	.long	l_0337
 	.long	ufo_bomb_creates_hole_0da6
 	.long	l_1201
@@ -827,20 +828,28 @@ l_0349:
 	rts                                    	| [$034d: ret] -  Out
 	
 * < HL pointer to X/Y pos + text
-write_text_to_screen_at_xy_034e:
+write_text_to_screen_at_xy_with_delay_034e:
 	jbsr	compute_screen_address_and_attribute_03db                            	| [$034e: call $03DB] -  Get screen cursor and color
 l_0351:
+	* appears to be an infinite loop but this 
+	* can be exited to the upper level at the end of the string
 	jbsr	write_to_screen_03c9                            	| [$0351: call $03C9] -  Process one script command (abort takes us back to caller) * J035F
 	move.b	#0x03,d0                        	| [$0354: ld   a,$03] -  Set ...
 	move.b	d0,sync_flag_E050                 	| [$0356: ld   (sync_flag_E050),a] -  ... ISR delay
 l_0359:
+	* jotd: problem: in that loop, sync flag can be very high, like if a concurrent long wait changed the value...
+	* happens in "TIME TO REACH POINT..." for instance
 	move.b	sync_flag_E050,d0                 	| [$0359: ld   a,(sync_flag_E050)] -  Has ISR counted ... * J035D
 	                               	| [$035c: and  a] -  ... this down to zero?
-	jne	l_0359                             	| [$035d: jr   nz,$0359] -  No ... wait for zero
-	jra	l_0351                             	| [$035f: jr   $0351] -  Keep processing script
+	jeq	l_0351                             	| [$035f: jr   $0351] -  Keep processing script
+	cmp.b	#4,d0
+	jcs		l_0359
+	* some other part tampered with the timer: restore it
+	move.b	#3,sync_flag_E050
+	jra	l_0359                             	| [$035d: jr   nz,$0359] -  No ... wait for zero
 	
 	
-l_0361:
+wait_for_sync_0361:
 	move.b	sync_flag_E050,d0                 	| [$0361: ld   a,(sync_flag_E050)] -  Count-down timer ...
 	                               	| [$0364: and  a] -  ... reached zero?
 	jne	l_036f                             	| [$0365: jr   nz,$036F] -  No ... transition to state 8
@@ -930,7 +939,7 @@ print_digit_03bd:
 write_to_screen_and_move_cursor_03c1:
 	move.w	d7,-(sp)
 	move.l	a1,d7
-	jbsr	osd_w_videoram                 	| [$03c1: ld   (de),a] -  Store character (tile number) to screen * J03D9,C0408
+	jbsr	osd_w_videoram   			| [$03c1: ld   (de),a] -  Store character (tile number) to screen * J03D9,C0408
 	exg		d2,d0                    	| [$03c2: ld   (iy+$00),c] -  Store background to color memory
 	move.l	a3,d7
 	jbsr	osd_w_colorram
@@ -1011,7 +1020,7 @@ l_03fe:
 	
 	
 l_0402:
-	* pops stack maybe to pop caller
+	* pops stack to pop caller (exit out of infinite loop)
 	move.l	(sp)+,a0                        	| [$0402: pop  hl] -  Don't return to script processor * J03CD
 	rts                                    	| [$0403: ret] -  Return out of script (abort)
 	
@@ -1496,8 +1505,8 @@ l_064b:
 	                           	| [...]
 	dbf	d1,l_064b                             	| [$064f: djnz $064B] -  Compare all digits
 	jcs	display_score_0668                             	| [$0651: jr   c,$0668] -  Current score is lower ... don't update high score
-	move.w	player_score_E500,high_score_e008             	| [$0653: ld   hl,(player_score_E500)] -  Copy ...
-	                 	| [$0656: ld   (high_score_e008),hl] -  ... current score ...
+	move.w	player_score_E500,high_score_e008          	| [$0653: ld   hl,(player_score_E500)] -  Copy ...
+	                 	|								 [$0656: ld   (high_score_e008),hl] -  ... current score ...
 	move.b	cur_score2_e502,d0                 	| [$0659: ld   a,(cur_score2_e502)] -  ... to ...
 	move.b	d0,high_score2_e00a                 	| [$065c: ld   (high_score2_e00a),a] -  ... high score
 	move.b	cur_point_e50e,d0                 	| [$065f: ld   a,(cur_point_e50e)] -  Current passed-point
@@ -1680,7 +1689,7 @@ l_0745:
 	jbsr	print_creds_0527                            	| [$074e: call $0527]
 	* "INSERT COIN" text
 	lea	game_rom+0x2C57,a0                      	| [$0751: ld   hl,$2C57] -  "INSERT COIN" script
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$0754: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$0754: call $034E]
 	lea	continue_timer_E054,a1                	| [$0757: ld   de,continue_timer_E054]
 	move.w	#0x20,d1                        	| [$075a: ld   bc,$0020] 32
 	move.b	slot_mode_e044,d0                 	| [$075d: ld   a,(slot_mode_e044)]
@@ -1708,7 +1717,7 @@ l_0787:
 	move.b	d0,(a0)                         	| [$0787: ld   (hl),a] -  * J077F
 l_0788:
 	lea	continue_timer_E054,a0                	| [$0788: ld   hl,continue_timer_E054] -  * J079D
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$078b: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$078b: call $034E]
 l_078e:
 	move.b	cnt_till_cred_e047,d0                 	| [$078e: ld   a,(cnt_till_cred_e047)] -  * J076C,J0792
 	                               	| [$0791: and  a]
@@ -1763,7 +1772,7 @@ l_07dd:
 	jra	l_07aa                             	| [$07e6: jr   $07AA]
 l_07e8:
 	lea	continue_timer_E054,a0                	| [$07e8: ld   hl,continue_timer_E054] -  * C0766,C07DD
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$07eb: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$07eb: call $034E]
 	LOAD_LEW	continue_timer_E054,d5             	| [$07ee: ld   hl,(continue_timer_E054)]
 	                      	| [$07f1: ld   de,$0040] 64
 	add.w	#0x40,d5                            	| [$07f4: add  hl,de]
@@ -2689,8 +2698,9 @@ l_0cde:
 l_0d09:
 	jbsr	display_nb_lives_06d5                            	| [$0d09: call $06D5] -  * J0CF8
 	jbsr	display_time_212c                            	| [$0d0c: call $212C]
-	jbsr	display_position_298a                            	| [$0d0f: call $298A]
+	jbsr	display_position_in_map_298a                            	| [$0d0f: call $298A]
 l_0d12:
+	* display "point " letter
 	move.b	cur_point_e50e,d0                 	| [$0d12: ld   a,(cur_point_e50e)] -  * C0B85,J152B,C2866
 	move.b	#0x02,d2                        	| [$0d15: ld   c,$02]
 	cmp.b	#0x1A,d0                         	| [$0d17: cp   $1A]
@@ -2812,7 +2822,7 @@ sfx_index_table:
 	dc.b	COIN_SND           | 19
 	dc.b	JEEP_JUMP_SND      | 20
 	dc.b	STOP_LOOP_SND      | 21
-	dc.b	-1  | SPACE_PLANT_SND    | 22 disabled ATM
+	dc.b	SPACE_PLANT_SND    | 22
 	dc.b	UFO_ATTACK_SND     | 23
 	dc.b	MAIN_TUNE_SND      | 24
 	dc.b	-1                 | 25
@@ -3561,7 +3571,7 @@ l_1201:
 l_1204:
 	* D3+D4
 	LOAD_D3_16_FROM_D3D4
-	move.w	d3,title_screen_address_E0EB                 	| [$1204: ld   (title_screen_address_E0EB),de] -  Will be pointer to screen, but this isn't a pointer to screen memory yet * J1253
+	STORE_LEW	d3,title_screen_address_E0EB                 	| [$1204: ld   (title_screen_address_E0EB),de] -  Will be pointer to screen, but this isn't a pointer to screen memory yet * J1253
 l_1208:
 	move.l	a0,pointer_on_title_char_data_E0E9                 	| [$1208: ld   (pointer_on_title_char_data_E0E9),hl] -  Hold pointer to splash text data * J124D
 	move.b	timer_8bit_E04E,d0                 	| [$120b: ld   a,(timer_8bit_E04E)] -  Current ISR
@@ -3575,9 +3585,9 @@ display_title_1218:
 	move.b	timer_8bit_E04E,d0                 	| [$1218: ld   a,(timer_8bit_E04E)] -  Current ISR
 	cmp.b	(0x01,a2),d0                     	| [$121b: cp   (ix+$01)] -  Time to take action?
 	jne	l_1213                             	| [$121e: jr   nz,$1213] -  No ... stay in state 0B and out
-	move.w	title_screen_address_E0EB,d5             	| [$1220: ld   hl,(title_screen_address_E0EB)] -  Pointer to screen
+	LOAD_LEW	title_screen_address_E0EB,d5             	| [$1220: ld   hl,(title_screen_address_E0EB)] -  Pointer to screen
 	addq.w	#1,d5                           	| [$1223: inc  hl] -  Next column ...
-	move.w	d5,title_screen_address_E0EB                 	| [$1224: ld   (title_screen_address_E0EB),hl] -  ... over
+	STORE_LEW	d5,title_screen_address_E0EB                 	| [$1224: ld   (title_screen_address_E0EB),hl] -  ... over
 	subq.w	#1,d5                           	| [$1227: dec  hl] -  But this column for now
 	exg	d3,d5                              	| [$1228: ex   de,hl] -  To DE
 	and.l	#0xFFFF,d3
@@ -6008,7 +6018,7 @@ section_completed_27c0:
 	tst.b	d0                               	| [$27ce: and  a]
 	jne	l_285e                             	| [$27cf: jp   nz,$285E]
 l_27d2:
-	jbsr	l_29fa                            	| [$27d2: call $29FA] -  * J27CB
+	jbsr	fill_done_section_in_map_29fa                            	| [$27d2: call $29FA] -  * J27CB
 	move.b	#0x1E,d0                        	| [$27d5: ld   a,$1E] -  Play end of level sound
 	jbsr	queue_sound_effect_if_game_playing_0d75                            	| [$27d7: call $0D75] -  ... congratulations music
 	lea	moonbase_already_displayed_E50F,a0                	| [$27da: ld   hl,moonbase_already_displayed_E50F]
@@ -6051,7 +6061,7 @@ l_2805:
 	                           	| [$281f: dec  hl]
 	move.b	d4,-(a0)                         	| [$2820: ld   (hl),e]
 	lea	game_rom+0x2C39,a0                      	| [$2821: ld   hl,$2C39] -  "YOU HAVE BROKEN A RECORD" script
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$2824: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$2824: call $034E]
 l_2827:
 	LOAD_LEW	course_section_record_E094,d5             	| [$2827: ld   hl,(course_section_record_E094)] -  * J2817,J285C
 	LOAD_LEW	time_bcd_E511,d3            	| [$282a: ld   de,(time_bcd_E511)]
@@ -6097,14 +6107,14 @@ l_285e:
 	jcs	l_2883                             	| [$2874: jr   c,$2883]
 	* better than section best time
 	lea	game_rom+0x2BE4,a0                      	| [$2876: ld   hl,$2BE4] -  "GOOD BONUS POINTS" script
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$2879: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$2879: call $034E]
 	move.b	champ_colors_e0f9,d0                 	| [$287c: ld   a,(champ_colors_e0f9)]
 	addq.b	#1,d0                           	| [$287f: inc  a]
 	jra	l_27f9                             	| [$2880: jp   $27F9]
 l_2883:
 	* not better than section best time
 	lea	game_rom+0x2BF9,a0                      	| [$2883: ld   hl,$2BF9] -  "SORRY NO BONUS" script * J2874
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$2886: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$2886: call $034E]
 	jbsr	delay3_sec_05e8                            	| [$2889: call $05E8]
 	jra	l_289c                             	| [$288c: jr   $289C]
 l_288e:
@@ -6178,7 +6188,7 @@ l_28f6:
 	move.b	d2,-(a0)                         	| [$2906: ld   (hl),c]
 l_2907:
 	lea	game_rom+0x2B79,a0                      	| [$2907: ld   hl,$2B79] -  "TIME TO REACH POINT " script * J2902
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$290a: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$290a: call $034E]
 	jbsr	current_point_modulus_26_2981                            	| [$290d: call $2981]
 	tst.b	d0                               	| [$2910: and  a]
 	jne	l_2915                             	| [$2911: jr   nz,$2915]
@@ -6192,15 +6202,15 @@ l_2915:
 	jbsr	osd_w_videoram					| [$2919: ld   (de),a]
 	exg		a1,d7                      	
 	lea	game_rom+0x2B94,a0                      	| [$291a: ld   hl,$2B94]   "YOUR TIME"
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$291d: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$291d: call $034E]
 	lea	unknown_E512,a0                	| [$2920: ld   hl,unknown_E512]
 	addq.w	#1,a1                           	| [$2923: inc  de]
 	jbsr	write_2_digits_to_screen_039a                            	| [$2924: call $039A]
 	lea	game_rom+0x2BB0,a0                      	| [$2927: ld   hl,$2BB0] -  "THE AVERAGE TIME " script
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$292a: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$292a: call $034E]
 	jbsr	write_course_section_record_2968                            	| [$292d: call $2968]
 	lea	game_rom+0x2BCC,a0                      	| [$2930: ld   hl,$2BCC] -  "TOP RECORD " script
-	jbsr	write_text_to_screen_at_xy_034e                            	| [$2933: call $034E]
+	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$2933: call $034E]
 	move.l	unknown_pointer_E096,a0             	| [$2936: ld   hl,(unknown_pointer_E096)]
 	addq.w	#1,a1                           	| [$2939: inc  de]
 	jbsr	write_2_digits_to_screen_039a                            	| [$293a: call $039A]
@@ -6248,7 +6258,9 @@ current_point_modulus_26_2981:
 0:
 	sub.b	#0x1A,d0                         	| [$2987: sub  $1A]
 	rts                                    	| [$2989: ret]
-display_position_298a:
+	
+display_position_in_map_298a:
+	* first write map background (pale blue)
 	LOAD_VIDEORAM_ADDRESS	0x80CC                      	| [$298a: ld   hl,$80CC] -  * C0D0F
 	move.w	#0x84CC,d3                      	| [$298d: ld   de,$84CC]
 	move.b	#0x10,d1                        	| [$2990: ld   bc,$1002] 4098
@@ -6265,6 +6277,7 @@ l_2997:
 	subq.b	#1,d1                           	| [...]
 	jne	l_2997                             	| [$299c: djnz $2997]
 	LOAD_VIDEORAM_ADDRESS	0x80CC                      	| [$299e: ld   hl,$80CC]
+	* now sections, character 0x22 (vertical separator)
 	move.b	#0x05,d1                        	| [$29a1: ld   b,$05]
 l_29a3:
 	jbsr	osd_r_videoram                         	| [$29a3: inc  (hl)] -  * J29A7
@@ -6273,8 +6286,12 @@ l_29a3:
 	addq.w	#3,d7                           	| [$29a4: inc  hl] * 3
 	subq.b	#1,d1                           	| [...]
 	jne	l_29a3                             	| [$29a7: djnz $29A3]
+	* the end
 	WRITE_VIDEORAM	#0x1B                      	| [$29a9: ld   (hl),$1B]
+	* now the current point to fill with red until current point
+
 	jbsr	current_point_modulus_26_2981                            	| [$29ab: call $2981]
+
 	LOAD_VIDEORAM_ADDRESS	0x80CC                      	| [$29ae: ld   hl,$80CC]
 	move.b	#0x05,d1                        	| [$29b1: ld   b,$05]
 l_29b3:
@@ -6282,6 +6299,7 @@ l_29b3:
 	jcs	l_29c3                             	| [$29b5: jr   c,$29C3]
 	move.b	#0x03,d3                        	| [$29b7: ld   d,$03]
 l_29b9:
+	* fully filled
 	WRITE_VIDEORAM	#0x29                      	| [$29b9: ld   (hl),$29] -  * J29BD
 	addq.w	#1,d7                           	| [$29bb: inc  hl]
 	subq.b	#1,d3                           	| [$29bc: dec  d]
@@ -6290,10 +6308,12 @@ l_29b9:
 	subq.b	#1,d1                           	| [...]
 	jne	l_29b3                             	| [$29c1: djnz $29B3]
 l_29c3:
+	* d0 <- d0 * 5
 	move.b	d0,d3                           	| [$29c3: ld   d,a] -  * J29B5
 	add.b	d0,d0                            	| [$29c4: add  a,a]
 	add.b	d0,d0                            	| [$29c5: add  a,a]
 	add.b	d3,d0                            	| [$29c6: add  a,d]
+	* what's the use??? d4 is never read again...
 	move.b	d0,d4                           	| [$29c7: ld   e,a]
 l_29c8:
 	cmp.b	#0x08,d0                         	| [$29c8: cp   $08] -  * J29D4
@@ -6301,19 +6321,20 @@ l_29c8:
 	jeq	l_29cf                             	| [$29cc: jr   z,$29CF]
 	subq.b	#1,d0                           	| [$29ce: dec  a]
 l_29cf:
+	* fully filled
 	WRITE_VIDEORAM	#0x29                      	| [$29cf: ld   (hl),$29] -  * J29CC
 	addq.w	#1,d7                           	| [$29d1: inc  hl]
 	sub.b	#0x08,d0                         	| [$29d2: sub  $08]
 	jra	l_29c8                             	| [$29d4: jr   $29C8]
 l_29d6:
-	move.w	screen_address_E0F4,d7             	| [$29d6: ld   hl,(screen_address_E0F4)] -  * C0E03,C2863
-	move.b	unknown_E0F6,d0                 	| [$29d9: ld   a,(unknown_E0F6)]
+	move.w	progress_map_next_char_address_E0F4,d7             	| [$29d6: ld   hl,(progress_map_next_char_address_E0F4)] -  * C0E03,C2863
+	move.b	progress_map_fine_increment_E0F6,d0                 	| [$29d9: ld   a,(progress_map_fine_increment_E0F6)]
 l_29dc:
 	addq.b	#1,d0                           	| [$29dc: inc  a] -  * J29CA
 	move.b	d0,d3                           	| [$29dd: ld   d,a]
-	add.b	#0x21,d0                         	| [$29de: add  a,$21]
+	add.b	#0x21,d0                         	| [$29de: add  a,$21] character for map
 	move.w	d0,-(a7)
-	jbsr	osd_r_videoram
+	jbsr	osd_r_videoram					| read current character at current position
 	btst.b	#4,d0                         	| [$29e0: bit  4,(hl)]
 	movem.w	(a7)+,d0
 	jeq	l_29eb                             	| [$29e2: jr   z,$29EB]
@@ -6329,14 +6350,15 @@ l_29eb:
 	clr.b	d0                               	| [$29f1: xor  a]
 	addq.w	#1,d7                           	| [$29f2: inc  l]
 l_29f3:
-	move.b	d0,unknown_E0F6                 	| [$29f3: ld   (unknown_E0F6),a] -  * J29EF
-	move.w	d7,screen_address_E0F4                 	| [$29f6: ld   (screen_address_E0F4),hl]
+	move.b	d0,progress_map_fine_increment_E0F6                 	| [$29f3: ld   (progress_map_fine_increment_E0F6),a] -  * J29EF
+	move.w	d7,progress_map_next_char_address_E0F4     	| [$29f6: ld   (progress_map_next_char_address_E0F4),hl]
 	rts                                    	| [$29f9: ret]
-l_29fa:
-	move.w	#0x80CC,d7                      	| [$29fa: ld   hl,$80CC] -  * C27D2
+	
+fill_done_section_in_map_29fa:
+	LOAD_VIDEORAM_ADDRESS 0x80CC                      	| [$29fa: ld   hl,$80CC] -  * C27D2
 	move.b	#0x0F,d1                        	| [$29fd: ld   b,$0F]
 l_29ff:
-	move.b	#0x29,d0                      	| [$29ff: ld   (hl),$29] -  * J2A02
+	move.b	#0x29,d0                      	| [$29ff: ld   (hl),$29] -  * J2A02 full rectangle
 	jbsr	osd_w_videoram
 	addq.w	#1,d7                           	| [$2a01: inc  hl]
 	subq.b	#1,d1                           	| [...]
@@ -6344,7 +6366,7 @@ l_29ff:
 	move.b	#0x1F,d0                      	| [$2a04: ld   (hl),$1F]
 	jbsr	osd_w_videoram
 	move.b	#0x5A,d0                        	| [$2a06: ld   a,$5A]
-	move.w	#0x8052,d7
+	LOAD_VIDEORAM_ADDRESS	0x8052
 	jbsr	osd_w_videoram                     	| [$2a08: ld   ($8052),a]
 	rts                                    	| [$2a0b: ret]
 

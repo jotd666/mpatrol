@@ -42,7 +42,7 @@ all: $(AMIGA_ECS_SRC)/graphics.68k $(AMIGA_SHARED_SRC)/sounds.68k $(MAIN) $(WHDL
 clean:
 	del $(OBJS) "$(MAIN)"
 	
-$(AMIGA_ECS_SRC)/graphics.68k: $(ASSETS)/convert_graphics_ecs.py $(ASSETS)/../$(PROGNAME)_gfx.c
+$(AMIGA_ECS_SRC)/graphics.68k: $(ASSETS)/convert_graphics_ecs.py $(ASSETS)/shared.py $(ASSETS)/../$(PROGNAME)_gfx.c
 	cmd /c $(ASSETS)\convert_graphics_ecs.py
 
 #$(ASSETS)/../sounds/$(PROGNAME)_conv.mod
