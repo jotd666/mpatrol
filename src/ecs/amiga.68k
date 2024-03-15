@@ -1052,7 +1052,7 @@ osd_update_sprites:
 	* now sprites with bob backups
 	cmp.b	#BB_SHIP,d3
 	bcs.b	2f				| not a hardware sprite
-	bne.b	20f
+*	jne	20f
 	* count UFOs
 	* UFO: if too low, convert to bob to avoid conflict
 	not.b	d1		| convert to real coord
@@ -1065,15 +1065,15 @@ osd_update_sprites:
 	move.b	d0,nb_displayed_ships
 	cmp.b	#NB_HOST_SPRITES+1,d0
 	bcc.b	convert_to_bob	| if already 8 sprites, switch to bob copy
-	bra.b	2f
-20:
-	* other case is rolling rocks: no explosions from ufos can happen, no tanks
-	* when they're there so we can use the slots for 4 rocks
-	move.b	nb_displayed_rocks,d0
-	addq.b	#1,d0
-	move.b	d0,nb_displayed_rocks
-	cmp.b	#4+1,d0			| 3 wheels use 4 sprite slots
-	bcc.b	convert_to_bob	| if already 4 rock sprites, switch to bob copy
+*	bra.b	2f
+*20:
+*	* other case is rolling rocks: no explosions from ufos can happen, no tanks
+*	* when they're there so we can use the slots for 4 rocks
+*	move.b	nb_displayed_rocks,d0
+*	addq.b	#1,d0
+*	move.b	d0,nb_displayed_rocks
+*	cmp.b	#4+1,d0			| 3 wheels use 4 sprite slots
+*	bcc.b	convert_to_bob	| if already 4 rock sprites, switch to bob copy
 2:
 	move.l	(a0)+,(a1)+		| brutal copy
 	dbf		d7,0b
@@ -1101,6 +1101,7 @@ ignore_sprite:
 really_update_hardware_sprites:
 
 	lea		sprite_registers,a0
+	move.l	A0,0x200
 	st.b	do_upper_part
 	bsr		update_hardware_sprites
 	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
@@ -1237,8 +1238,12 @@ update_hardware_sprites:
 	
 	moveq	#0,d6
 10:
+	moveq	#0,d1
+	move.b	(SPRITE_Y,a2),d1		| Y=0 can happen when X != 0
+	beq.b	101f
 	move.b	(SPRITE_X,a2),d0
 	bne.b	20f
+101:
 	* slot free: replace sprite by blank
 	* this doesn't allow that a sprite crosses the SPRITE_Y_SPLIT_LIMIT
 	* boundary but in that case we'll switch for a BOB
@@ -1262,8 +1267,6 @@ update_hardware_sprites:
 	* lookup sprite code
 	
 	and.w	#0xFF,d0
-	moveq	#0,d1
-	move.b	(SPRITE_Y,a2),d1
 	moveq	#0,d2
 	move.b	(SPRITE_CODE,a2),d2
 		
@@ -1294,7 +1297,6 @@ update_hardware_sprites:
 	add.w	d4,d4
 	add.w	d4,d4					| sprite index times 4 (pointer index)
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
-
 
 	move.w	(A5)+,d3
 	cmp.w	#16,d3

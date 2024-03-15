@@ -33,7 +33,7 @@
 	.global	unknown_E068
 	.global	course_section_record_E094
 	.global	unknown_pointer_E096
-	.global	unknown_16bit_E098
+	.global	good_bonus_points_E098
 	.global	unknown_E099
 	.global	temp_object_structure_E0D4
 	.global	temp_16bit_x_E0D6
@@ -139,7 +139,7 @@
 	.global current_level_E510
 	.global	time_bcd_E511
 	.global	unknown_E512
-	.global	unknown_E513
+	.global	nb_sections_to_clear_E513
 	.global	terrain_height_in_tiles_E514
 	.global	nb_lives_E515
 	.global	track_events_data_pointer_E516
@@ -237,7 +237,7 @@ course_section_record_E094:
 	ds.b	2
 unknown_pointer_E096:
 	ds.l	1
-unknown_16bit_E098:
+good_bonus_points_E098:
 	ds.b	1
 unknown_E099:
 	ds.b	59
@@ -463,7 +463,7 @@ time_bcd_E511:
 	ds.b	1
 unknown_E512:
 	ds.b	1
-unknown_E513:
+nb_sections_to_clear_E513:
 	ds.b	1
 terrain_height_in_tiles_E514:
 	ds.b	1

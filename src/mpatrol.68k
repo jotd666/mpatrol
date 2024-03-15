@@ -889,8 +889,8 @@ l_0390:
 	addq.w	#1,a0                           	| [$0390: inc  hl] -  Next in script * J0385
 	jra	l_037e                             	| [$0391: jr   $037E] -  Continue running script
 
-* < A0: pointer on 2 digits (endianness??)
-* < A1: video memory to write to
+* < A0: pointer on last of 2 digits
+* < A1: video memory to write to (updated)
 write_2_digits_to_screen_0393:
 	move.b	(a0),d0                         	| [$0393: ld   a,(hl)] -  Get BCD number (most significant) * C2977
 	addq.w	#1,a1                           	| [$0394: inc  de] -  Skip potentially 0 leading digit
@@ -2499,7 +2499,8 @@ l_0bfa:
 	move.b	#TERRAIN_BUMPY_02,d0                        	| [$0c00: ld   a,$02]
 	move.b	d0,terrain_slope_type_E508                 	| [$0c02: ld   (terrain_slope_type_E508),a]
 	jbsr	draw_ground_0d8d                  	| [$0c05: call draw_ground_0d8d]
-	move.b	unknown_E513,d0                 	| [$0c08: ld   a,(unknown_E513)]
+	* alternating from mountains to city using nb_sections_to_clear_E513 to know where we are
+	move.b	nb_sections_to_clear_E513,d0                 	| [$0c08: ld   a,(nb_sections_to_clear_E513)]
 	subq.b	#1,d0                           	| [$0c0b: dec  a]
 	cmp.b	#0x05,d0                         	| [$0c0c: cp   $05]
 	SET_X_FROM_C
@@ -2653,7 +2654,7 @@ l_0cc2:
 	move.b	cur_point_e50e,d0                 	| [$0cc7: ld   a,(cur_point_e50e)] -  Current passed point
 	cmp.b	#0x1A,d0                         	| [$0cca: cp   $1A] -  Is this the "champion" course
 	jcs	l_0cd1                             	| [$0cce: jr   c,$0CD1] -  ... normal colors
-	addq.b	#1,d0                           	| [$0cd0: inc  a] -  Yes ... flat champ colors
+	moveq	#1,d0                           	| [$0cd0: inc  a] -  Yes ... flat champ colors
 	bra.b	l_0cd1_2
 l_0cd1:
 	clr.b	d0                               	| [$0ccc: ld   a,$00] -  No ... use
@@ -6008,7 +6009,7 @@ section_completed_27c0:
 	subq.b	#1,(a0)                         	| [$27c3: dec  (hl)]
     jbsr  osd_enable_interrupts  | [ei]
 	move.b	d1,d0                           	| [$27c5: ld   a,b]
-	move.b	d0,unknown_E513                 	| [$27c6: ld   (unknown_E513),a]
+	move.b	d0,nb_sections_to_clear_E513                 	| [$27c6: ld   (nb_sections_to_clear_E513),a]
 	tst.b	section_completed_flag
 	jne		l_285e
 	clr.b	section_completed_flag
@@ -6033,8 +6034,11 @@ l_27d2:
 	jbsr	display_section_results_28ba                            	| [$27ed: call $28BA]
 	lea	game_rom+0x2C0C,a0                      	| [$27f0: ld   hl,$2C0C] -  "SPECIAL BOUNS POINTS" script
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$27f3: call $0300]
-	move.b	unknown_E513,d0                 	| [$27f6: ld   a,(unknown_E513)]
+	* checked in beginner then champion. In beginner must be 5 so 5000 points, and when 0
+	* it awards 10000 points completing champion
+	move.b	nb_sections_to_clear_E513,d0                 	| [$27f6: ld   a,(nb_sections_to_clear_E513)]
 l_27f9:
+	* arrives here with 0 or 1 depending on beginner/champ: 1000 or 2000 points
 	rol.b	#4,d0                           	| [$27f9: rla] 4 -  * J2880
 	clr.w	d5                               	| [$27fd: ld   h,$00]
 	and.b	#0xF0,d0                         	| [$27ff: and  $F0]
@@ -6043,7 +6047,7 @@ l_27f9:
 	jne	l_2805                             	| [$2802: jr   nz,$2805]
 	add.w	#0x100,d5                           	| [$2804: inc  h]
 l_2805:
-	STORE_LEW	d5,unknown_16bit_E098                 	| [$2805: ld   (unknown_16bit_E098),hl] -  * J2802
+	STORE_LEW	d5,good_bonus_points_E098                 	| [$2805: ld   (good_bonus_points_E098),hl] -  * J2802
 	jbsr	display_good_bonus_points_2971                            	| [$2808: call $2971]
 	move.l	unknown_pointer_E096,a0             	| [$280b: ld   hl,(unknown_pointer_E096)]
 	move.b	(a0),d3                         	| [$280e: ld   d,(hl)]
@@ -6079,7 +6083,7 @@ l_2836:
 	sub.w	d3,d5                            	| [$283a: sbc  hl,de]
 	jcs	l_288e                             	| [$283c: jr   c,$288E]
 	jbsr	write_course_section_record_2968                            	| [$283e: call $2968]
-	LOAD_LEW	unknown_16bit_E098,d5             	| [$2841: ld   hl,(unknown_16bit_E098)]
+	LOAD_LEW	good_bonus_points_E098,d5             	| [$2841: ld   hl,(good_bonus_points_E098)]
 	CLEAR_XC_FLAGS
 	move.b	#1,d0                           	| [$2844: ld   a,l]
 	abcd	d0,d5                        	| [$2845: add  a,$01 + daa]
@@ -6087,7 +6091,7 @@ l_2836:
 	jcc	l_284c                             	| [$2849: jr   nc,$284C]
 	add.w	#0x100,d5                           	| [$284b: inc  h]
 l_284c:
-	STORE_LEW	d5,unknown_16bit_E098                 	| [$284c: ld   (unknown_16bit_E098),hl] -  * J2849
+	STORE_LEW	d5,good_bonus_points_E098                 	| [$284c: ld   (good_bonus_points_E098),hl] -  * J2849
 	jbsr	display_good_bonus_points_2971                            	| [$284f: call $2971]
 	move.b	#0x10,d0                        	| [$2852: ld   a,$10] -  Play
 	jbsr	queue_sound_effect_if_game_playing_0d75                            	| [$2854: call $0D75] -  ... passing point
@@ -6121,17 +6125,17 @@ l_2883:
 l_288e:
 	jbsr	delay3_sec_05e8                            	| [$288e: call $05E8] -  * J283C
 	lea	cur_score1_e501,a1                	| [$2891: ld   de,cur_score1_e501]
-	lea	unknown_16bit_E098,a0                	| [$2894: ld   hl,unknown_16bit_E098]
+	lea	good_bonus_points_E098,a0                	| [$2894: ld   hl,good_bonus_points_E098]
 	move.b	#0x02,d1                        	| [$2897: ld   b,$02]
 	jbsr	l_0636                            	| [$2899: call $0636]
 l_289c:
 										| [$289c: ld   hl,$0000] 0 -  * J288C
 	CLR_W	time_bcd_E511                	| [$289f: ld   (time_bcd_E511),hl]
-	lea	unknown_E513,a0                	| [$28a2: ld   hl,unknown_E513]
+	lea	nb_sections_to_clear_E513,a0                	| [$28a2: ld   hl,nb_sections_to_clear_E513]
 	move.b	(a0),d0                         	| [$28a5: ld   a,(hl)]
 	                               	| [$28a6: and  a]
 	jne	start_new_section_0bb7                             	| [$28a7: jp   nz,$0BB7]
-	move.b	#0x05,(a0)                      	| [$28aa: ld   (hl),$05]
+	move.b	#0x05,(a0)                      	| [$28aa: ld   (hl),$05] 5 remaining sections before end of champion track
 	* champion track data
 	lea	game_rom+0x23A2,a0                      	| [$28ac: ld   hl,$23A2]
 	move.l	a0,track_events_data_pointer_E516                 	| [$28af: ld   (track_events_data_pointer_E516),hl]
@@ -6151,7 +6155,7 @@ l_28ce:
 	move.b	#0x0A,d0                        	| [$28c7: ld   a,$0A]
 l_28ce_2:
 	move.b	d0,d4                           	| [$28ce: ld   e,a] -  * J28C5,J28C9
-	move.b	unknown_E513,d0                 	| [$28cf: ld   a,(unknown_E513)]
+	move.b	nb_sections_to_clear_E513,d0                 	| [$28cf: ld   a,(nb_sections_to_clear_E513)]
 	move.b	#0x00,d1                        	| [$28d2: ld   bc,$0080] 128
 	move.b	#0x80,d2                        	| [$28d2: ld   bc,$0080] 128
 	cmp.b	#0x08,d0                         	| [$28d5: cp   $08]
@@ -6238,11 +6242,13 @@ write_course_section_record_2968:
 	move.w	#0x81D9,a1                      	| [$2968: ld   de,$81D9] -  * C283E,C292D
 	lea	course_section_record_E094+1,a0                	| [$296b: ld   hl,unknown_E095]
 	jra	write_2_digits_to_screen_039a                             	| [$296e: jp   $039A]
+
 display_good_bonus_points_2971:
 	lea	unknown_E099,a0                	| [$2971: ld   hl,unknown_E099] -  * C2808,C284F
 	move.w	#0x8297,a1                      	| [$2974: ld   de,$8297]
 	jbsr	write_2_digits_to_screen_0393                            	| [$2977: call $0393]
 	exg	a1,d7                              	| [$297a: ex   de,hl]
+	* write 2 other zeroes
 	move.b	#0x30,d0
 	jbsr	osd_w_videoram
 	addq.w	#1,d7

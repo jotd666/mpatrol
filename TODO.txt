@@ -1,7 +1,6 @@
-- missile: miss front part if ships still in the sky (multiplexing sprite issue??)
-- cycle exact: lower hardware sprites flash (multiplexing???)
-- champion E: 10000 points (check on MAME on snapshot!!) bonus carry issue 10 of 10000 is trashed!
-- champion cheat: car becomes pink sometimes
+- moonbase displayed: don't optimize ground blit height either!
+
+- cycle exact: lower hardware sprites flash (multiplexing??? try without)
 - 68000 test: crashes after first section in the middle of an instruction: re-test
   debug with chip slave
 - ignore bob with y flip (hole making ship) instead of disappearing
@@ -30,6 +29,9 @@ low pri:
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - sprite allocation fail: low/high in message
 - still floor tile missing after a slope
+- missile: (champion course point A): missing front part or even complete missile
+  if ships still in the sky when reaching point A: ships should go away earlier,
+  game can't handle that (not a display issue, more a game sequence issue, like in demo)
 
 AGA:
 

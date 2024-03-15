@@ -1610,7 +1610,7 @@ display_status_bar_0b8a:
 0C00: 3E 02       ld   a,$02
 0C02: 32 08 E5    ld   (unknown_E508),a
 0C05: CD 8D 0D    call draw_ground_0d8d
-0C08: 3A 13 E5    ld   a,(unknown_E513)
+0C08: 3A 13 E5    ld   a,(nb_sections_to_clear_E513)
 0C0B: 3D          dec  a
 0C0C: FE 05       cp   $05
 0C0E: CE 00       adc  a,$00
@@ -4212,7 +4212,7 @@ ISROBJRun_1C:
 27C3: 35          dec  (hl)
 27C4: FB          ei
 27C5: 78          ld   a,b
-27C6: 32 13 E5    ld   (unknown_E513),a
+27C6: 32 13 E5    ld   (nb_sections_to_clear_E513),a
 27C9: FE 05       cp   $05
 27CB: CA D2 27    jp   z,$27D2
 27CE: A7          and  a
@@ -4231,7 +4231,7 @@ ISROBJRun_1C:
 27ED: CD BA 28    call $28BA
 27F0: 21 0C 2C    ld   hl,$2C0C                   ; "SPECIAL BOUNS POINTS" script
 27F3: CD 00 03    call $0300
-27F6: 3A 13 E5    ld   a,(unknown_E513)
+27F6: 3A 13 E5    ld   a,(nb_sections_to_clear_E513)
 27F9: 17          rla                             ; * J2880
 27FA: 17          rla
 27FB: 17          rla
@@ -4311,7 +4311,7 @@ ISROBJRun_1C:
 2899: CD 36 06    call $0636
 289C: 21 00 00    ld   hl,$0000                   ; * J288C
 289F: 22 11 E5    ld   (time_bcd_e511),hl
-28A2: 21 13 E5    ld   hl,unknown_E513
+28A2: 21 13 E5    ld   hl,nb_sections_to_clear_E513
 28A5: 7E          ld   a,(hl)
 28A6: A7          and  a
 28A7: C2 B7 0B    jp   nz,$0BB7
@@ -4330,7 +4330,7 @@ ISROBJRun_1C:
 28C9: FA CE 28    jp   m,$28CE
 28CC: 3E 05       ld   a,$05
 28CE: 5F          ld   e,a                        ; * J28C5,J28C9
-28CF: 3A 13 E5    ld   a,(unknown_E513)
+28CF: 3A 13 E5    ld   a,(nb_sections_to_clear_E513)
 28D2: 01 80 00    ld   bc,$0080
 28D5: FE 08       cp   $08
 28D7: 30 09       jr   nc,$28E2
