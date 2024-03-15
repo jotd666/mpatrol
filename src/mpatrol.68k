@@ -838,7 +838,8 @@ l_0351:
 	move.b	d0,sync_flag_E050                 	| [$0356: ld   (sync_flag_E050),a] -  ... ISR delay
 l_0359:
 	* jotd: problem: in that loop, sync flag can be very high, like if a concurrent long wait changed the value...
-	* happens in "TIME TO REACH POINT..." for instance
+	* happens in "TIME TO REACH POINT..." for instance. I don't want to investigate, maybe
+	* a race condition only present in the amiga version. Easy fix, no bigge.
 	move.b	sync_flag_E050,d0                 	| [$0359: ld   a,(sync_flag_E050)] -  Has ISR counted ... * J035D
 	                               	| [$035c: and  a] -  ... this down to zero?
 	jeq	l_0351                             	| [$035f: jr   $0351] -  Keep processing script

@@ -1,6 +1,5 @@
 - missile: miss front part if ships still in the sky (multiplexing sprite issue??)
 - champion E: 10000 points (check on MAME on snapshot!!) bonus carry issue 10 of 10000 is trashed!
-- 50 fps only if fast+AGA
 - champion cheat: car becomes pink sometimes
 - 68000 test: crashes after first section in the middle of an instruction: re-test
   debug with chip slave
@@ -9,30 +8,31 @@
 - dying & resuming with different mountain height! should erase blue mountain
   if previous y - y > 1 we should use blitter to clear zone or just
   better: clear top of screen if ground strip not moving
-- "TIME TO REACH..." sometimes locks up a few seconds at the first T  
-- demo section continues even if killed until game over then continue!!!
-- custom2 bit jump with button 2 only
-- start lives is wrong
-- save highscore & best course times
-- colons not erased: erase all planes when switching to mountains
-
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
+- blit ground strip: blit less if low Y terrain
+
+- custom2 bit jump with button 2 only
+- start lives is wrong
+- demo section out of sync jeep falls into second hole! then continues
+- save highscore & best course times
+- colons not erased: erase all planes when switching to mountains
 
 
 - city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again
 
-- (c) IREM not properly displayed + small transparency effect on the tip of the "l" of "Moon Patrol"
-=> redraw more tiles!!!
 
 low pri:
 
-- optimize code by adding osd_w_videoram_no_update if followed by osd_w_colorram
-- points awarded: 500 points wrong clut/wrong transcription because black color
-  in sprite => set in background, OK as BOB
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - sprite allocation fail: low/high in message
 - still floor tile missing after a slope
+
+AGA:
+
+- add city layer
+- dual playfield with characters on top except for lower strip
+- full bitplanes for ground strip (moonbase)
 
 converter:
 
