@@ -1,4 +1,5 @@
 - missile: miss front part if ships still in the sky (multiplexing sprite issue??)
+- cycle exact: lower hardware sprites flash (multiplexing???)
 - champion E: 10000 points (check on MAME on snapshot!!) bonus carry issue 10 of 10000 is trashed!
 - champion cheat: car becomes pink sometimes
 - 68000 test: crashes after first section in the middle of an instruction: re-test
@@ -10,7 +11,9 @@
   better: clear top of screen if ground strip not moving
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
-- blit ground strip: blit less if low Y terrain
+  
+- pre-render title and cookie cut blit (with proper bob palette if possible!) 
+  it if "is_title_displayed", don't include "moon patrol" tiles
 
 - custom2 bit jump with button 2 only
 - start lives is wrong
