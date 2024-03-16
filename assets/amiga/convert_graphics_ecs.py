@@ -533,7 +533,7 @@ cropped = replace_color(cropped,(0, 184, 255),(0,174,200))
 cropped = replace_color(cropped,(255, 255, 255),(193,200,200))
 cropped = replace_color(cropped,(255, 33, 0),(193,0,0))
 
-title_bitmap = bitplanelib.palette_image2raw(cropped,None,bob_global_palette,forced_nb_planes=4,generate_mask=True)
+title_bitmap = bitplanelib.palette_image2raw(cropped,None,bob_global_palette,forced_nb_planes=4,generate_mask=True,blit_pad=True)
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")
@@ -541,7 +541,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tbob_table\n")
     f.write("\t.global\tblue_mountains\n")
     f.write("\t.global\tgreen_mountains\n")
-    f.write("\t.global\tgreen_city\n")
+    #f.write("\t.global\tgreen_city\n")
+    f.write("\t.global\ttitle_bitmap\n")
     f.write("\t.global\thardware_sprite_flag_table\n")
 
 
@@ -758,3 +759,5 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             f.write(f"\n* plane {z} ({plane_size} bytes)")
             dump_asm_bytes(raw[z*plane_size:(z+1)*plane_size],f)
 
+    f.write("title_bitmap:")
+    dump_asm_bytes(title_bitmap,f)

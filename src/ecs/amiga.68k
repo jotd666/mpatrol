@@ -65,8 +65,11 @@ TARGET_SPRITE_Y = 0
 TARGET_SPRITE_X = 3
 ACTIVE_BITPLANE_MASK = 4   | for optimized bitplane erase
 
+* fixed title blit
 TITLE_NB_COLS = 22
 TITLE_NB_ROWS = 12
+TITLE_X = 64
+TITLE_Y = 80
 
 * above tile 7: playfield
 PLAYFIELD_TILE_Y_MIN = 7
@@ -85,6 +88,8 @@ OPT_ENABLE_PROFILING = 0
 * set to higher values than 1 to speed game up
 ONE_TICK = 1
 
+TITLE_WIDTH = 160
+TITLE_HEIGHT = 104
 
 	.endif
 	
@@ -419,8 +424,9 @@ _user:
 	beq.b	0f
 	bset	#5,dip_switches_2
 0:
-	
+	move.w	#0x4000,_custom+intena
 	jsr	 _detect_controller_types 
+	move.w	#0xC000,_custom+intena
 	clr.b	controller_joypad_0
 	clr.b	controller_joypad_1
 
@@ -2186,8 +2192,63 @@ blit_scrollable_layers:
 	* hack: if title "moon patrol" is shown on screen, we have to redraw it
 	* as the mountains share the same layer and have clobbered it partially
 	jbsr		is_title_displayed
-	bne.b	0f
-	nop
+	jne	0f
+
+	lea		title_bitmap,a0
+	move.l	bg_drawed_screen_ptr,a1
+	add.w	#TITLE_X/8+(TITLE_Y*NB_BYTES_PER_ROW),a1	| fixed position
+	
+    move.l  #0x0fca0000,d3    | B+C-A->D cookie cut, no shift
+
+	move.w	#(TITLE_WIDTH/8+2)*TITLE_HEIGHT,d5	| plane size
+	* compute mask
+	move.l	a0,a3
+	move.w	d5,d4
+	lsl.w	#2,d4
+	add.w	d4,a3		| plus 4 bitplanes
+
+
+
+	* blit height + width, hardcoded
+	move.w	#TITLE_HEIGHT*64+TITLE_WIDTH/16+1,d4
+
+	
+	
+    * always the same settings
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+
+	* plane 0
+	move.l d3,bltcon0(a5)	| sets con0 and con1
+    move.w  #0,bltamod(a5)	|A (mask) modulo: 40 bytes per row - 20 used
+    move.w  #0,bltbmod(a5)	|B (data) modulo: 40 bytes per row - 20 used
+    move.w  #20-2,bltcmod(a5)	|C modulo: 0 full line is drawn
+    move.w  #20-2,bltdmod(a5)	|D modulo: 0 full line is drawn
+
+	move.w	#NB_PLAYFIELD_PLANES-2,d3
+1:
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	add.w	d5,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	dbf		d3,1b
+	
+	* last plane
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
 0:
 	rts
 
@@ -3018,14 +3079,18 @@ update_bg_tile:
 	seq		d1
 112:
 
-	moveq	#0,d6		| standard copy mode
-	tst.b	background_layer_control_E1C5
-	beq.b	22f
-	cmp.w	#COOKIE_CUT_TILE_Y_MIN,d3		| lower Y: remain in standard copy at all times (panel)
-	bcs.b	22f
-	jbsr	is_title_displayed
-	seq		d6
-22:
+* disabled cookie cut display, too slow, only useful for title, where
+* we faked it by blitting a big fat BOB instead, bye bye curtain effect
+* but who cares? this was just too slow
+*
+*	moveq	#0,d6		| standard copy mode
+*	tst.b	background_layer_control_E1C5
+*	beq.b	22f
+*	cmp.w	#COOKIE_CUT_TILE_Y_MIN,d3		| lower Y: remain in standard copy at all times (panel)
+*	bcs.b	22f
+*	jbsr	is_title_displayed
+*	seq		d6
+*22:
 	
 	and.w	#0x1F,d7	| this is X (tile)
 	addq.w	#2,d7
@@ -3091,12 +3156,17 @@ update_bg_tile:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
+	* special case for vertical shots. We managed to put the color in the 4th
+	* plane so it doesn't interact with the mountain background which only use 3
+	* the color change a bit and it's yellow instead of white but it's already
+	* a miracle that it displays properly given the constraints
 	and.b	#0xF8,d2
 	cmp.b	#0x60,d2
 	jeq		copy_third_plane
 
-	tst.b	d6
-	jne		5f
+* disabled cookie cut mode for chars
+*	tst.b	d6
+*	jne		5f
 	
 	* just copy
 4:
