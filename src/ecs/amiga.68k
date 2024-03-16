@@ -888,7 +888,6 @@ refresh_tiles:
 	rts
 	
 clear_background:
-	
 	tst.b	background_cleared_flag
 	beq.b	0f
 	* already cleared: don't redo it
@@ -897,6 +896,20 @@ clear_background:
 	movem.l	d0-d7/A0-A6,-(a7)
 	bsr		reset_background_dynamic_colors
 	
+	bsr		really_clear_background
+
+	st		background_cleared_flag
+	bsr		load_tiles_palette_in_playfield_copperlist
+	
+	WAIT_BLIT
+
+	bsr		refresh_tiles
+	
+	
+	movem.l	(A7)+,d0-d7/A0-A6
+	rts
+	
+really_clear_background:	
 	lea		_custom,a5
 	* compute height
 	moveq	#0,d1
@@ -916,15 +929,6 @@ clear_background:
 	jbsr		clear_planes_any_blitter_internal
 	clr.b	previous_blue_layer_y   | only done once!
 0:
-	st		background_cleared_flag
-	bsr		load_tiles_palette_in_playfield_copperlist
-	
-	WAIT_BLIT
-
-	bsr		refresh_tiles
-	
-	
-	movem.l	(A7)+,d0-d7/A0-A6
 	rts
 	
 * < A0: 
@@ -973,7 +977,6 @@ update_background:
 	move.b	d4,(a1)
 	jeq		clear_background	| layer control = 0 + ground was moving: clear
 	
-	* irem hardware works differently for scroll
 	not.b	d0
 	not.b	d1
 	not.b	d5
@@ -991,10 +994,27 @@ update_background:
 	tst.b	previous_blue_layer_y
 	bne.b	2f
 	* was previously at 0: screen switch to mountains display
-	* we have to re-set bobs palette
+	* we have to re-set bobs palette, and also clear remaining tile shit
+	movem.w	d0-d5,-(a7)
+	bsr		really_clear_background
+	movem.w	(a7)+,d0-d5	
 	bsr		load_bobs_palette_in_playfield_copperlist
-
+	jra		23f
 2:
+	move.b	previous_blue_layer_y,d6
+	sub.b	d2,d6
+	jpl		22f
+	neg.b	d6
+22:
+	cmp.b	#2,d6
+	jcs		23f
+	* more diff than 2: brutal Y change: we have to clear the top of screen
+	* (happens when player killed after changing terrain height, and last
+	* checkpoint is on some other terrain height, rare but happens)
+	movem.w	d0-d5,-(a7)
+	bsr		really_clear_background
+	movem.w	(a7)+,d0-d5
+23:
 	move.b	d2,previous_blue_layer_y
 	jra		blit_scrollable_layers
 1:
@@ -2122,6 +2142,8 @@ blit_scrollable_layers:
 
 	move.w	#(32-SCROLLABLE_TILE_Y_START)*8,d4		| max source height (64)
 
+	bsr		is_moonbase_displayed
+	beq.b	55f				| moonbase is displayed: don't optimize
 	move.b	terrain_slope_type_E508,d2
 	cmp.b	#4,d2
 	beq.b	55f				| descending slope: we can't optimize
@@ -2702,7 +2724,7 @@ platform_init:
     move.w #0x2289,diwstop(a5)
 	* 4 bitplanes, try to hide color 0 on the border (except on OCS)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
-    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS
+    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 
 	move.l	chiprevbits,d0
@@ -3253,10 +3275,10 @@ update_bg_tile:
 	and.b	#0xF8,d0
 	cmp.b	#0x60,d0
 	jeq	erase_third_plane
-	tst.b	background_layer_control_E1C5
-	beq.b	111f	| no background: no cookie cut
-	tst.b	d6
-	bne.b	2f		| cookie cut of empty char => do nothing
+	*tst.b	background_layer_control_E1C5
+	*beq.b	111f	| no background: no cookie cut
+	*tst.b	d6
+	*bne.b	2f		| cookie cut of empty char => do nothing
 111:
 	.set	offset,0
 	.rept	8
