@@ -98,7 +98,7 @@ OPT_ENABLE_DOUBLE_BUFFERING = 1
 
 _custom = 0xDFF000
 
-OPT_ENABLE_MULTIPLEXED_SPRITES = 0
+OPT_ENABLE_MULTIPLEXED_SPRITES = 1
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
@@ -1335,7 +1335,11 @@ update_hardware_sprites:
 	add.w	d3,d3	| 16*4 or 32*4
 	addq	#4,d3
 	add.w	d3,a5
-	clr.l	(a5)			| clear previous control word ATM (useful if no lower sprite?)
+	* we used to clear previous control word (needed if no lower sprite)
+	* but doing so makes lower sprites blink when activated
+	* anyway we make lower sprites point on blanks when not used so
+	* we can leave that untouched, let the lower sprite write it
+		
 	lea		upper_sprite_buffers(pc),a1
 	move.l	a5,(a1,d4.w)	| store pointer on control word for lower matching sprite
 	move.l	(a7)+,a5
@@ -2696,11 +2700,10 @@ platform_init:
     move.w #0x1C99,diwstrt(a5)
 	*         VVHH
     move.w #0x2289,diwstop(a5)
+	* 4 bitplanes, try to hide color 0 on the border (except on OCS)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
-    move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
-	* AGA-compatible ECS default values
     move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS
-    move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
+    move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 
 	move.l	chiprevbits,d0
 	and.l	#SETCHIPREV_AA,d0
@@ -2712,6 +2715,8 @@ platform_init:
 	scc.b	update_at_50Hz		| enable 50 Hz if fastmem
 	* AGA: enable fast bitplane fetch
 	* (A1200/nofast is not powerful enough for 50Hz)		
+	* AGA-compatible ECS default values
+    move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
     move.w #3,fmode(a5)
     move.w #0x0030,ddfstrt(a5)
     move.w #0x00C8,ddfstop(a5)
@@ -4187,7 +4192,7 @@ blank_sprite_table:
 	.set	offset,0
 	.rept	16
 	.long	blank_sprite_0+offset
-	.set	offset,offset+40
+	.set	offset,offset+64+8
 	.endr
 	
 tiles_palette:
@@ -4254,7 +4259,7 @@ debug_color:
 	dc.l	-2
 	
 blank_sprite_0:
-	.rept	40*8
+	.rept	(64+8)*16
 	.long	0
 	.endr
 	

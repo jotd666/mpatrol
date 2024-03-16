@@ -1,16 +1,14 @@
 - moonbase displayed: don't optimize ground blit height either!
-
-- cycle exact: lower hardware sprites flash (multiplexing, OK without!!!)
-
+- borderblank ECS issue
+- beginner course go! not erased at start!!
+- tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
+  if jeep is not exploding
 - dying & resuming with different mountain height! should erase blue mountain
   if previous y - y > 1 we should use blitter to clear zone or just
   better: clear top of screen if ground strip not moving
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
   
-- pre-render title and cookie cut blit (with proper bob palette if possible!) 
-  it if "is_title_displayed", don't include "moon patrol" tiles
-
 - custom2 bit jump with button 2 only
 - start lives is wrong
 - demo section out of sync jeep falls into second hole! then continues
