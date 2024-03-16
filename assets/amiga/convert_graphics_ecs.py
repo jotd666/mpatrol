@@ -533,7 +533,7 @@ cropped = replace_color(cropped,(0, 184, 255),(0,174,200))
 cropped = replace_color(cropped,(255, 255, 255),(193,200,200))
 cropped = replace_color(cropped,(255, 33, 0),(193,0,0))
 
-title_bitmap = bitplanelib.palette_image2raw(cropped,None,bob_global_palette,forced_nb_planes=4,generate_mask=True,blit_pad=True)
+title_bitmap = bitplanelib.palette_image2raw(cropped,None,bob_global_palette,forced_nb_planes=4,generate_mask=True)
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")

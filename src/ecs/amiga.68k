@@ -2200,7 +2200,7 @@ blit_scrollable_layers:
 	
     move.l  #0x0fca0000,d3    | B+C-A->D cookie cut, no shift
 
-	move.w	#(TITLE_WIDTH/8+2)*TITLE_HEIGHT,d5	| plane size
+	move.w	#(TITLE_WIDTH/8)*TITLE_HEIGHT,d5	| plane size
 	* compute mask
 	move.l	a0,a3
 	move.w	d5,d4
@@ -2210,23 +2210,24 @@ blit_scrollable_layers:
 
 
 	* blit height + width, hardcoded
-	move.w	#TITLE_HEIGHT*64+TITLE_WIDTH/16+1,d4
+	move.w	#TITLE_HEIGHT*64+TITLE_WIDTH/16,d4
 
 	
 	
     * always the same settings
 
+	move.l	#0x09f00000,d6
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
     
     * blitter registers set
 
-	* plane 0
+	* planes 0-2
 	move.l d3,bltcon0(a5)	| sets con0 and con1
-    move.w  #0,bltamod(a5)	|A (mask) modulo: 40 bytes per row - 20 used
-    move.w  #0,bltbmod(a5)	|B (data) modulo: 40 bytes per row - 20 used
-    move.w  #20-2,bltcmod(a5)	|C modulo: 0 full line is drawn
-    move.w  #20-2,bltdmod(a5)	|D modulo: 0 full line is drawn
+    move.w  #0,bltamod(a5)	|A (mask) modulo: object data is contiguous
+    move.w  #0,bltbmod(a5)	|B (data) modulo: object data is contiguous
+    move.w  #NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltcmod(a5)	|C modulo
+    move.w  #NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltdmod(a5)	|D modulo
 
 	move.w	#NB_PLAYFIELD_PLANES-2,d3
 1:
@@ -2242,10 +2243,9 @@ blit_scrollable_layers:
 	WAIT_BLIT
 	dbf		d3,1b
 	
-	* last plane
-	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
-	move.l a0,bltbpt(a5)	|source graphic top left corner
-	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	* last plane, no need to wait, no need for cookie cut
+	move.l  d6,bltcon0(a5)    | A->D copy, ascending mode
+	move.l 	a0,bltapt(a5)	|source graphic top left corner (could be omitted!)
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
