@@ -1,10 +1,8 @@
 - moonbase displayed: don't optimize ground blit height either!
 
-- cycle exact: lower hardware sprites flash (multiplexing??? try without)
+- cycle exact: lower hardware sprites flash (multiplexing, OK without!!!)
 - 68000 test: crashes after first section in the middle of an instruction: re-test
   debug with chip slave
-- ignore bob with y flip (hole making ship) instead of disappearing
-  display normal bob
 - dying & resuming with different mountain height! should erase blue mountain
   if previous y - y > 1 we should use blitter to clear zone or just
   better: clear top of screen if ground strip not moving
@@ -21,8 +19,9 @@
 - colons not erased: erase all planes when switching to mountains
 
 
-- city layer: missing black color, redefine yellow, height issue, erase issue! ATM put mountain again
 
+- ignore bob with y flip (hole making ship) instead of disappearing
+  display normal bob
 
 low pri:
 
@@ -35,7 +34,8 @@ low pri:
 
 AGA:
 
-- add city layer
+- add city layer: missing black color, redefine yellow, height issue, 
+   erase issue!
 - dual playfield with characters on top except for lower strip
 - full bitplanes for ground strip (moonbase)
 

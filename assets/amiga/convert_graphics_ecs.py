@@ -523,6 +523,17 @@ sprites[1]["bitmap"] = jeep_dict
 sprites[1]["hsize"] = jeep_img.size[1]
 sprites[1]["vsize"] = jeep_img.size[0]
 
+title_pic = Image.open(os.path.join(this_dir,os.pardir,"mpatrol","title_screen.png"))
+cropped = Image.new("RGB",(160,104))
+cropped.paste(title_pic,(-40,-74))  # just the title + copyright
+
+# find close colors in bobs palette, I could use copper to set them exactly, but ATM who cares for 5 seconds
+# where the title is displayed? ALL colors are different WTF
+cropped = replace_color(cropped,(0, 184, 255),(0,174,200))
+cropped = replace_color(cropped,(255, 255, 255),(193,200,200))
+cropped = replace_color(cropped,(255, 33, 0),(193,0,0))
+
+title_bitmap = bitplanelib.palette_image2raw(cropped,None,bob_global_palette,forced_nb_planes=4,generate_mask=True)
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")
@@ -708,7 +719,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         bitplanelib.dump_asm_bytes(k,f,mit_format=True)
 
     f.write("\n* backgrounds\n")
-    backgrounds = ['blue_mountains', 'green_mountains', 'green_city']
+    backgrounds = ['blue_mountains', 'green_mountains'] #, 'green_city']
 
     # we only need 8 first colors (actually even less)
     bg_palette = background_palette
