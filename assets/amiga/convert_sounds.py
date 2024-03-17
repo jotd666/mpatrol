@@ -44,7 +44,7 @@ sound_dict = {
 "MAIN_TUNE_SND"                :{"index":10,"pattern":1,"loops":True,"volume":40},
 "COURSE_START_SND"              :{"index":11,"pattern":0,"loops":False,"volume":40},
 "SECTION_END_SND"              :{"index":12,"pattern":5,"loops":False,"volume":40,"ticks":250},
-"COURSE_END_SND"              :{"index":13,"pattern":4,"loops":False,"volume":40,"ticks":500},
+"COURSE_END_SND"              :{"index":13,"pattern":4,"loops":False,"volume":40,"ticks":480},
 "GAME_OVER_SND"              :{"index":14,"pattern":6,"loops":False,"volume":40,"ticks":200},
 
 }

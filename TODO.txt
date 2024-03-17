@@ -1,8 +1,7 @@
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
+- end section letter written at the end of the strip
   
-
-
 - tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
 - demo section out of sync jeep falls into second hole! then continues

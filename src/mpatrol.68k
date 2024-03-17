@@ -2997,8 +2997,7 @@ enter_rear_missile_0e4f:
 	move.b	d0,ufo_objects_e370                 	| [$0e51: ld   (ufo_objects_e370),a]
 	rts                                    	| [$0e54: ret]
 
-* called when rock is hit
-l_0e55:
+write_checkpoint_scrolling_letter_0e55:
 	move.b	#0x01,d0                        	| [$0e55: ld   a,$01] -  * J0E8B
 	move.b	d0,unknown_E1DC                 	| [$0e57: ld   (unknown_E1DC),a]
 	move.w	screen_address_E0E4,d7             	| [$0e5a: ld   hl,(screen_address_E0E4)]
@@ -3006,6 +3005,7 @@ l_0e55:
 	and.b	#0x1F,d7                         	| [$0e5e: and  $1F]
 	or.w	#0xC0,d7                          	| [$0e60: or   $C0]
 	                           	| [$0e62: ld   l,a]
+	* write in 83DE or 83DF the checkpoint letter plus a small horizontal bar
 	move.b	#0x0A,d0
 	jbsr	osd_w_videoram                      	| [$0e63: ld   (hl),$0A]
 	move.w	#0x20,d1											| [$0e65: ld   bc,$0020] 32
@@ -3039,7 +3039,7 @@ l_0e55:
 
 change_slope_type_0e8a:
 	addq.b	#1,d0                           	| [$0e8a: inc  a] -  * J0E2B
-	jeq	l_0e55                             	| [$0e8b: jr   z,$0E55]
+	jeq	write_checkpoint_scrolling_letter_0e55                             	| [$0e8b: jr   z,$0E55]
 	* make up for negative value by adding 5
 	addq.b	#0x05,d0                        	| [$0e8d: add  a,$05]
 	move.b	d0,terrain_slope_type_E508                 	| [$0e8f: ld   (terrain_slope_type_E508),a]
