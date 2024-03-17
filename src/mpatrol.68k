@@ -362,24 +362,8 @@ l_0048:
 	subq.b	#1,(a0)+                         	| [$0049: dec  (hl)] -  -1
 	                           	| [$004a: inc  hl] -  Next counter byte
 	subq.b	#1,(a0)                         	| [$004b: dec  (hl)] -  -1
-	jbsr	osd_read_dsw_2                       	| [$004c: ld   a,($D004)] -  Are we ...
-	tst.b	d0                               	| [$004f: and  a] -  ... in service mode?
-	jmi	l_0093                             	| [$0050: jp   m,$0093] -  No ... process game
-	lea	timer_8bit_E04E,a0                	| [$0053: ld   hl,timer_8bit_E04E] -  Point to counter1
-	addq.b	#1,(a0)                         	| [$0056: inc  (hl)] -  Bump it again (will dec it in 3)
-	move.b	#0x00,d1                        	| [$0057: ld   bc,$0003] 3 -  Count of 3*256
-	move.b	#0x03,d2                        	| [$0057: ld   bc,$0003] 3 -  Count of 3*256
-	lea	timer_8bit_E04E,a0                	| [$005a: ld   hl,timer_8bit_E04E] -  Point to counter1 again
-	subq.b	#1,(a0)                         	| [$005d: dec  (hl)] -  Bump back down
-l_005e:
-	subq.b	#1,d1                           	| [...]
-	jne	l_005e                             	| [$005e: djnz $005E] -  Inner count 256 * J005E,J0061
-	subq.b	#1,d2                           	| [$0060: dec  c] -  Outer count ...
-	jne	l_005e                             	| [$0061: jr   nz,$005E] -  ... 3 (3*256 total)
-	jbsr	exx                               	| [$0063: exx] -  Restore main ...
-	exg	d0,d7                              	| [$0064: ex   af,af'] -  ... registers
-    jbsr  osd_enable_interrupts  | [ei]
-	rts                                    	| [$0067: ret] -  Ignore
+	jra		l_0093			| skip service mode test and unreachable code
+	
 
 startup_cont_0068:
     jbsr  osd_enable_interrupts  | [ei]
@@ -477,7 +461,7 @@ l_0104:
     jbsr  osd_enable_interrupts  | [ei]
 	jbsr	l_0d29                            	| [$010a: call $0D29]
 l_010d:
-	jbsr	l_0533                            	| [$010d: call $0533] -  * J0110
+	jbsr	show_push_button_screen_text_0533                            	| [$010d: call $0533] -  * J0110
 	jeq	l_010d                             	| [$0110: jr   z,$010D]
 	jbsr	l_0b38                            	| [$0112: call $0B38]
 	jra	start_new_section_0bb7                             	| [$0115: jp   $0BB7]
@@ -539,7 +523,7 @@ l_0192:
 	jeq	l_01d2                             	| [$0193: jr   z,$01D2]
 	moveq	#1,d7
 	sbcd	d7,d0                           	| [$0195: dec  a + daa]
-	move.b	d0,continue_timer_E054                 	| [$0197: ld   (continue_timer_E054),a]
+	move.b	d0,temp_ram_buffer_E054                 	| [$0197: ld   (temp_ram_buffer_E054),a]
 	lea	0x8233,a1                      	| [$019a: ld   de,$8233]
 	move.b	#0x02,d2                        	| [$019d: ld   c,$02]
 	jbsr	set_character_at_address_03ae                            	| [$019f: call $03AE]
@@ -548,7 +532,7 @@ l_0192:
 	st.b	in_continue_loop_flag
 l_01a7:
 	                               	| [$01aa: and  a]
-	move.b	continue_timer_E054,d0                 	| [$01ab: ld   a,(continue_timer_E054)]
+	move.b	temp_ram_buffer_E054,d0                 	| [$01ab: ld   a,(temp_ram_buffer_E054)]
 	tst.b	sync_flag_E050                 	| [$01a7: ld   a,(sync_flag_E050)] -  * J01BF,J01C4
 	jeq	l_0192                             	| [$01ae: jr   z,$0192]
 	move.b	credits_e048,d0              	| [$01b0: ld   a,(credits_e048)]
@@ -560,7 +544,7 @@ l_01a7:
 	jra	l_01a7                             	| [$01bf: jr   $01A7]
 l_01c1:
 	* test if start button pressed
-	jbsr	l_0533                            	| [$01c1: call $0533] -  * J01B4
+	jbsr	show_push_button_screen_text_0533                            	| [$01c1: call $0533] -  * J01B4
 	jeq	l_01a7                             	| [$01c4: jr   z,$01A7]
 	clr.b	in_continue_loop_flag
 	jbsr	l_01da                            	| [$01c6: call $01DA]
@@ -712,7 +696,7 @@ l_02ad:
 	add.w	d1,d1				| one more shift for 32 bit jump
 	move.b	(0x01,a2),d0                    	| [$02b2: ld   a,(ix+$01)] -  Parameter data e.g. ISR count or score-adjust
 	* push return address
-	pea		l_02a5                      	| [$02b5: ld   hl,$02A5] -  Return to ...
+	pea		l_02a5(pc)                      	| [$02b5: ld   hl,$02A5] -  Return to ...
 
 	                        	| [$02b8: push hl] -  ... 2A5
 	lea	jump_table_02D3,a0             	| [$02b9: ld   hl,jump_table_02D3] -  Jump table (back up one entry ... first entry is 1)
@@ -1270,7 +1254,7 @@ print_creds_0527:
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$052a: call $0300] -  Print it
 	move.b	credits_e048,d0              	| [$052d: ld   a,(credits_e048)] -  Number of credits
 	jra	set_character_at_address_03ae                             	| [$0530: jp   $03AE] -  Print it and out
-l_0533:
+show_push_button_screen_text_0533:
 	lea	game_rom+0x2AD1,a0                      	| [$0533: ld   hl,$2AD1] -  " PUSH BUTTON " script * C010D,C01C1
 	jbsr	flash_script_0374                            	| [$0536: call $0374] -  Print the flashing script
 	jbsr	print_creds_0527                            	| [$0539: call $0527] -  Print number of credits
@@ -1691,7 +1675,7 @@ l_0745:
 	* "INSERT COIN" text
 	lea	game_rom+0x2C57,a0                      	| [$0751: ld   hl,$2C57] -  "INSERT COIN" script
 	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$0754: call $034E]
-	lea	continue_timer_E054,a1                	| [$0757: ld   de,continue_timer_E054]
+	lea	temp_ram_buffer_E054,a1                	| [$0757: ld   de,temp_ram_buffer_E054]
 	move.w	#0x20,d1                        	| [$075a: ld   bc,$0020] 32
 	move.b	slot_mode_e044,d0                 	| [$075d: ld   a,(slot_mode_e044)]
 	                               	| [$0760: and  a]
@@ -1717,7 +1701,7 @@ l_0745:
 l_0787:
 	move.b	d0,(a0)                         	| [$0787: ld   (hl),a] -  * J077F
 l_0788:
-	lea	continue_timer_E054,a0                	| [$0788: ld   hl,continue_timer_E054] -  * J079D
+	lea	temp_ram_buffer_E054,a0                	| [$0788: ld   hl,temp_ram_buffer_E054] -  * J079D
 	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$078b: call $034E]
 l_078e:
 	move.b	cnt_till_cred_e047,d0                 	| [$078e: ld   a,(cnt_till_cred_e047)] -  * J076C,J0792
@@ -1762,7 +1746,8 @@ l_07c3:
 	move.b	#0x53,(a0)                      	| [$07d0: ld   (hl),$53]
 	rts                                    	| [$07d2: ret]
 l_07d3:
-	lea	game_rom+0x2C7D,a0                      	| [$07d3: ld   hl,$2C7D] -  "A 1 PLAYER 1 COIN" script * C0797
+	* called only in coin mode 2 (A ... prefix for coin slot)
+	lea	game_rom+0x2C7D,a0                      	| [$07d3: ld   hl,$2C7D] -  "A ... 1 PLAYER 1 COIN" script * C0797
 	jbsr	ldir                              	| [$07d6: ldir]
 	lea	unknown_E05B,a0                	| [$07d8: ld   hl,unknown_E05B]
 	jra	l_07a7                             	| [$07db: jr   $07A7]
@@ -1772,12 +1757,12 @@ l_07dd:
 	move.b	slot_modeB_e042,d0                 	| [$07e3: ld   a,(slot_modeB_e042)]
 	jra	l_07aa                             	| [$07e6: jr   $07AA]
 l_07e8:
-	lea	continue_timer_E054,a0                	| [$07e8: ld   hl,continue_timer_E054] -  * C0766,C07DD
+	lea	temp_ram_buffer_E054,a0                	| [$07e8: ld   hl,temp_ram_buffer_E054] -  * C0766,C07DD
 	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$07eb: call $034E]
-	LOAD_LEW	continue_timer_E054,d5             	| [$07ee: ld   hl,(continue_timer_E054)]
+	LOAD_LEW	temp_ram_buffer_E054,d5             	| [$07ee: ld   hl,(temp_ram_buffer_E054)]
 	                      	| [$07f1: ld   de,$0040] 64
 	add.w	#0x40,d5                            	| [$07f4: add  hl,de]
-	STORE_LEW	d5,continue_timer_E054                 	| [$07f5: ld   (continue_timer_E054),hl]
+	STORE_LEW	d5,temp_ram_buffer_E054                 	| [$07f5: ld   (temp_ram_buffer_E054),hl]
 	lea	unknown_E057,a0                	| [$07f8: ld   hl,unknown_E057]
 	addq.b	#1,(a0)                         	| [$07fb: inc  (hl)]
 	rts                                    	| [$07fc: ret]
@@ -2762,12 +2747,12 @@ l_0d5e:
 	move.b	#0x40,d1                        	| [$0d60: ld   bc,$4000] 16384 -  B=40, C=0
 	move.b	#0x00,d2                        	| [$0d60: ld   bc,$4000] 16384 -  B=40, C=0
 	clr.b	d0                               	| [$0d63: xor  a] -  A is now 0
-l_0d64:
+*l_0d64:
 * set scroll value??? sound??
 **out  (c),a
-	addq.b	#1,d2                           	| [$0d66: inc  c] -  ... to ports ...
-	subq.b	#1,d1                           	| [...]
-	jne	l_0d64                             	| [$0d67: djnz $0D64] -  ... 00 through 3F
+*	addq.b	#1,d2                           	| [$0d66: inc  c] -  ... to ports ...
+*	subq.b	#1,d1                           	| [...]
+*	jne	l_0d64                             	| [$0d67: djnz $0D64] -  ... 00 through 3F
     jbsr  osd_disable_interrupts  | [di]
 	jbsr	queue_sound_effect_0d7d                            	| [$0d6a: call $0D7D] -  Queue up a stop-sound command
     jbsr  osd_enable_interrupts  | [ei]
@@ -2793,11 +2778,13 @@ queue_sound_effect_0d7d:
 	lea		sfx_index_table,a0
 	and.w	#0xFF,d0
 	move.b	(a0,d0.w),d0
+	bmi.b	1f
 	cmp.b	#JEEP_EXPLOSION_SND,d0
 	bne.b	0f
 	jbsr	osd_sound_stop			| stop music before some sounds
 0:
 	jbsr	osd_sound_start
+1:
 	move.l	(sp)+,a0                        	| [$0d8b: pop  hl] -  Restore HL
 	rts                                    	| [$0d8c: ret] -  Done
 
@@ -2892,7 +2879,7 @@ l_0db7:
 	add.w	d3,d7                            	| [$0dbb: add  hl,de]
 	jra	l_0db7                             	| [$0dbc: jr   $0DB7]
 l_0dbe:
-	STORE_LEW	d7,continue_timer_E054                 	| [$0dbe: ld   (continue_timer_E054),hl] -  * J0DB9,J0DD4,J0DDA
+	STORE_LEW	d7,temp_ram_buffer_E054                 	| [$0dbe: ld   (temp_ram_buffer_E054),hl] -  * J0DB9,J0DD4,J0DDA
 l_0dc1:
 	move.b	(a4)+,d0                         	| [$0dc1: ld   a,(bc)] -  * J0DCB
 												| [$0dc2: inc   bc]
@@ -2906,7 +2893,7 @@ l_0dc1:
 	add.w	d3,d7                            	| [$0dca: add  hl,de]
 	jra	l_0dc1                             	| [$0dcb: jr   $0DC1]
 l_0dcd:
-	move.b	continue_timer_E054,d0                 	| [$0dcd: ld   a,(continue_timer_E054)] -  * J0DC5
+	move.b	temp_ram_buffer_E054,d0                 	| [$0dcd: ld   a,(temp_ram_buffer_E054)] -  * J0DC5
 	addq.b	#1,d0                           	| [$0dd0: inc  a]
 	move.b	d0,d7                           	| [$0dd1: ld   l,a]
 	and.b	#0x1F,d0                         	| [$0dd2: and  $1F]
@@ -3584,9 +3571,11 @@ l_1213:
 	rts                                    	| [$1217: ret] -  Done
 
 display_title_1218:
+	move.b	#0,0x200
 	move.b	timer_8bit_E04E,d0                 	| [$1218: ld   a,(timer_8bit_E04E)] -  Current ISR
 	cmp.b	(0x01,a2),d0                     	| [$121b: cp   (ix+$01)] -  Time to take action?
 	jne	l_1213                             	| [$121e: jr   nz,$1213] -  No ... stay in state 0B and out
+	
 	LOAD_LEW	title_screen_address_E0EB,d5             	| [$1220: ld   hl,(title_screen_address_E0EB)] -  Pointer to screen
 	addq.w	#1,d5                           	| [$1223: inc  hl] -  Next column ...
 	STORE_LEW	d5,title_screen_address_E0EB                 	| [$1224: ld   (title_screen_address_E0EB),hl] -  ... over

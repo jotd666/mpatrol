@@ -3,7 +3,7 @@ set game mpatrol
 ;propack p a $game
 copy $game.RNC DF0:$game
 protect DF0:$game RWED
-copy readme.md instructions.txt df0:
+copy readme.md df0:
 
 ;delete $game.rnc
 if exists df0:$game.high

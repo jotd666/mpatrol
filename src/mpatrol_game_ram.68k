@@ -25,7 +25,7 @@
 	.global	isr_count4_e051
 	.global	unknown_E052
 	.global	coin_start_e053
-	.global	continue_timer_E054
+	.global	temp_ram_buffer_E054
 	.global	unknown_E057
 	.global	unknown_E05B
 	.global	unknown_E05F
@@ -221,7 +221,7 @@ unknown_E052:
 	ds.b	1
 coin_start_e053:
 	ds.b	1
-continue_timer_E054:
+temp_ram_buffer_E054:
 	ds.b	3
 unknown_E057:
 	ds.b	4

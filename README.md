@@ -9,6 +9,7 @@ Credits:
   (merged their comments & variable names after having started my RE)
 - PascalDe73: icon
 - mrv2k: boxart
+- DamienD: floppy menu
 
 Amiga version:
 

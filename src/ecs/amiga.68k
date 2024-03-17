@@ -249,6 +249,25 @@ _user:
     jsr _LVOOpenLibrary(a6)
     move.l  d0,_dosbase
 
+	bsr		load_highscores
+
+    * check if "floppy" file is here
+    
+    move.l  _dosbase(pc),a6
+    move.l   #floppy_file,d1
+    move.l  #1005,d2   | MODE_OLDFILE
+    jsr     _LVOOpen(a6)
+    move.l  d0,d1
+    beq.b   no_floppy
+    
+    * "floppy" file found
+    jsr     _LVOClose(a6)
+    * wait 2 seconds for floppy drive to switch off
+    move.l  #100,d1
+    jsr     _LVODelay(a6)
+	
+no_floppy:
+
 	lea	read_args_string(pc),a0
 	lea	program_args(pc),a1
 	move.l	#program_args_end-program_args,d0
@@ -307,24 +326,7 @@ _user:
 
 	
 
-	bsr		load_highscores
 
-    * check if "floppy" file is here
-    
-    move.l  _dosbase(pc),a6
-    move.l   #floppy_file,d1
-    move.l  #1005,d2   | MODE_OLDFILE
-    jsr     _LVOOpen(a6)
-    move.l  d0,d1
-    beq.b   .no_floppy
-    
-    * "floppy" file found
-    jsr     _LVOClose(a6)
-    * wait 2 seconds for floppy drive to switch off
-    move.l  #100,d1
-    jsr     _LVODelay(a6)
-	
-.no_floppy:
 
 .startup:
 
@@ -390,15 +392,17 @@ _user:
 	
 	move.l	misc_options,d1
 	btst	#0,d1
-	*sne		hard_bags_flag
+	sne		no_green_layer_flag
 	btst	#1,d1
-	beq.b	0f
-	bset	#5,d0
-0:
-	btst	#2,d1
-	beq.b	0f
-	bset	#6,d0
-0:
+	sne		no_blue_layer_flag
+*	btst	#1,d1
+*	beq.b	0f
+*	bset	#5,d0
+*0:
+*	btst	#2,d1
+*	beq.b	0f
+*	bset	#6,d0
+*0:
 	.ifndef	RELEASE
 	btst	#31,d1
 	sne		break_at_startup_flag
@@ -719,7 +723,7 @@ _vblank:
     addq.w  #1,d0
     cmp.w   #5,d0
     bne.b   22f
-    * update a second time, simulate 60Hz (doesn't work right now)
+    * update a second time, simulate 60Hz
 	moveq	#ONE_TICK*2,d1
 	clr.w d0    
 22:
@@ -745,7 +749,7 @@ _vblank:
 	* itself in the short time of the computations
 	move.w	#0x2300,SR
 	subq.b	#1,vb_ticks_count		| simulate 60Hz
-	bne.b	0b
+	*bne.b	0b
 	clr.b	interrupt_mode
 	* AGA/AA: fmode=3 allows much faster blitter operation
 	* allowing 50 fps without a hitch :)
@@ -1840,9 +1844,11 @@ set_mountain_dynamic_colors:
 	* the line list is not contiguous, we need to check size and skip sprite chunk
 	bsr		shift_d6_copper_y
 	
-
+	tst.b	no_green_layer_flag
+	bne.b	0f
 	move.w	#color,(A0,d6.w)
 	move.w	(8,a1),(2,a0,d6.w)
+0:
 	* set rock color (using same color as mountain dark blue)
 	move.w	rock_color_register,(4,a0,d6.w)
 	move.w	rock_color,(6,a0,d6.w)
@@ -1867,6 +1873,9 @@ set_mountain_dynamic_colors:
 	* now change red to dark green (space plant)
 	
 	* now blue
+	tst.B	no_blue_layer_flag
+	jne	10f
+	
 	move.w	blue_y_end,d7
 	
 	cmp.w	#DYNAMIC_COPPER_ROWS,d7
@@ -1950,6 +1959,9 @@ blit_scrollable_layers:
 	move.w	d4,d7
 	add.w	d2,d7			| D7=Y position to set blue color as color 0
 	
+	tst.B	no_blue_layer_flag
+	jne	0f
+
 	add.w	d2,d2
 	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
@@ -2018,6 +2030,7 @@ blit_scrollable_layers:
 	* green part
 	******************
 	
+0:
 	movem.l	(a7),d0-d5/a1
 	bsr		get_green_mountains_data
 	
@@ -2025,18 +2038,24 @@ blit_scrollable_layers:
 	* and it's ugly. We'll optimize as most of the time blue mountain erases
 	* green mountain top, but at lowest level it can't erase all
 	
+	tst.B	no_green_layer_flag
+	jne	0f		| no need to erase green layer: no layer
+	tst.B	no_blue_layer_flag
+	jne	0f		| no need to erase+cookie cut green layer: no blue layer
+
 	movem.l	d0-d4/A1-A6,-(a7)
 	move.w	d2,d1				| Y blue
 	add.w	blue_mountains,d1				| Y height
+	move.w	#26,d4		| empiric
 	add.w	#PANEL_MAX_Y+8,d1
+
 	move	#NB_PLAYFIELD_PLANES-2,d3
 	move.w	#NB_BYTES_PER_ROW,d2			| width = all screen width
 	moveq	#0,d0			| X=0 (all screen)
 	move.l	bg_drawed_screen_ptr(pc),a1
-	move.w	#26,d4		| empiric
 	jbsr		clear_planes_any_blitter_internal
 	movem.l	(A7)+,d0-d4/A1-A6
-
+0:
 	
 	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
@@ -2047,7 +2066,9 @@ blit_scrollable_layers:
 	move.w	d6,green_y_end		| save green Y end
 	move.w	d7,blue_y_end		| save blue Y end
 
-	
+	tst.B	no_green_layer_flag
+	jne	2f
+
 	move.w	(a0)+,d5		| number of bytes for the plane (height * 66)
 
 	
@@ -2057,8 +2078,12 @@ blit_scrollable_layers:
 	lsr.w	#3,d2
 	bclr	#0,d2
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
-    move.l  #0x0fca0000,d3    | B+C-A->D cookie cut   
 
+    move.l  #0x0fca0000,d3    | B+C-A->D cookie cut   
+	tst.b	no_blue_layer_flag
+	jeq	0f
+	move.l	#0x09f00000,d3		| brutal copy
+0:
 	* blit height
 	lsl.w	#6,d4
 	add.w	#20,d4		| size: the whole screen
@@ -2075,7 +2100,46 @@ blit_scrollable_layers:
 	or.l	d0,d3
 	swap	d3
 	
-	* compute mask
+	tst.b	no_blue_layer_flag
+	jeq	0f
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+
+	* plane 0
+	move.l d3,bltcon0(a5)	| sets con0 and con1
+    move.w  #26,bltamod(a5)	|A (mask) modulo: 66 bytes per row - 40 used
+    move.w  #26,bltbmod(a5)	|B (data) modulo: 66 bytes per row - 40 used
+    move.w  #0,bltcmod(a5)	|D modulo: 0 full line is drawn
+    move.w  #0,bltdmod(a5)	|D modulo: 0 full line is drawn
+
+	move.l a0,bltapt(a5)	|source graphic top left corner (mask)
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	add.w	d5,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	* plane 1
+	move.l a0,bltapt(a5)	|source graphic top left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
+	add.w	d5,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	* plane 2
+	move.l a0,bltapt(a5)	|source graphic top left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	jra		2f				| done with mountains
+
+0:
+	* green over blue: compute mask
 	move.l	a0,a3
 	add.w	d5,a3
 	add.w	d5,a3
@@ -2125,7 +2189,7 @@ blit_scrollable_layers:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 
-
+2:
 	movem.l	(a7)+,d0-d5/a1
 	.endif
 	
@@ -3158,9 +3222,12 @@ update_bg_tile:
 	cmp.w	#SCROLLABLE_TILE_Y_START,d3
 	bcc		update_scrollable_bottom
 230:
+	* ignore checkpoint letters, pity
+	cmp.w	#0x3DE,d6
+	beq.b	231f
 	cmp.w	#0x3DF,d6
 	bne.b	24f
-	move.w	#0,0x200
+231:
 	* this is where the game writes the checkpoint letters in the
 	* scrollable strip. We're just drawing one plane, so we cannot
 	* display that properly: make a special case
@@ -4083,6 +4150,10 @@ do_upper_part:
 	.byte	0
 background_cleared_flag:
 	.byte	0
+no_green_layer_flag:
+	.byte	0
+no_blue_layer_flag:
+	.byte	0
 update_at_50Hz:
 	.byte	0
 	.align	2
@@ -4271,6 +4342,7 @@ blank_sound:
 	ds.l	4
 	
 debug_copperlist:
+	dc.w	bplcon0,0x200
 	dc.w	color
 debug_color:
 	dc.w	0

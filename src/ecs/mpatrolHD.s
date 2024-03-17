@@ -43,6 +43,8 @@ _config
 	dc.b	"C2:X:jump with button 2 only:0;"
 	dc.b    "C4:L:start course:beginner,champion 1,champion 2;"
 	dc.b    "C5:L:start lives:default,1,2,3,5;"
+	dc.b	"C3:X:no green layer:0;"
+	dc.b	"C3:X:no blue mountains layer:1;"
 	IFD		CHIP_ONLY
 	dc.b	"C3:X:break at startup:31;"
 	ENDC

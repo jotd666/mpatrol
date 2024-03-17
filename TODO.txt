@@ -1,17 +1,26 @@
+- disable green / disable blue option
+- blinking hole ufo ships
+- 50fps enabled by mistake??? test again...
+- 99 credits after a while continuing
+- slow CPU => ships too slow, game too slow overall
+- demo section out of sync jeep falls into second hole: ground moves slightly too fast?
+  or jump is off? create video and compare with original
+
+
+
+
+
 - write letter to 83DE: write into another buffer, then blit it at the proper location
   when blitting ground strip
-- end section letter written at the end of the strip
-  
+ 
 - tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
-- demo section out of sync jeep falls into second hole! then continues
 - save highscore & best course times
 - custom2 bit jump with button 2 only
 - start lives is wrong
 - OCS: ground not working properly???
 - borderblank ECS issue: maybe WinUAE problem??
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
-- sprite allocation fail: low/high in message
 - still floor tile missing after a slope
 - missile: (champion course point A): missing front part or even complete missile
   if ships still in the sky when reaching point A: ships should go away earlier,
