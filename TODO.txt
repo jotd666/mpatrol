@@ -1,18 +1,6 @@
-- disable green / disable blue option
-- blinking hole ufo ships
-- 50fps enabled by mistake??? test again...
 - 99 credits after a while continuing
-- slow CPU => ships too slow, game too slow overall
-- demo section out of sync jeep falls into second hole: ground moves slightly too fast?
-  or jump is off? create video and compare with original
-
-
-
-
-
-- write letter to 83DE: write into another buffer, then blit it at the proper location
-  when blitting ground strip
- 
+- highscore erased on section score screen
+- "TIME" not displayed sometimes
 - tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
 - save highscore & best course times
@@ -22,9 +10,9 @@
 - borderblank ECS issue: maybe WinUAE problem??
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - still floor tile missing after a slope
-- missile: (champion course point A): missing front part or even complete missile
-  if ships still in the sky when reaching point A: ships should go away earlier,
-  game can't handle that (not a display issue, more a game sequence issue, like in demo)
+- game is 10% slower than it should be. Adding extra call each 10 calls adds
+  nothing but more problems (demo not in sync, title not in sync, who knows what?),
+  and copper mid-screen interrupt system not working ATM.
 
 AGA:
 

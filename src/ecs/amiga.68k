@@ -37,7 +37,7 @@ OPT_NO_BACKGROUND_MOUNTAINS = 0
 PANEL_MAX_Y = 48
 DYNAMIC_COPPER_ROWS = 210-PANEL_MAX_Y   | make sure it's even!!!!
 HALF_DYNAMIC_COPPER_ROWS = DYNAMIC_COPPER_ROWS/2
-SPRITE_COPPERLIST_CHUNK_SIZE = 64+64	| sprite copper (8*2 pointers) + color sprite copper (16 colors)
+SPRITE_COPPERLIST_CHUNK_SIZE = 64+64+4	| sprite copper (8*2 pointers) + color sprite copper (16 colors) + intreq
 SPRITE_Y_SPLIT_LIMIT = 96+PANEL_MAX_Y
 
 * with those, buggy wheels match perfectly the ground!
@@ -644,12 +644,6 @@ save_highscores:
     rts
     
 	
-* To get the core to run, you just need to jump to mpatrol_reset after
-* you've initialised the platform (Amiga) stuff. That essentially does a
-* Z80 reset. You also need to call mpatrol_im1_irq from the Amiga vblank
-* routine. They are the only 2 entry points required for the core to run,
-* even if there's no other I/O.
-
 
 demo_game:
 		move		#0x4000,_custom+intena						| disable interrupts
@@ -718,22 +712,11 @@ _vblank:
 	bsr		set_mountain_dynamic_colors
 0:
 
-	moveq	#ONE_TICK,d1
-    move.w  vbl_counter(pc),d0
-    addq.w  #1,d0
-    cmp.w   #5,d0
-    bne.b   22f
-    * update a second time, simulate 60Hz
-	moveq	#ONE_TICK*2,d1
-	clr.w d0    
-22:
-	move.b	d1,vb_ticks_count
-    move.w  d0,vbl_counter
 	
 	tst.b	pause_flag
 	bne.b	23f
 
-	sub.w	d1,delay_timer
+	subq.w	#1,delay_timer
 		
 
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
@@ -748,8 +731,6 @@ _vblank:
 	* we update the graphics now so it's not possible that mpatrol_irq interrupts
 	* itself in the short time of the computations
 	move.w	#0x2300,SR
-	subq.b	#1,vb_ticks_count		| simulate 60Hz
-	*bne.b	0b
 	clr.b	interrupt_mode
 	* AGA/AA: fmode=3 allows much faster blitter operation
 	* allowing 50 fps without a hitch :)
@@ -788,6 +769,32 @@ _vblank:
 4:
     rte
 	
+_mid_screen_interrupt:
+	movem.l	d0-a6,-(a7)
+	* usually does nothing, or a irq to simulate extra 12% speed
+	* (vblank triggered each 56.74Hz)
+	* but without doing it twice as it confuses game logic
+	* - game demo plays incorrectly
+	* - "moon patrol" title is displayed with delay
+	
+    move.w  vbl_counter(pc),d0
+    addq.w  #1,d0
+    cmp.w   #9,d0
+    bne.b   22f
+	
+	st.b	interrupt_mode
+	**jbsr		mpatrol_irq
+	clr.b	interrupt_mode
+
+	clr.w d0    
+22:
+    move.w  d0,vbl_counter
+	lea		_custom,a5
+	* ack interrupt
+	move.w	#0x0004,(intreq,a5)
+	move.w	#0x0004,(intreq,a5)
+	movem.l	(a7)+,d0-a6
+	rte
 	
 osd_blitz:
 	blitz
@@ -898,7 +905,7 @@ clear_background:
 	rts
 0:
 	movem.l	d0-d7/A0-A6,-(a7)
-	bsr		reset_background_dynamic_colors
+	bsr		reset_dynamic_colors
 	
 	bsr		really_clear_background
 
@@ -917,10 +924,10 @@ really_clear_background:
 	lea		_custom,a5
 	* compute height
 	moveq	#0,d1
-	move.b	previous_blue_layer_y,d1
+	tst.b	previous_blue_layer_y
 	beq.b	0f		| no previous Y means no clear!
 	move.w	#Y_MAX,d4
-	sub.w	d1,d4
+	*sub.w	d1,d4
 	* now D4 is the full height to clear
 	move	#NB_PLAYFIELD_PLANES,d3
 	moveq	#34,d2			| width = 32 (all screen width)
@@ -1833,7 +1840,7 @@ set_mountain_dynamic_colors:
 	bsr		reset_background_dynamic_colors
 	
 	move.w	green_y_end,d6			| Y pos to change color 0 for green
-	beq.b	10f				| in case it's not set
+	jeq	10f				| in case it's not set
 	
 	* set copper color 0 to green (color 4 of bobs palette)
 	* at the proper row
@@ -1877,17 +1884,14 @@ set_mountain_dynamic_colors:
 	jne	10f
 	
 	move.w	blue_y_end,d7
-	
-	cmp.w	#DYNAMIC_COPPER_ROWS,d7
-	bcc.b	10f
-	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d7
-	bcs.b	9f
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d7
-9:
-
 	lsl.w	#4,d7
 	
-
+	cmp.w	#DYNAMIC_COPPER_ROWS*16,d7
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS*16,d7
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,d7
+9:
 	move.w	#color,(A0,d7.w)
 	move.w	(6,a1),(2,a0,d7.w)
 10:	
@@ -2380,13 +2384,13 @@ get_green_mountains_data:
 	rts
 	
 shift_d6_copper_y:
-	cmp.w	#DYNAMIC_COPPER_ROWS,d6
-	bcc.b	10f
-	cmp.w	#HALF_DYNAMIC_COPPER_ROWS,d6
-	bcs.b	9f
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE/16,d6
-9:
 	lsl.w	#4,d6		| times 16
+	cmp.w	#DYNAMIC_COPPER_ROWS*16,d6
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS*16,d6
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,d6
+9:
 	rts
 10:
 	moveq	#0,d6
@@ -2690,13 +2694,15 @@ store_system:
 	move.l	d0,system_vbr
 1:
 	
-*	move.w	AttnFlags(a6),d0
-*	btst	#AFB_68020,d0
-*	bne.b	1f
-*	* no whdload, no 68020: assume slow
-*	* if running on PiStorm, well, too bad use whdload
-*	st.b	slow_machine
-*1:
+	move.w	AttnFlags(a6),d0
+	btst	#AFB_68020,d0
+	bne.b	1f
+	* no whdload, no 68020: assume slow
+	* if running on PiStorm, well, too bad use whdload
+	
+	* to save speed, disable blue mountain layer
+	st.b	no_blue_layer_flag
+1:
 	lea	_custom,a6
 	move.w	intenar(a6),old_intena
 	move.w	dmaconr(a6),old_dmacon
@@ -2888,6 +2894,8 @@ platform_init:
 	move.l	(a7)+,(0x68,a1)
 	pea		_vblank(pc)
 	move.l	(a7)+,(0x6C,a1)
+	pea		_mid_screen_interrupt(pc)
+	move.l	(a7)+,(0x64,a1)
 	pea		_nmi(pc)
 	move.l	(a7)+,(0x7C,a1)
 
@@ -2999,7 +3007,7 @@ osd_enable_interrupts:
 	* works from the game (which calls enable interrupts from interrupt)
 	move.w	#0x2000,SR
 0:
-	move.w	#0xC038,_custom+intena
+	move.w	#0xC03C,_custom+intena
 	rts
 	
 osd_disable_interrupts:
@@ -3008,7 +3016,7 @@ osd_disable_interrupts:
 	* if interrupts are disabled again from interrupt, re-set SR
 	move.w	#0x2700,SR
 0:
-	move.w	#0x0030,_custom+intena
+	move.w	#0x0034,_custom+intena
 	rts
 
 
@@ -4401,15 +4409,19 @@ color_line_copper:
 	.set    beampos,beampos+0x100
 	.word	beampos,0xFFFE
 	.endr
-	* multiplexed sprites
+	* multiplexed sprites + mid-screen interrupt (disabled ATM
+	* as it crashes the machine when calling mpatrol_irq from it...)
 	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
+	*.word	intreq
+	*.word	0x8004
+	.word	0x1FE,0
 sprites_lower_cols:
 	DECL_COLORS	16,16
 sprites_lower_part:
 	DECL_SPRITES
 	.else
 	* reserve room
-	.rept	32
+	.rept	33
 	.word	0x1FE,0
 	.endr
 	.endif

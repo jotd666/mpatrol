@@ -337,18 +337,17 @@ rst_28:
 	jra	(a0)                               	| [$0031: jp   (hl)] -  Jump to routine
 
 
-* This is triggered every VBLANK ... 56.74Hz.
+* This is triggered every VBLANK ... 56.74Hz on the actual machine
+* 50Hz on amiga because we can't do better ATM without breaking the game logic
 * -Copy RAM mirror to hardware registers
 * -Bump the counters (E04E++, E04F every 16, E050--, E051--)
-* -If in service mode twiddle timer, kill time, and out
 * -Game mode:
-*  -
 *
 
 mpatrol_irq:
 mpatrol_irq_0038:
-	exg	d0,d7                              	| [$0038: ex   af,af'] -  Switch to ...
-	jbsr	exx                               	| [$0039: exx] -  ... interrupt-handlers registers
+*	exg	d0,d7                              	| [$0038: ex   af,af'] -  Switch to ...
+*	jbsr	exx                               	| [$0039: exx] -  ... interrupt-handlers registers
 	jbsr	reg_mirror_056d               	| [$003a: call reg_mirror_056d] -  Copy RAM mirror to hardware at start of VBLANK
 	lea	timer_8bit_E04E,a0                	| [$003d: ld   hl,timer_8bit_E04E] -  Counter area
 	addq.b	#1,(a0)                         	| [$0040: inc  (hl)] -  Bump the counter byte
@@ -362,35 +361,8 @@ l_0048:
 	subq.b	#1,(a0)+                         	| [$0049: dec  (hl)] -  -1
 	                           	| [$004a: inc  hl] -  Next counter byte
 	subq.b	#1,(a0)                         	| [$004b: dec  (hl)] -  -1
-	jra		l_0093			| skip service mode test and unreachable code
-	
+	* skip service mode test and unreachable code, put the code here, makes more sense
 
-startup_cont_0068:
-    jbsr  osd_enable_interrupts  | [ei]
-	jbsr	display_status_bar_0b8a           	| [$0069: call display_status_bar_0b8a]
-	move.b	#0x01,d0                        	| [$006c: ld   a,$01]
-	move.b	d0,title_display_timer_E04D           | [$006e: ld   (title_display_timer_E04D),a]
-	move.b	d0,moonbase_already_displayed_E50F       | [$0071: ld   (moonbase_already_displayed_E50F),a]
-	                           	| [$0074: inc  a]
-	* normal terrain: flat with bumps
-	move.b	#TERRAIN_BUMPY_02,terrain_slope_type_E508                 	| [$0075: ld   (terrain_slope_type_E508),a]
-	jra	start_new_section_0bb7                             	| [$0078: jp   $0BB7]
-l_007b:
-	clr.b	d1                               	| [$007b: ld   b,$00] -  * J0504
-l_007d:
-	clr.b	d0                               	| [$007d: xor  a] -  * J0091
-	move.b	d0,title_display_timer_E04D                 	| [$007e: ld   (title_display_timer_E04D),a]
-	lea	game_status_bits_E046,a0                	| [$0081: ld   hl,game_status_bits_E046]
-	move.b	d1,(a0)                         	| [$0084: ld   (hl),b]
-    jbsr  osd_enable_interrupts  | [ei]
-	jbsr	l_0745                            	| [$0086: call $0745]
-	jbsr	display_status_bar_0b8a           	| [$0089: call display_status_bar_0b8a]
-	jra	start_new_section_0bb7                             	| [$008c: jp   $0BB7]
-l_008f:
-	move.b	#0x04,d1                        	| [$008f: ld   b,$04] -  * J00EF
-	jra	l_007d                             	| [$0091: jr   $007D]
-
-l_0093:
 	jbsr	sound_stuff_05cb                            	| [$0093: call $05CB] -  Play next waiting sound (if any) * J0050
 	jbsr	osd_read_in_0                       	| [$0096: ld   a,($D000)] -  Coins and start
 	not.b	d0                               	| [$0099: cpl] -  Active high
@@ -418,9 +390,9 @@ l_00b6:
 	                         	| [$00c1: bit  0,(hl)] -  ?? Old code left behind? The flags are never used
 l_00c3:
 
-	move.l	a3,-(sp)                        	| [$00c3: push iy] -  Preserve these ... * J00BB,J05B7
+	*move.l	a3,-(sp)                        	| [$00c3: push iy] -  Preserve these ... * J00BB,J05B7
 
-	move.l	a2,-(sp)                        	| [$00c5: push ix] -  .. since the others are EXX to safety
+	*move.l	a2,-(sp)                        	| [$00c5: push ix] -  .. since the others are EXX to safety
 	jbsr	coins_and_credits_040e                            	| [$00c7: call $040E] -  Handle coins and credits
 	move.b	free_play_E041,d0                 	| [$00ca: ld   a,(free_play_E041)] -  Coin mode slot A
 	                               	| [$00cd: and  a] -  Free play?
@@ -448,12 +420,39 @@ l_00f2:
 	jbsr	get_inputs_047a                            	| [$00f6: call $047A] -  Get inputs (or demo mode ??)
 	jbsr	run_objects_01ec                            	| [$00f9: call $01EC] -  Run the game objects
 l_00fc:
-	move.l	(sp)+,a2                        	| [$00fc: pop  ix] -  Restore IX and ... * J00DF,J00E9,J00F4
-	move.l	(sp)+,a3                        	| [$00fe: pop  iy] -  ... IY
-	jbsr	exx                               	| [$0100: exx] -  Restore the other ...
- 	exg	d0,d7                              	| [$0101: ex   af,af'] -  ... registers
+*	move.l	(sp)+,a2                        	| [$00fc: pop  ix] -  Restore IX and ... * J00DF,J00E9,J00F4
+*	move.l	(sp)+,a3                        	| [$00fe: pop  iy] -  ... IY
+*	jbsr	exx                               	| [$0100: exx] -  Restore the other ...
+* 	exg	d0,d7                              	| [$0101: ex   af,af'] -  ... registers
     jbsr  osd_enable_interrupts  | [ei]
 	rts                                    	| [$0103: ret] -  Done with ISR
+	
+
+startup_cont_0068:
+    jbsr  osd_enable_interrupts  | [ei]
+	jbsr	display_status_bar_0b8a           	| [$0069: call display_status_bar_0b8a]
+	move.b	#0x01,d0                        	| [$006c: ld   a,$01]
+	move.b	d0,title_display_timer_E04D           | [$006e: ld   (title_display_timer_E04D),a]
+	move.b	d0,moonbase_already_displayed_E50F       | [$0071: ld   (moonbase_already_displayed_E50F),a]
+	                           	| [$0074: inc  a]
+	* normal terrain: flat with bumps
+	move.b	#TERRAIN_BUMPY_02,terrain_slope_type_E508                 	| [$0075: ld   (terrain_slope_type_E508),a]
+	jra	start_new_section_0bb7                             	| [$0078: jp   $0BB7]
+l_007b:
+	clr.b	d1                               	| [$007b: ld   b,$00] -  * J0504
+l_007d:
+	clr.b	d0                               	| [$007d: xor  a] -  * J0091
+	move.b	d0,title_display_timer_E04D                 	| [$007e: ld   (title_display_timer_E04D),a]
+	lea	game_status_bits_E046,a0                	| [$0081: ld   hl,game_status_bits_E046]
+	move.b	d1,(a0)                         	| [$0084: ld   (hl),b]
+    jbsr  osd_enable_interrupts  | [ei]
+	jbsr	l_0745                            	| [$0086: call $0745]
+	jbsr	display_status_bar_0b8a           	| [$0089: call display_status_bar_0b8a]
+	jra	start_new_section_0bb7                             	| [$008c: jp   $0BB7]
+l_008f:
+	move.b	#0x04,d1                        	| [$008f: ld   b,$04] -  * J00EF
+	jra	l_007d                             	| [$0091: jr   $007D]
+
 
 l_0104:
 	move.b	#0x02,(a0)                      	| [$0104: ld   (hl),$02] -  * J00E5
@@ -467,15 +466,15 @@ l_010d:
 	jra	start_new_section_0bb7                             	| [$0115: jp   $0BB7]
 l_0118:
 	lea		stack_top_E800,sp		| ld   sp,unknown_E800
-	lea	game_status_bits_E046,a0                	| [$011b: ld   hl,game_status_bits_E046]
-	subq.b	#1,(a0)                         	| [$011e: dec  (hl)]
     jbsr  osd_enable_interrupts  | [ei]
-	jpl	startup_cont_0068                             	| [$0120: jp   p,$0068]
+										| [$011b: ld   hl,game_status_bits_E046]
+	subq.b	#1,game_status_bits_E046                         	| [$011e: dec  (hl)]
+	jpl	startup_cont_0068                             	| [$0120: jp   p,$0068]  demo mode: don't continue
 	jbsr	l_0b96                            	| [$0123: call $0B96]
 	clr.b	d0                               	| [$0126: xor  a]
 	move.b	d0,unknown_E1A6                 	| [$0127: ld   (unknown_E1A6),a]
-	lea	nb_lives_E515,a0               	| [$012a: ld   hl,nb_lives_E515]
-	subq.b	#1,(a0)                         	| [$012d: dec  (hl)]
+	               	| [$012a: ld   hl,nb_lives_E515]
+	subq.b	#1,nb_lives_E515                         	| [$012d: dec  (hl)]
 	jeq	l_014b                             	| [$012e: jr   z,$014B]
 	jbsr	display_nb_lives_06d5                            	| [$0130: call $06D5]
 	lea	game_status_bits_E046,a0                	| [$0133: ld   hl,game_status_bits_E046]
