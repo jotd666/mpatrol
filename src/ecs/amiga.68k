@@ -389,10 +389,7 @@ no_floppy:
 	
 	
 	move.l	misc_options,d1
-	btst	#0,d1
-	sne		no_green_layer_flag
-	btst	#1,d1
-	sne		no_blue_layer_flag
+
 *	btst	#1,d1
 *	beq.b	0f
 *	bset	#5,d0
@@ -741,14 +738,13 @@ _vblank:
 	
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 	jbsr	is_game_over_displayed
-	beq.b	24f				| avoid nasty blinking effect when GAME OVER
+	beq.b	23f				| avoid nasty blinking effect when GAME OVER
 	bsr		switch_screen_buffers
 	.endif
-	bra.b	24f
 23:
 	* don't blit, but update hw sprites as it doesn't cost a lot
 	bsr		really_update_hardware_sprites
-24:
+
 	* now we check copper interrupt again
 	move.w	_custom+intreqr,d0
 	btst	#4,d0
@@ -2732,7 +2728,7 @@ platform_init:
 	and.l	#SETCHIPREV_AA,d0
 	cmp.l	#SETCHIPREV_AA,d0
 	bne.b	0f
-    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank	
+        move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank	
 	* check one of the variables, see if fastmem is used
 	lea		chiprevbits(pc),a0
 	cmp.l	#0x200000,a0
@@ -2918,7 +2914,7 @@ osd_enable_interrupts:
 	* works from the game (which calls enable interrupts from interrupt)
 	move.w	#0x2000,SR
 0:
-	move.w	#0xC03C,_custom+intena
+	move.w	#0xC038,_custom+intena
 	rts
 	
 osd_disable_interrupts:
@@ -2927,7 +2923,7 @@ osd_disable_interrupts:
 	* if interrupts are disabled again from interrupt, re-set SR
 	move.w	#0x2700,SR
 0:
-	move.w	#0x0034,_custom+intena
+	move.w	#0x0030,_custom+intena
 	rts
 
 
