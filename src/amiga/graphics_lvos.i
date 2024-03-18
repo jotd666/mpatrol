@@ -1,6 +1,8 @@
 	.ifndef	_GFX_LVOS
 _GFX_LVOS = 1
 
+gb_ChipRevBits0 = 236
+
 *********************** LVOs for graphics.library ***********************
 
 _LVOBltBitMap          =     -30

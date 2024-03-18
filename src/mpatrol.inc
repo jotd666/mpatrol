@@ -37,7 +37,7 @@
 
 	.equ	STOP_LOOP_SND,             0
 	.equ	EXPLOSION_SND,	           1
-	.equ	BOMB_EXPLOSION_SND,        2
+	.equ	BOMB_EXPLOSION_SND,        1  | same as above!
 	.equ	PING_SND,                  3
 	.equ	UFO_EXPLOSION_SND,         4
 	.equ	SHOOT_SND,                 5

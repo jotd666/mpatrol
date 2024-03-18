@@ -12,14 +12,20 @@
 - still floor tile missing after a slope
 - game is 10% slower than it should be. Adding extra call each 10 calls adds
   nothing but more problems (demo not in sync, title not in sync, who knows what?),
-  and copper mid-screen interrupt system not working ATM.
+  and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
+  
 
 AGA:
 
 - add city layer: missing black color, redefine yellow, height issue, 
    erase issue!
+- blue mountain + ground strip on one playfield, using hardware scrolling
+  => a lot less blits, with full bitplanes for ground strip (moonbase, maybe
+     blit an adapted image because tile palette is still different, but tile
+	 palette could be used for lower playfield, mountain colors could fit
+     in or even be dynamic!)
 - dual playfield with characters on top except for lower strip
-- full bitplanes for ground strip (moonbase)
+- 
 
 converter:
 

@@ -2659,6 +2659,12 @@ restore_system:
 
 	move.l	old_syscoplist,cop1lc(a6)
 	move.l	_gfxbase,a6
+	
+	* set chip rev bits in whdload flags so A1200 floppy
+	* also detects AGA
+	
+	move.b	gb_ChipRevBits0(a6),chiprevbits+3
+	
 	move.l	old_actiview,a1
 	jsr	_LVOLoadView(a6)
 
@@ -2720,12 +2726,13 @@ platform_init:
     move.w #0x2289,diwstop(a5)
 	* 4 bitplanes, try to hide color 0 on the border (except on OCS)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
-    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 
 	move.l	chiprevbits,d0
 	and.l	#SETCHIPREV_AA,d0
-	beq.b	0f
+	cmp.l	#SETCHIPREV_AA,d0
+	bne.b	0f
+    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank	
 	* check one of the variables, see if fastmem is used
 	lea		chiprevbits(pc),a0
 	cmp.l	#0x200000,a0
@@ -2742,6 +2749,12 @@ platform_init:
 	bra.b	1f
 0:
 	* OCS/ECS
+	and.l	#SETCHIPREV_ECS,d0
+	cmp.l	#SETCHIPREV_ECS,d0
+	bne.b	0f
+	* ECS
+    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank	
+0:
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
     move.w #0,fmode(a5)			
