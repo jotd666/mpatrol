@@ -101,13 +101,14 @@ OPT_ENABLE_MULTIPLEXED_SPRITES = 1
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
-NB_BYTES_PER_ROW = 40
+FG_NB_BYTES_PER_ROW = 40
+BG_NB_BYTES_PER_ROW = 64
 NB_LINES = 256
 NB_PLAYFIELD_LINES = NB_LINES
 
-BG_SCREEN_PLANE_SIZE = NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
+BG_SCREEN_PLANE_SIZE = BG_NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
 BG_SCREEN_SIZE =  BG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
-FG_SCREEN_PLANE_SIZE = BG_SCREEN_PLANE_SIZE
+FG_SCREEN_PLANE_SIZE = FG_NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
 FG_SCREEN_SIZE =  FG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
 
 NB_HOST_SPRITES = 8
@@ -894,10 +895,10 @@ really_clear_background:
 	moveq	#0,d0			| X=0 (all screen)
 	move.l	fg_drawed_screen_ptr(pc),a1
 	movem.l	d0-d4/A2-A6,-(a7)
-	jbsr		clear_planes_any_blitter_internal
+	jbsr		clear_fg_planes_any_blitter_internal
 	movem.l	(A7)+,d0-d4/A2-A6
 	move.l	fg_displayed_screen_ptr(pc),a1
-	jbsr		clear_planes_any_blitter_internal
+	jbsr		clear_fg_planes_any_blitter_internal
 	clr.b	previous_blue_layer_y   | only done once!
 0:
 	
@@ -991,7 +992,7 @@ update_background:
 	movem.w	(a7)+,d0-d5
 23:
 	move.b	d2,previous_blue_layer_y
-	jra		blit_scrollable_layers
+	jra		update_scrollable_layers
 1:
 	rts
 	
@@ -1437,7 +1438,7 @@ update_bobs:
 	move.w	(a4),d2			| width in bytes (16 pixels: 4 bytes)
 	move.w	(2,a4),d4		| height
 	clr.l	(a4)+			| ack deletion
-	bsr		clear_planes_any_blitter_internal
+	bsr		clear_fg_planes_any_blitter_internal
 	bra.b	12f
 11:
 	addq	#8,a4
@@ -1562,7 +1563,7 @@ update_bobs:
 * < D4: blit height
 * trashes D0-D6
 * > A1: even address where blit was done
-clear_plane_any_blitter_internal:
+clear_fg_plane_any_blitter_internal:
 	moveq	#1,d3
 * < A5: custom
 * < D0,D1: x,y
@@ -1572,7 +1573,7 @@ clear_plane_any_blitter_internal:
 * < D4: blit height
 * < D7: mask (disabled, -1 set at start)
 * trashes D0-D6
-clear_planes_any_blitter_internal:
+clear_fg_planes_any_blitter_internal:
     * pre-compute the maximum of shit here
 	move.w	d1,d6
     beq.b   1f    | optim
@@ -1589,7 +1590,7 @@ clear_planes_any_blitter_internal:
 	* null or negative height after clipping: out
 	rts
 0:
-    lea mulNB_BYTES_PER_ROW_table(pc),a2
+    lea mulFG_NB_BYTES_PER_ROW_table(pc),a2
     add.w   d1,d1
     move.w  (a2,d1.w),d1
 1:
@@ -1609,7 +1610,94 @@ clear_planes_any_blitter_internal:
 2:   
     add.w   d1,a1       | plane position (always even)
 
-	move.w #NB_BYTES_PER_ROW,d0
+	move.w #FG_NB_BYTES_PER_ROW,d0
+    sub.w   d2,d0       | blit width
+
+    lsl.w   #6,d4
+    lsr.w   #1,d2
+    add.w   d2,d4       | blit height
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+	.ifdef	VARIABLE_BLITTER_MASKS_AND_MODS
+    move.l  d7,bltafwm(a5)
+	.endif
+	
+	move.l d5,bltcon0(a5)	
+    move.w  d0,bltdmod(a5)	|D modulo
+	
+	subq	#1,d3
+	beq.b	4f
+	subq	#1,d3
+3:
+	move.l a1,bltdpt(a5)	|destination top left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
+	WAIT_BLIT
+	dbf		d3,3b
+4:
+	move.l a1,bltdpt(a5)	|destination top left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	
+    rts
+
+* < A5: custom
+* < D0,D1: x,y
+* < A1: plane pointer
+* < D2: width in bytes (inc. 2 extra for shifting)
+* < D4: blit height
+* trashes D0-D6
+* > A1: even address where blit was done
+clear_bg_plane_any_blitter_internal:
+	moveq	#1,d3
+* < A5: custom
+* < D0,D1: x,y
+* < A1: foreground plane pointer (often first plane!)
+* < D2: width in bytes (inc. 2 extra for shifting)
+* < D3: number of planes to clear
+* < D4: blit height
+* < D7: mask (disabled, -1 set at start)
+* trashes D0-D6
+clear_bg_planes_any_blitter_internal:
+    * pre-compute the maximum of shit here
+	move.w	d1,d6
+    beq.b   1f    | optim
+	* check if y start + height > Y_MAX
+	* (ignores case where y = 0, no risk)
+	add.w	d4,d6
+	sub.w	#Y_MAX,d6
+	bmi.b	0f
+	* y start + height > Y_MAX: clip height
+	sub.w	d6,d4
+	beq.b	10f
+	bpl.b	0f
+10:
+	* null or negative height after clipping: out
+	rts
+0:
+    lea mulBG_NB_BYTES_PER_ROW_table(pc),a2
+    add.w   d1,d1
+    move.w  (a2,d1.w),d1
+1:
+    move.l  #0x01000000,d5   | minterm useD & rect clear (0xA) 
+    move    d0,d6
+    beq.b   2f
+    MOVEQ #15,D6
+    AND.W D0,D6
+    and.w   #0x1F0,d0
+    lsr.w   #3,d0
+    add.w   d0,d1
+    LSL.W #8,D6
+    LSL.W #4,D6
+
+    swap    d6
+    or.l    d6,d5            | add shift
+2:   
+    add.w   d1,a1       | plane position (always even)
+
+	move.w #BG_NB_BYTES_PER_ROW,d0
     sub.w   d2,d0       | blit width
 
     lsl.w   #6,d4
@@ -1641,6 +1729,7 @@ clear_planes_any_blitter_internal:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	
     rts
+
 
 * what: blits 16x? data on one plane, cookie cut
 * args:
@@ -1698,7 +1787,7 @@ blit_planes_any_internal_cookie_cut:
 1:	
 	tst	d1
     beq.b   2f    | optim
-    lea		mulNB_BYTES_PER_ROW_table,a4
+    lea		mulFG_NB_BYTES_PER_ROW_table,a4
 	.ifdef	NO68020
 	add.w	d1,d1
     move.w  (a4,d1.w),d1	| y times 40
@@ -1729,7 +1818,7 @@ blit_planes_any_internal_cookie_cut:
     * but a 68000 CPU doesn't and since we RETURN A1...
     bclr    #0,d1
     add.w   d1,a1       | plane position (D1 < 0x7FFF, 288*40=0x2D00)
-	move.w	#NB_BYTES_PER_ROW,d0
+	move.w	#FG_NB_BYTES_PER_ROW,d0
 	tst.w	d4
 	bpl.b	5f
 	neg.w	d0
@@ -1766,7 +1855,7 @@ blit_planes_any_internal_cookie_cut:
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
 	WAIT_BLIT
 	dbf		d3,6b
 7:
@@ -1852,23 +1941,10 @@ set_mountain_dynamic_colors:
 10:	
 	rts
 	
-clear_credits_remaining_bitmap:
-	movem.l	d0-a6,-(a7)
-	move.w	#Y_MAX-24,d1
-	move.w	#16,d4
-	move	#NB_PLAYFIELD_PLANES,d3
-	moveq	#10,d2			| width = 10
-	move.w	#22*8,d0
-	move.l	fg_drawed_screen_ptr(pc),a1
-	move.l	fg_drawed_screen_ptr(pc),a1
-	movem.l	d0-d4/A2-A6,-(a7)
-	jbsr		clear_planes_any_blitter_internal
-	movem.l	(A7)+,d0-d4/A2-A6
-	move.l	fg_displayed_screen_ptr(pc),a1
-	jbsr		clear_planes_any_blitter_internal
-	movem.l	(A7)+,d0-a6
-	rts
+
 	
+* done only when blue mountain is displayed again
+* TODO: maybe just hide colors!
 blit_blue_mountain_strip:
 	lea		blue_mountains,a0
 	
@@ -1913,8 +1989,6 @@ blit_blue_mountain_strip:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
 	
-	* while it's blitting, let's erase the line above
-	bsr		erase_mountain_line
 	
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
@@ -1928,8 +2002,6 @@ blit_blue_mountain_strip:
 
 	add.w	d5,a0			| next source plane
 
-	* while it's blitting, let's erase the line above
-	bsr		erase_mountain_line
 
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
@@ -1958,7 +2030,7 @@ blit_blue_mountain_strip:
 
 	
 * it also changes black background to the relevant background (blue or green)
-blit_scrollable_layers:
+update_scrollable_layers:
 	
 	addq.b	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
 	addq.b	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
@@ -1968,29 +2040,22 @@ blit_scrollable_layers:
 	beq.b	0f
 	clr.b		background_cleared_flag
 	* scrollable layer just enabled
-	* "CREDIT xx" string is still in the bottom right corner
-	* remove it
-	bsr		clear_credits_remaining_bitmap
+
 0:
 	sub.w	#PANEL_MAX_Y+8,d2
 	sub.w	#PANEL_MAX_Y+8,d3
 	lea		_custom,A5
 	move.l	fg_drawed_screen_ptr(pc),a1
-	add.w	#(PANEL_MAX_Y+8)*NB_BYTES_PER_ROW,a1
-	lea		mulNB_BYTES_PER_ROW_table,a2
+	add.w	#(PANEL_MAX_Y+8)*FG_NB_BYTES_PER_ROW,a1
+	lea		mulFG_NB_BYTES_PER_ROW_table,a2
+	
 	movem.l	d0-d5/a1,-(a7)
-	
-	***********
-	* blue part
-	***********
-	
 
 
 	******************
 	* green part
 	******************
 	
-	movem.l	(a7),d0-d5/a1
 	bsr		get_green_mountains_data
 	
 	* clear the lower part of the mountain else some dark green remains
@@ -2052,7 +2117,7 @@ blit_scrollable_layers:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
@@ -2062,7 +2127,7 @@ blit_scrollable_layers:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
 	* plane 2
@@ -2080,7 +2145,7 @@ blit_scrollable_layers:
 	jne	0f
 	lea		title_bitmap,a0
 	move.l	fg_drawed_screen_ptr,a1
-	add.w	#TITLE_X/8+(TITLE_Y*NB_BYTES_PER_ROW),a1	| fixed position
+	add.w	#TITLE_X/8+(TITLE_Y*FG_NB_BYTES_PER_ROW),a1	| fixed position
 	
     move.l  #0x0fca0000,d3    | B+C-A->D cookie cut, no shift
 	move.w	#(TITLE_WIDTH/8)*TITLE_HEIGHT,d5	| plane size
@@ -2101,8 +2166,8 @@ blit_scrollable_layers:
 	move.l d3,bltcon0(a5)	| sets con0 and con1
     move.w  #0,bltamod(a5)	|A (mask) modulo: object data is contiguous
     move.w  #0,bltbmod(a5)	|B (data) modulo: object data is contiguous
-    move.w  #NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltcmod(a5)	|C modulo
-    move.w  #NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltdmod(a5)	|D modulo
+    move.w  #FG_NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltcmod(a5)	|C modulo
+    move.w  #FG_NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltdmod(a5)	|D modulo
 	move.w	#NB_PLAYFIELD_PLANES-2,d3
 1:
 	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
@@ -2111,7 +2176,7 @@ blit_scrollable_layers:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
@@ -2146,14 +2211,6 @@ shift_d6_copper_y:
 	rts
 10:
 	moveq	#0,d6
-	rts
-	
-erase_mountain_line:
-	sub.w	#NB_BYTES_PER_ROW,a1
-	move.w	#NB_BYTES_PER_ROW/4-1,d0
-0:
-	clr.l	(a1)+
-	dbf		d0,0b
 	rts
 	
 * < D0: sprite X
@@ -2482,8 +2539,8 @@ platform_init:
     move.w	#-8,d0
 
     move.w #0,bplcon1(a5)
-    move.w d0,bpl1mod(a5)
-    move.w d0,bpl2mod(a5)
+    move.w #-8+24,bpl1mod(a5)
+    move.w #-8,bpl2mod(a5)
 
 	* set sprite registers in copperlist for the upper part
 	lea		sprites_upper_part,a0
@@ -2809,7 +2866,7 @@ update_bg_tile:
 	and.w	#0x1F,d7	| this is X (tile)
 	addq.w	#2,d7
 
-	lea		mulNB_BYTES_PER_ROW_table(pc),a0
+	lea		mulBG_NB_BYTES_PER_ROW_table(pc),a0
 
 	moveq	#NB_PLAYFIELD_PLANES-1,d4		| 4 bitplanes for the panel
 	cmp.w	#PANEL_MAX_Y/8,d3
@@ -2817,18 +2874,7 @@ update_bg_tile:
 	* always wait for blitter operation before writing to chip with CPU
 	WAIT_BLIT
 23:
-	* do special stuff for tiles that go into scrollable strip
-	cmp.w	#0x100,d0
-	bcc.b	230f
-	cmp.w	#0x68,d0
-	jcc	update_scrollable_bottom
-	
-	* for 0 char we have to decide according to Y tile
-	tst.b	d0
-	bne.b	230f
-	cmp.w	#SCROLLABLE_TILE_Y_START,d3
-	bcc		update_scrollable_bottom
-230:
+
 	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
 	move.l	bg_drawed_screen_ptr(pc),a1
@@ -2882,7 +2928,7 @@ update_bg_tile:
 	.rept	8
 	move.b	(a0)+,(offset,a1)
 
-	.set	offset,offset+NB_BYTES_PER_ROW
+	.set	offset,offset+BG_NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
 	dbf		d4,4b
@@ -2905,7 +2951,7 @@ update_bg_tile:
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
-	.set	offset,offset+NB_BYTES_PER_ROW
+	.set	offset,offset+BG_NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
 	dbf		d4,111b
@@ -2928,7 +2974,7 @@ copy_third_plane:
 	.rept	8
 	move.b	(a0)+,(offset,a1)
 
-	.set	offset,offset+NB_BYTES_PER_ROW
+	.set	offset,offset+BG_NB_BYTES_PER_ROW
 	.endr
 
 
@@ -2942,7 +2988,7 @@ erase_third_plane:
 	add.w	d5,a1
 	.rept	8
 	clr.b	(offset,a1)
-	.set	offset,offset+NB_BYTES_PER_ROW
+	.set	offset,offset+BG_NB_BYTES_PER_ROW
 	.endr
 
 	rts
@@ -2950,102 +2996,6 @@ erase_third_plane:
 latest_overwritten_tile_code:
 	dc.w	0
 
-
-update_scrollable_bottom:
-	lea		mulNB_BYTES_PER_SCROLLABLE_STRIP_ROW_table(pc),a0
-	lea		bg_scrollable_strip,a1		| backbuffer
-	* D3 = Y
-	move.w	#SCROLLABLE_PLANE_SIZE,d5
-
-	* recenter on 0
-	sub.w	#SCROLLABLE_TILE_Y_START,d3
-	add.w	d3,d3
-	move.w	(a0,d3.w),d3
-	lsl.w	#3,d3		| times 8
-	add.w	d3,a1
-	add.w	d7,a1
-
-	tst.b	d1
-	bne.b	23f
-	tst.w	d0	| empty character
-	jeq	11f
-23:
-	* optimization when a well-known
-	* uniform character is passed (standard charset)
-	*cmp.b	#0xF3,d0	| uniform ground
-	
-	
-	lea		character_table,a0
-	add.w	d0,d0
-	add.w	d0,d0
-	move.l	(a0,d0.w),d0
-	jeq	2f
-	move.l	d0,a0		| pointer on clut table
-	* now we use d1 (attribute)
-	add.w	d1,d1
-	add.w	(a0,d1.w),a0
-	cmp.l	d0,a0
-	jeq		12f		| should not happen
-
-	
-	* just copy
-4:
-	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
-	bcc		42f		| single copy
-41:
-	.set	offset,0
-	.rept	8
-	move.b	(a0)+,d0
-	move.b	d0,(offset,a1)	
-	move.b	d0,(offset+32,a1)		| mirror
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,41b
-0:
-	rts
-42:
-	.set	offset,0
-	.rept	8
-	move.b	(a0)+,d0
-	move.b	d0,(offset,a1)	
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,42b
-	rts
-
-* clear tile(s)
-11:
-	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
-	bcc		112f		| single clear
-	* mirror
-111:
-	.set	offset,0
-	.rept	8
-	clr.b	(offset,a1)
-	clr.b	(offset+32,a1)
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,111b
-2:
-	rts
-	* no mirror
-112:
-	.set	offset,0
-	.rept	8
-	clr.b	(offset,a1)
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,12b
-	rts
-	
-12:
-	* clut/tile combo not declared as used
-	**blitz
-	rts
 			
 store_sprite_pos_16:
 	move.l	a1,-(a7)
@@ -3615,7 +3565,8 @@ beamdelay:
 	rts
 
 	
-	MUL_TABLE	NB_BYTES_PER_ROW,256
+	MUL_TABLE	FG_NB_BYTES_PER_ROW,256
+	MUL_TABLE	BG_NB_BYTES_PER_ROW,256
 	MUL_TABLE	NB_BYTES_PER_SCROLLABLE_STRIP_ROW,256
 
 	.align	4		| leave this long word alignment
@@ -3997,24 +3948,19 @@ post_pal_copper_rows:
 		.section .bsschip
 bg_screen_buffer_1:
 	.skip	BG_SCREEN_SIZE
-	.skip	NB_BYTES_PER_ROW*12*3
+	.skip	BG_NB_BYTES_PER_ROW*12*3
 	.skip	8
 	
 fg_screen_buffer_1:
 	.skip	BG_SCREEN_SIZE
-	.skip	NB_BYTES_PER_ROW*12*3
+	.skip	FG_NB_BYTES_PER_ROW*12*3
 	.skip	8
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 fg_screen_buffer_2:
 	.skip	BG_SCREEN_SIZE
-	.skip	NB_BYTES_PER_ROW*12*3
+	.skip	FG_NB_BYTES_PER_ROW*12*3
 	.skip	8
 	.endif
-	* draw the rows 24->31 in a buffer to be able
-	* to blit it with scroll effect afterwards
-	* double the buffer as we need to emulate revolving scroll
-bg_scrollable_strip:
-	ds.b	SCROLLABLE_PLANE_SIZE*NB_PLAYFIELD_PLANES
-	.align	8
+
 
 		

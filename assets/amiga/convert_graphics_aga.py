@@ -11,7 +11,7 @@ transparent = (60,100,200)  # whatever is not a used RGB is ok
 
 this_dir = os.path.dirname(__file__)
 src_dir = os.path.join(this_dir,"../../src/aga")
-dump_dir = os.path.join(this_dir,"dumps")
+dump_dir = os.path.join(this_dir,"dumps","aga")
 dump_tiles_dir = os.path.join(dump_dir,"tiles")
 dump_palettes_dir = os.path.join(dump_dir,"palettes")
 dump_sprites_dir = os.path.join(dump_dir,"sprites")
@@ -142,16 +142,7 @@ def replace_color(img,color,replacement_color):
                 rgb = replacement_color
             rval.putpixel(c,rgb)
     return rval
-def replace_nonblack_by(img,replacement_color):
-    rval = Image.new("RGB",img.size)
-    for x in range(img.size[0]):
-        for y in range(img.size[1]):
-            c = (x,y)
-            rgb = img.getpixel(c)
-            if rgb != (0,0,0):
-                rgb = replacement_color
-            rval.putpixel(c,rgb)
-    return rval
+
 
 def bob_color_change(img_to_raw):
     img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
@@ -283,7 +274,7 @@ def switch_values(t,a,b):
 
 
 all_bob_colors = sorted(bobs_used_colors)[1:]
-all_bob_colors.remove(brown_rock_color)
+all_bob_colors.remove(brown_rock_color)  # TODO: remove blue mountain color instead
 
 # remove yellow_background_city_color
 bg_copy = [x for x in background_palette if x != yellow_background_city_color]
@@ -298,9 +289,7 @@ elif len(bob_global_palette) < 16:
     bob_global_palette += [(1,2,3)] * (16-len(bob_global_palette))
 
 
-i1 = bob_global_palette.index(dark_brown_color)
-i2 = bob_global_palette.index(yellow_color)
-switch_values(bob_global_palette,i1,i2)
+
 
 tile_global_palette += ((254,22,11),)*(16-len(tile_global_palette))
 
@@ -353,9 +342,6 @@ if True:
                     for j in range(8):
                         v = next(d)
                         img.putpixel((j,i),colors[v])
-                if 0x68 <= k <= 0x91:
-                    # moon base: make all tiles single plane with color 15 to enable all bitplanes
-                    img = replace_nonblack_by(img,tile_global_palette[15])
                 character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette,generate_mask=True))
                 if dump_tiles:
                     scaled = ImageOps.scale(img,5,0)

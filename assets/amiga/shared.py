@@ -108,6 +108,8 @@ def get_used_tile_cluts():
         used_cluts[i].add(0x13)
     for i in range(0x7C,0x81):
         used_cluts[i].add(0x10)
+    for i in range(0x8D,0x91):
+        used_cluts[i].add(0x10)
     for i in range(0x71,0x77):
         used_cluts[i].add(0X11)
     for i in range(0x77,0x7C):

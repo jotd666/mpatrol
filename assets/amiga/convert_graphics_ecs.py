@@ -11,7 +11,7 @@ transparent = (60,100,200)  # whatever is not a used RGB is ok
 
 this_dir = os.path.dirname(__file__)
 src_dir = os.path.join(this_dir,"../../src/ecs")
-dump_dir = os.path.join(this_dir,"dumps")
+dump_dir = os.path.join(this_dir,"dumps/ecs")
 dump_tiles_dir = os.path.join(dump_dir,"tiles")
 dump_palettes_dir = os.path.join(dump_dir,"palettes")
 dump_sprites_dir = os.path.join(dump_dir,"sprites")
