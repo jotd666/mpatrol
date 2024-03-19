@@ -720,7 +720,12 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
 
         # first write number of rows, then number of bytes total, which differ from one background to another
         # = number of rows * ((512/16)+2) (there's a blit shift mask like all shiftable bobs)
-        f.write(f"\t.word\t{nb_rows},{nb_rows*((512//8)+2)}")
+        f.write(f"\t.word\t{nb_rows},")
+        if is_green:
+            f.write(f"{nb_rows*((512//8)+2)}")
+        else:
+            f.write(f"{nb_rows*((512//8))}")  # no shifting when blitting blue, hardware scroll!
+
         # then the data itself
         img = Image.new("RGB",(512,nb_rows))
         # convert data to picture, twice as large so can be blit-scrolled
@@ -735,11 +740,11 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         # replace yellow by dark green if found, we'll switch to yellow dynamically (saves 1 precious color slot
         # as both backgrounds can't be present at the same time)
         img = replace_color(img,yellow_background_city_color,green_background_mountain_color)
-        # dump, we don't need a mask for the blue layer as it's behind
+        # dump, we don't need a mask for any layers: blue layer is alone, green layer is behind in its playfield
 
         raw = bitplanelib.palette_image2raw(img,None,bob_global_palette[:8],forced_nb_planes=3,
-                    palette_precision_mask=0xFF,generate_mask=is_green,blit_pad=True)
-        nb_planes = 4 if "green" in b else 3
+                    palette_precision_mask=0xFF,generate_mask=False,blit_pad=is_green)  # only blit pad if green
+        nb_planes = 3
         plane_size = len(raw)//nb_planes
         for z in range(nb_planes):
             f.write(f"\n* plane {z} ({plane_size} bytes)")

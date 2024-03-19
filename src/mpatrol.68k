@@ -1332,7 +1332,6 @@ reg_mirror_056d:
 	move.b	#0x04,d1                        	| [$058e: ld   b,$04] -  ... to ...
 	* set scroll value for ground
 *l_0590:
-	jbsr	osd_set_ground_scroll_value
 **out  (c),a
 *	addq.b	#1,d2                           	| [$0592: inc  c] -  ... four ...
 *	subq.b	#1,d1                           	| [...]
