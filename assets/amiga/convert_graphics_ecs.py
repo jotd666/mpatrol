@@ -732,11 +732,12 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         nb_rows = len(data)
         is_green = "green" in b
 
+        hsize = 256+32*8
         # first write number of rows, then number of bytes total, which differ from one background to another
         # = number of rows * ((512/16)+2) (there's a blit shift mask like all shiftable bobs)
-        f.write(f"\t.word\t{nb_rows},{nb_rows*((512//8)+2)}")
+        f.write(f"\t.word\t{nb_rows},{nb_rows*((hsize//8)+2)}")
         # then the data itself
-        img = Image.new("RGB",(512,nb_rows))
+        img = Image.new("RGB",(hsize,nb_rows))
         # convert data to picture, twice as large so can be blit-scrolled
         for y,d in enumerate(data):
             v = iter(d)
@@ -744,7 +745,9 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                 cidx = next(v)
                 rgb = bg_palette[cidx]
                 img.putpixel((x,y),rgb)
-                img.putpixel((x+256,y),rgb)
+                ax = x+256
+                if ax < hsize:
+                    img.putpixel((ax,y),rgb)
 
         # replace yellow by dark green if found, we'll switch to yellow dynamically (saves 1 precious color slot
         # as both backgrounds can't be present at the same time)

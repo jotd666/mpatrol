@@ -2262,9 +2262,6 @@ blit_scrollable_layers:
     move.w  #26,bltamod(a5)	|A modulo: 66 bytes per row - 40 used
     move.w  #0,bltdmod(a5)	|D modulo: 0 full line is drawn
 	lea		(BG_SCREEN_PLANE_SIZE*3,a1),a1
-	add.w	d5,a0			| next source plane
-	add.w	d5,a0			| next source plane
-	add.w	d5,a0			| next source plane
     * now just wait for blitter ready to write all registers
 	* plane 3
 	move.l a0,bltapt(a5)	|source graphic top left corner
@@ -3367,12 +3364,12 @@ update_scrollable_bottom:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
+	* skip empty data/one bitplane for ground strip (first 3 ones)
+	add.w	#8*3,a0
 	
-	* just copy
 4:
 	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
-	bcc		42f		| single copy
-41:
+	bcc		42f		| single copy, never wraps that high
 	.set	offset,0
 	.rept	8
 	move.b	(a0)+,d0
@@ -3380,19 +3377,16 @@ update_scrollable_bottom:
 	move.b	d0,(offset+32,a1)		| mirror
 	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
 	.endr
-	add.w	d5,a1
-	dbf		d4,41b
+
 0:
 	rts
 42:
 	.set	offset,0
 	.rept	8
-	move.b	(a0)+,d0
-	move.b	d0,(offset,a1)	
+	move.b	(a0)+,(offset,a1)	
 	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
 	.endr
-	add.w	d5,a1
-	dbf		d4,42b
+
 	rts
 
 * clear tile(s)
@@ -4373,7 +4367,7 @@ bg_screen_buffer_2:
 	* to blit it with scroll effect afterwards
 	* double the buffer as we need to emulate revolving scroll
 bg_scrollable_strip:
-	ds.b	SCROLLABLE_PLANE_SIZE*NB_PLAYFIELD_PLANES
+	ds.b	SCROLLABLE_PLANE_SIZE
 	.align	8
 
 		
