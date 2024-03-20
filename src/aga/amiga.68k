@@ -99,7 +99,7 @@ OPT_ENABLE_MULTIPLEXED_SPRITES = 1
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
-FG_NB_BYTES_PER_ROW = 40
+FG_NB_BYTES_PER_ROW = 40		| could be 32
 BG_NB_BYTES_PER_ROW = 64
 NB_LINES = 256
 NB_PLAYFIELD_LINES = NB_LINES
@@ -363,9 +363,11 @@ no_floppy:
 	move.l	a0,fg_drawed_screen_ptr
 	move.l	a0,fg_displayed_screen_ptr
 	
-	lea		bg_screen_buffer_1,a0
+	lea		bg_screen_buffer,a0
 	bsr		align_8
-	move.l	a0,bg_drawed_screen_ptr
+	move.l	a0,bg_panel_screen_ptr
+	add.w	#BG_NB_BYTES_PER_ROW*(PANEL_MAX_Y+8),a0
+	move.l	a0,bg_base_mountain_screen_ptr
 	
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	lea		fg_screen_buffer_2,a0
@@ -374,7 +376,8 @@ no_floppy:
 	move.l	a0,fg_displayed_screen_ptr
 	.endif
 	
-
+	bsr		set_panel_bitplanes
+	bsr		set_mountain_bitplanes
 	move.l	dip_switch_start_course(pc),d0
 	move.b	d0,start_level_flag
 	
@@ -898,7 +901,7 @@ really_clear_background:
 	move.l	fg_displayed_screen_ptr(pc),a1
 	jbsr		clear_fg_planes_any_blitter_internal
 	
-	move.l	bg_drawed_screen_ptr(pc),a1
+	move.l	bg_panel_screen_ptr(pc),a1
 	jbsr	clear_bg_planes_any_blitter_internal
 	* reset scrolling to 0
 	clr.w	blue_mountains_scroll_value
@@ -1726,7 +1729,7 @@ clear_bg_planes_any_blitter_internal:
 3:
 	move.l a1,bltdpt(a5)	|destination top left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	add.l		#BG_SCREEN_PLANE_SIZE,a1	| long!!
+	add.w		#BG_SCREEN_PLANE_SIZE,a1
 	WAIT_BLIT
 	dbf		d3,3b
 4:
@@ -1953,10 +1956,10 @@ set_mountain_dynamic_colors:
 *
 * < D2: Y where to blit (should be fixed!!)
 blit_blue_mountain_strip:
-	rts
+	movem.l	d0-a6,-(a7)
 	
 	lea		_custom,a5
-	move.l	bg_drawed_screen_ptr(pc),a1
+	move.l	bg_base_mountain_screen_ptr(pc),a1
 	
 	move.w	#PANEL_MAX_Y+16,d2		| TEMP
 	lea		blue_mountains,a0
@@ -1971,7 +1974,7 @@ blit_blue_mountain_strip:
     move.l  #0x09f00000,d3    | A->D copy, ascending mode
 	* blit height
 	lsl.w	#6,d4
-	add.w	#BG_NB_BYTES_PER_ROW,d4		| size: the whole screen
+	add.w	#BG_NB_BYTES_PER_ROW/2,d4		| size: the whole bg screen in words
     * always the same settings
 
 
@@ -1990,7 +1993,7 @@ blit_blue_mountain_strip:
 	add.w	d5,a0			| next source plane
 	
 	
-	add.l	#BG_SCREEN_PLANE_SIZE,a1
+	add.w	#BG_SCREEN_PLANE_SIZE,a1
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
@@ -1999,20 +2002,8 @@ blit_blue_mountain_strip:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	* this blits the pale blue layer of the back mountain
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-
-	add.w	d5,a0			| next source plane
-
-
-	add.l	#BG_SCREEN_PLANE_SIZE,a1
-    * now just wait for blitter ready to write all registers
-	move.l  #0x01000000,d5
-	WAIT_BLIT
-	* plane 2 (all zeroes with the palette we've chosen)
-	* we still have to clear it to remove artifacts from green layer
-	* but we still save bandwidth
-	move.l  d5,bltcon0(a5)   | minterm useD & rect clear (0xA) 
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	movem.l	(a7)+,d0-a6
+	
 	rts
 	
 * blit the mountains/city green layer
@@ -2046,19 +2037,24 @@ update_scrollable_layers:
 	******************
 	
 	* D5: 0->0xFF
-	move.l	bg_drawed_screen_ptr(pc),a1
+	
+	move.l	bg_base_mountain_screen_ptr(pc),a1		| temp
 	move.w	d5,d6
 	and.w	#0xC0,d6		| bit displacement
 	lsr.w	#3,d6			| in bytes
 	add.w	d6,a1
-	move.l	a1,bg_displayed_screen_ptr
-	bsr		set_bg_bitplanes
-	* now set the shifting 0-63
+	move.l	a1,bg_mountain_screen_ptr
+	bsr		set_mountain_bitplanes
+	* now set the shifting 0-63, first negate it
+	not.b	d5
+	add.w	#0x40,d5
+	
 	move.w	d5,d6
 	and.w	#0xF,d6		| 16 original bits
 	and.w	#0x30,d5	| 2 remaining bits
 	lsl.w	#5,d5		| position in 10-11
 	or.w	d5,d6
+	move.w	d6,blue_mountains_scroll_value
 	move.w	d6,ground_strip_scroll_value
 
 
@@ -2404,9 +2400,7 @@ switch_screen_buffers:
 	move.l	a1,(a0)
 	move.l	a5,fg_displayed_screen_ptr
 	move.l	a2,bob_previous_drawed_sprites
-	move.l		bg_drawed_screen_ptr(pc),bg_displayed_screen_ptr
 
-	jbsr		set_bg_bitplanes
 	jbsr		set_fg_bitplanes
 	.endif
 	
@@ -2898,7 +2892,7 @@ update_bg_tile:
 
 	move.l	#BG_SCREEN_PLANE_SIZE,d5
 	
-	move.l	bg_drawed_screen_ptr(pc),a1
+	move.l	bg_panel_screen_ptr(pc),a1
 	
 	* D3 = Y
 
@@ -3075,18 +3069,35 @@ HW_SpriteYTable_\height:
 	DEF_HW_SPRITE_Y_TABLE	32
 
 
-
+* done once at start
+set_panel_bitplanes:
+	movem.l	a0/a1,-(a7)
+    move.l	bg_panel_screen_ptr(pc),a1
+	lea	panel_bitplanes+2,a0
+	bsr		set_bg_bitplanes
+	movem.l	(a7)+,a0/a1
+	rts
+	
+set_mountain_bitplanes:
+	movem.l	a0/a1,-(a7)
+	* share the buffer between the panel and background
+	* only the background gets a pointer refresh
+	move.l	bg_mountain_screen_ptr(pc),a1
+	lea	blue_mountains_bitplanes+2,a0
+	bsr		set_bg_bitplanes
+	movem.l	(a7)+,a0/a1
+	rts
+	
 * set_bg_bitplanes
 * what: sets bitplanes in copperlist
-* TODO allow to set them lower in copperlist
+* < A0: copperlist pointer on first bitplane nibble
+* < A1: first bg plane address
 
 set_bg_bitplanes:
-	movem.l	d0-d2/a0,-(a7)
-    move.l	bg_displayed_screen_ptr(pc),a0
+	movem.l	d0-d2,-(a7)
     moveq #4-1,d1
-	move.l	a0,d0
-    lea	panel_bitplanes+2,a0
-	move.l	#BG_SCREEN_PLANE_SIZE,d2
+	move.l	a1,d0
+ 	move.l	#BG_SCREEN_PLANE_SIZE,d2
 1:
     swap d0
     move.w d0,(a0)
@@ -3095,7 +3106,7 @@ set_bg_bitplanes:
     addq.w  #8,a0
     add.l d2,d0
     dbf d1,1b
-	movem.l	(a7)+,d0-d2/a0
+	movem.l	(a7)+,d0-d2
     rts
 
 * set_fg_bitplanes
@@ -3724,9 +3735,13 @@ fg_screen_data_2:
 	
 upper_sprite_buffers:
 	ds.l	8			| 8 pointers to 8 upper sprite end control words
-bg_drawed_screen_ptr:
+bg_panel_screen_ptr:
 	.long	0
-bg_displayed_screen_ptr:
+bg_base_mountain_screen_ptr:
+	.long	0
+bg_mountain_screen_ptr:
+	.long	0
+bg_base_ground_screen_ptr:
 	.long	0
 fg_drawed_screen_ptr:
 	.long	0
@@ -3854,6 +3869,8 @@ blank_sprite_0:
 	* main copperlist, get some aspirin!!
 copperlist:
     *.word   0x1801,0xFFFE
+	* reset scrolling to 0 (panel)
+	.word	bplcon1,0
 
 
 panel_bitplanes:
@@ -3882,6 +3899,8 @@ sprites_upper_part:
 	.word	bplcon1
 blue_mountains_scroll_value:
 	.word	0
+blue_mountains_bitplanes:
+	DECL_EVEN_BITPLANES	0,4
 	
 playfield_colors:
 	DECL_COLORS	16,TOTAL_NB_COLORS
@@ -3963,9 +3982,8 @@ post_pal_copper_rows:
 	.align	8
 	
 		.section .bsschip
-bg_screen_buffer_1:
-	.skip	BG_SCREEN_SIZE
-	.skip	BG_NB_BYTES_PER_ROW*12*3
+bg_screen_buffer:
+	.skip	BG_SCREEN_SIZE		| too big
 	.skip	8
 	
 fg_screen_buffer_1:

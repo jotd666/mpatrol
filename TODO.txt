@@ -1,3 +1,4 @@
+- ECS version borderblank is gone even for AGA
 - 99 credits after a while continuing
 - highscore erased on section score screen
 - "TIME" not displayed sometimes
