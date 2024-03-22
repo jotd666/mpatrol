@@ -1,4 +1,5 @@
-- ECS version borderblank is gone even for AGA
+- make OCS version with lq sfx, no blue mountain?
+- ECS version borderblank is gone even for AGA (whdload?)
 - 99 credits after a while continuing
 - highscore erased on section score screen
 - "TIME" not displayed sometimes
@@ -7,8 +8,6 @@
 - save highscore & best course times
 - custom2 bit jump with button 2 only
 - start lives is wrong
-- OCS: ground not working properly???
-- borderblank ECS issue: maybe WinUAE problem??
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
 - still floor tile missing after a slope
 - game is 10% slower than it should be. Adding extra call each 10 calls adds
