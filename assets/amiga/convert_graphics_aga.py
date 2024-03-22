@@ -527,7 +527,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tbob_table\n")
     f.write("\t.global\tblue_mountains\n")
     f.write("\t.global\tgreen_mountains\n")
-    #f.write("\t.global\tgreen_city\n")
+    f.write("\t.global\tgreen_city\n")
     f.write("\t.global\ttitle_bitmap\n")
     f.write("\t.global\thardware_sprite_flag_table\n")
 
@@ -706,7 +706,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         bitplanelib.dump_asm_bytes(k,f,mit_format=True)
 
     f.write("\n* backgrounds\n")
-    backgrounds = ['blue_mountains', 'green_mountains'] #, 'green_city']
+    backgrounds = ['blue_mountains', 'green_mountains', 'green_city']
 
     # we only need 8 first colors (actually even less)
     bg_palette = background_palette

@@ -13,19 +13,24 @@
 - game is 10% slower than it should be. Adding extra call each 10 calls adds
   nothing but more problems (demo not in sync, title not in sync, who knows what?),
   and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
-- test space plant (demo) again
-- remove osd_set_ground_scroll_value  
+- test space plant (demo) again 
 
 AGA:
 
-- bobs palette is wrong
-- ground scroll implemented but wrong
+- dual playfield with characters on top except for lower strip >= 192 (if this can
+  be dynamically switched 0x64 => 0x24 except in lower part!
+- draw "moon patrol" characters in front? or just ignore them, we'll paste
+  the image
+
+- blue mountain double strip wrong cut (python script)
+- crash when showing "insert coin" screen: without "clear_background" no crash!
+- ground strip mirror??
+- align both playfields
 - sprite issue??? (space plant)
 - add city layer: missing black color, redefine yellow, height issue
 - moon base almost ok (still color issues)
-- dual playfield with characters on top except for lower strip (if this can
-  be dynamically switched 0x64 => 0x24 except in lower part!
-- blue mountain blit at start doesn't work
+
+
 
 converter:
 
