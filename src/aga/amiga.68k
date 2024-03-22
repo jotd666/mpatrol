@@ -25,6 +25,7 @@ BB_ROCK = 3+1
 
 Y_MAX = 260
 
+BASE_BPLCON3_VALUE = (1<<12)|(1<<10)  | dpf second playfield palette starts at color 16!
 BASE_BPLCON2_VALUE = 0x0064
 SCREEN_ADDRESS = 0x8000
 
@@ -3932,7 +3933,7 @@ tile_log_table:
 	.endm
 
 .macro	DECL_COLOR_BANK	bankno
-	.word	bplcon3,0xC00+(BORDERBLANK<<5)+(\bankno<<13)
+	.word	bplcon3,BASE_BPLCON3_VALUE+(BORDERBLANK<<5)+(\bankno<<13)
 	.endm
 	
 .macro	DECL_COLORS	offset,nb_colors
