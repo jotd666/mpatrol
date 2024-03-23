@@ -52,7 +52,7 @@ clean:
 	
 $(AMIGA_ECS_SRC)/graphics.68k: $(ASSETS)/convert_graphics_ecs.py $(ASSETS)/shared.py $(ASSETS)/../$(PROGNAME)_gfx.c
 	cmd /c $(ASSETS)\convert_graphics_ecs.py
-$(AMIGA_AGA_SRC)/graphics.68k: $(ASSETS)/convert_graphics_aga.py $(ASSETS)/shared.py $(ASSETS)/../$(PROGNAME)_gfx.c
+$(AMIGA_AGA_SRC)/graphics.68k: $(ASSETS)/gen_scroll_table.py $(ASSETS)/convert_graphics_aga.py $(ASSETS)/shared.py $(ASSETS)/../$(PROGNAME)_gfx.c
 	cmd /c $(ASSETS)\convert_graphics_aga.py
 
 $(AMIGA_SHARED_SRC)/sounds.68k: $(ASSETS)/convert_sounds.py $(ASSETS)/../sounds/moon_patrol_conv.mod

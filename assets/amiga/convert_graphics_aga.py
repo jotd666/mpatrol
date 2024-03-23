@@ -6,6 +6,7 @@ import shared
 # ECS version
 import collections
 
+import gen_scroll_table
 
 transparent = (60,100,200)  # whatever is not a used RGB is ok
 
@@ -311,6 +312,7 @@ with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:
         bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
 
 
+gen_scroll_table.doit(os.path.join(src_dir,"scroll_table.68k"))
 
 with open(os.path.join(src_dir,"tiles_palette.68k"),"w") as f:
     bitplanelib.palette_dump(tile_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
