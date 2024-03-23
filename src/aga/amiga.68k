@@ -2729,7 +2729,9 @@ platform_init:
 	move.w	#0x22,bplcon4(a5)	| sprites palette start at color 32, keep coupling for now
     move.w #0x3,fmode(a5)
     move.w #0x0018,ddfstrt(a5)
-    move.w #0x00A0,ddfstop(a5)
+    move.w #0x00A8,ddfstop(a5)
+    *move.w #0x0030,ddfstrt(a5)
+    *move.w #0x00C0,ddfstop(a5)
     move.w	#-8,d0
 
     move.w #0,bplcon1(a5)
@@ -3040,6 +3042,12 @@ update_bg_tile:
 	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y (tile)
 	
+	
+	* TEMP
+*	cmp.w	#PANEL_MAX_Y/8,d3
+*	bcc		2f
+*	add.w	#(192/8),d3
+	
 	tst		d0
 	bne.b	112f
 	cmp.w	#PLAYFIELD_TILE_Y_MIN,d3	
@@ -3342,6 +3350,7 @@ set_mountain_bitplanes:
 	* share the buffer between the panel and background
 	* only the background gets a pointer refresh
 	move.l	bg_mountain_screen_ptr(pc),a1
+	subq.w	#8,a1
 	lea	blue_mountains_bitplanes+2,a0
 	bsr		set_bg_bitplanes
 	movem.l	(a7)+,a0/a1
