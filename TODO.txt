@@ -13,17 +13,22 @@
 - game is 10% slower than it should be. Adding extra call each 10 calls adds
   nothing but more problems (demo not in sync, title not in sync, who knows what?),
   and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
-- test space plant (demo) again 
 
 AGA:
 
+- blue mountain light blue color is wrong!
+- borderblank not working???
+- shot erase not working??
+- ground strip mirror: missing 8 pixels, same for mountain strip
+- add city layer: missing black color, redefine yellow
+- reinstate dynamic green
+
+- compare startup images with MAME
 - dual playfield with characters on top except for lower strip >= 192 (if this can
   be dynamically switched 0x64 => 0x24 except in lower part!
 - draw "moon patrol" characters in front? or just ignore them, we'll paste
   the image
 
-- ground strip mirror: missing 8 pixels, same for mountain strip
-- add city layer: missing black color, redefine yellow, height issue
 - moon base almost ok (still color issues)
 
 

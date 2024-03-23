@@ -105,6 +105,7 @@ green_background_mountain_color = (0,151,0)
 
 brown_rock_color = (0x84,0x51,0x00)
 blue_dark_mountain_color = (0,0,0xFF)
+blue_light_mountain_color = (0,0,0xFF)
 dark_brown_color = (0x3E,0x37,0)
 yellow_color = (0xC1,0xC8,00)
 dark_green_color = (0,81,0)  # in space plant base
@@ -146,7 +147,7 @@ def replace_color(img,color,replacement_color):
 
 
 def bob_color_change(img_to_raw):
-    img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
+    #img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
     img_to_raw = replace_color(img_to_raw,dark_green_color,red_color)
 
     return img_to_raw
@@ -275,12 +276,11 @@ def switch_values(t,a,b):
 
 
 all_bob_colors = sorted(bobs_used_colors)[1:]
-all_bob_colors.remove(brown_rock_color)  # TODO: remove blue mountain color instead
 
 # remove yellow_background_city_color
 bg_copy = [x for x in background_palette if x != yellow_background_city_color]
 
-bob_global_palette = bg_copy + all_bob_colors
+bob_global_palette = [x for x in bg_copy if x != blue_dark_mountain_color] + all_bob_colors
 if len(bob_global_palette) > 16:
     # error if not enough colors, no need to hack to shoehorn it
     # if too many colors, we can't use 4 bitplanes!
@@ -319,12 +319,8 @@ with open(os.path.join(src_dir,"tiles_palette.68k"),"w") as f:
 with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
     bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
-    rock_color = bitplanelib.to_rgb4_color(brown_rock_color)
     plant_color = bitplanelib.to_rgb4_color(dark_green_color)
-    rock_color_index = bob_global_palette.index(blue_dark_mountain_color)
     plant_color_index = bob_global_palette.index(red_color)
-    f.write("rock_color:\n\t.word\t0x{:x}\n".format(rock_color))
-    f.write("rock_color_register:\n\t.word\t0x180+{}\n".format(rock_color_index*2))
     f.write("plant_color:\n\t.word\t0x{:x}\n".format(plant_color))
     f.write("plant_color_register:\n\t.word\t0x180+{}\n".format(plant_color_index*2))
 character_codes_list = []
@@ -744,7 +740,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         img = replace_color(img,yellow_background_city_color,green_background_mountain_color)
         # dump, we don't need a mask for any layers: blue layer is alone, green layer is behind in its playfield
 
-        raw = bitplanelib.palette_image2raw(img,None,bob_global_palette[:8],forced_nb_planes=3,
+        raw = bitplanelib.palette_image2raw(img,None,bob_global_palette[:8] if is_green else bg_copy,forced_nb_planes=3,
                     palette_precision_mask=0xFF,generate_mask=False,blit_pad=is_green)  # only blit pad if green
         nb_planes = 3
         plane_size = len(raw)//nb_planes

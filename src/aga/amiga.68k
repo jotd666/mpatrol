@@ -2032,23 +2032,18 @@ blit_blue_mountain_strip:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	* this blits the pale blue layer of the back mountain
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	add.w	d5,a0			| next source plane
 	
-	* while this is blitting and since it's done only once
-	* at bootup, we can use CPU to just fill enough blue lines
-	move.l	bg_base_mountain_screen_ptr(pc),a1
-	lea		mulBG_NB_BYTES_PER_ROW_table(pc),a2
-	add.w	(a2,d7.w*2),a1
-	move.l	a1,a2
-	add.w	#BG_SCREEN_PLANE_SIZE,a2
-	move.w	#31,d7		| enough?
-	moveq	#-1,d5
-0:
-	move.w	#BG_NB_BYTES_PER_ROW/4-1,d6
-1:
-	move.l	d5,(a1)+
-	move.l	d5,(a2)+
-	dbf		d6,1b
-	dbf		d7,0b
+	add.w	#BG_SCREEN_PLANE_SIZE,a1
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	* plane 2
+	move.l a0,bltapt(a5)	|source graphic top left corner
+	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
+	* this blits the pale blue layer of the back mountain
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
 
 	movem.l	(a7)+,d0-a6
 	
@@ -2109,6 +2104,10 @@ update_scrollable_layers:
 	* background layer so proper colors for tiles
 	
 	*sub.w	(a2,d2.w*2),d6
+	add.w	#84,d2		| empiric???
+	move.b	d2,blue_mountains_start_copper_wait
+	add.w	#50,d2
+	move.b	d2,blue_mountains_end_copper_wait
 	
 	move.l	bg_base_mountain_screen_ptr(pc),a1
 	add.w	d6,a1
@@ -2613,7 +2612,7 @@ platform_init:
 	*         VVHH
     move.w #0x18A8,diwstop(a5)
 	* try to hide color 0 on the border (except on OCS)
-    move.w #0x0611,bplcon0(a5) | 8 bitplanes, dual playfield, borderblank
+    move.w #0x0610+BORDERBLANK,bplcon0(a5) | 8 bitplanes, dual playfield, borderblank
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
 	* AGA-compatible ECS default values
 	*move.w	#0x32,bplcon4(a5)	| odd sprites palette start at color 48, even at 32
@@ -2977,10 +2976,10 @@ update_bg_tile:
 	
 	* D3 = Y
 
-	move.w	(a0,d3.w*2),d3
-	lsl.w	#3,d3		| times 8
-	add.w	d3,d7
-	add.w	d7,a1
+	move.w	(a0,d3.w*2),d6
+	lsl.w	#3,d6		| times 8
+	add.w	d6,a1		| add Y offset
+	add.w	d7,a1		| add X offset
 
 
 	* optimization when a well-known
@@ -3054,6 +3053,8 @@ update_bg_tile:
 	rts
 
 copy_third_plane:
+	bsr		switch_to_fg_bitplanes
+
 	.set	offset,0
 	move.w	d5,d0
 	add.w	d5,d5
@@ -3062,9 +3063,13 @@ copy_third_plane:
 	addq	#8,a0		| non-zero shot bitplane (first bitplane is empty)
 	.set	offset,0
 	.rept	8
-	move.b	(a0)+,(offset,a1)
+	move.b	(a0),d0
+	move.b	d0,(offset,a1)
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	move.b	d0,(offset,a2)
+	.endif
 
-	.set	offset,offset+BG_NB_BYTES_PER_ROW
+	.set	offset,offset+FG_NB_BYTES_PER_ROW
 	.endr
 
 
@@ -3072,17 +3077,41 @@ copy_third_plane:
 	rts
 	
 erase_third_plane:
+	bsr		switch_to_fg_bitplanes
 	.set	offset,0
 	add.w	d5,a1
 	add.w	d5,a1
 	add.w	d5,a1
 	.rept	8
 	clr.b	(offset,a1)
-	.set	offset,offset+BG_NB_BYTES_PER_ROW
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	clr.b	(offset,a2)
+	.endif
+	.set	offset,offset+FG_NB_BYTES_PER_ROW
 	.endr
 
 	rts
 
+switch_to_fg_bitplanes:
+	lea		mulFG_NB_BYTES_PER_ROW_table(pc),a3
+	move.l	#FG_SCREEN_PLANE_SIZE,d5
+	
+	move.l	fg_drawed_screen_ptr(pc),a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	move.l	fg_displayed_screen_ptr(pc),a2
+	.endif
+	
+	* D3 = Y
+
+	move.w	(a3,d3.w*2),d6
+	lsl.w	#3,d6		| times 8
+	add.w	d6,d7
+	add.w	d7,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d7,a2
+	.endif
+	rts
+	
 * ground strip, lots of copy paste here...
 
 update_ground_strip_character:
@@ -3127,7 +3156,7 @@ update_ground_strip_character:
 	.rept	8
 	move.b	(a0)+,d0
 	move.b	d0,(offset,a1)
-	cmp.w	#34,d7
+	cmp.w	#32,d7
 	bcc.b	6f
 	move.b	d0,(offset+32,a1)
 6:
@@ -3145,7 +3174,7 @@ update_ground_strip_character:
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
-	cmp.w	#34,d7
+	cmp.w	#32,d7
 	bcc.b	6f
 	clr.b	(offset+32,a1)
 6:
@@ -4054,8 +4083,8 @@ blank_sprite_0:
 	* main copperlist, get some aspirin!!
 copperlist:
     *.word   0x1801,0xFFFE
-	* reset scrolling to max 3F (panel)
-	.word	bplcon1,0xF+(1<<10)
+	* reset scrolling to max (panel)
+	.word	bplcon1,DEFAULT_SCROLL_VALUE
 
 panel_bitplanes:
 	DECL_EVEN_BITPLANES	0,4
@@ -4080,11 +4109,6 @@ sprites_upper_part:
  	.set    beampos,0x5401
     .word  beampos,0xFFFE
 
-	.word	bplcon1
-blue_mountains_scroll_value:
-	.word	0
-blue_mountains_bitplanes:
-	DECL_EVEN_BITPLANES	0,4
 	
 playfield_colors:
 	DECL_COLORS	16,TOTAL_NB_COLORS
@@ -4094,7 +4118,23 @@ sprites_upper_cols:
 	DECL_COLORS	0,16
 	DECL_COLOR_BANK	0
 
+* wait before setting mountains planes
+blue_mountains_start_copper_wait:
+	.word	0x0001
+	.word	0xFFFE
 	
+	.word	bplcon1
+blue_mountains_scroll_value:
+	.word	0
+blue_mountains_bitplanes:
+	DECL_EVEN_BITPLANES	0,4
+	* now wait some lines until we're sure bitmap only contains
+	* non-black: we can set color 0 to light blue now
+blue_mountains_end_copper_wait:
+	.word	0x0001
+	.word	0xFFFE
+	.word	color
+	.word	0x09A
 color_line_copper:
 	.rept	HALF_DYNAMIC_COPPER_ROWS
 	* room for 3 color registers to change dynamically each line
