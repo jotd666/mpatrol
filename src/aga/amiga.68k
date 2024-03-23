@@ -28,6 +28,8 @@ Y_MAX = 260
 BASE_BPLCON3_VALUE = (1<<12)|(1<<10)+(BORDERBLANK<<5)  | dpf second playfield palette starts at color 16!
 BASE_BPLCON2_VALUE = 0x0064
 SCREEN_ADDRESS = 0x8000
+* max scroll
+DEFAULT_SCROLL_VALUE = 0xCCFF
 
 * set to 1 to block ground scrolling, see what's
 * going on with the game scrolling system
@@ -44,6 +46,10 @@ SPRITE_Y_SPLIT_LIMIT = 96+PANEL_MAX_Y
 * with those, buggy wheels match perfectly the ground!
 SPRITE_Y_CORRECTION = -14
 SPRITE_X_CORRECTION = 17
+* with fixed playfield scrolling at max
+* HW sprites must be shifted to follow
+HW_SPRITE_X_CORRECTION = 31+SPRITE_X_CORRECTION
+
 * exact match at 
 BACKGROUND_X_CORRECTION = 4
 
@@ -312,9 +318,6 @@ no_floppy:
 2:
 	move.l	#2,dip_switch_start_lives		| 3 lives default
 3:
-	lea		_custom,a5
-	lea		debug_copperlist,a0
-	move.l	a0,cop1lc(a5)
 
 	
 
@@ -324,6 +327,9 @@ no_floppy:
 	
 
 .startup:
+	lea		_custom,a5
+	lea		debug_copperlist,a0
+	move.l	a0,cop1lc(a5)
 
 * no multitask
     tst.l   _resload
@@ -371,6 +377,7 @@ no_floppy:
 	move.l	a0,bg_base_mountain_screen_ptr
 	move.l	a0,bg_mountain_screen_ptr
 	
+
 	move.l	bg_panel_screen_ptr,a0
 	add.w	#BG_NB_BYTES_PER_ROW*SCROLL_MIN_Y,a0
 	move.l	a0,bg_base_ground_screen_ptr
@@ -385,6 +392,8 @@ no_floppy:
 		
 	bsr		set_panel_bitplanes
 	bsr		set_mountain_bitplanes
+
+
 	move.l	dip_switch_start_course(pc),d0
 	move.b	d0,start_level_flag
 	
@@ -891,8 +900,16 @@ clear_background:
 	movem.l	(A7)+,d0-d7/A0-A6
 	rts
 	
-really_clear_background:	
+really_clear_background:
 	lea		_custom,a5
+	lea		blue_mountains_bitplanes,a0
+	move.w	#NB_PLAYFIELD_PLANES*2-1,d1
+0:
+	move.w	#0x1fe,d0		| noop, let panel show
+	move.w	d0,(a0)
+	addq.w	#4,a0
+	dbf		d1,0b
+
 	* compute height
 	moveq	#0,d1
 	tst.b	previous_blue_layer_y
@@ -910,11 +927,9 @@ really_clear_background:
 	move.l	fg_displayed_screen_ptr(pc),a1
 	jbsr		clear_fg_planes_any_blitter_internal
 	
-	*move.l	bg_panel_screen_ptr(pc),a1
-	*jbsr	clear_bg_planes_any_blitter_internal
-	* reset scrolling to 0
-	clr.w	blue_mountains_scroll_value
-	clr.w	ground_strip_scroll_value
+	* reset scrolling to default: max
+	move.w	#DEFAULT_SCROLL_VALUE,blue_mountains_scroll_value
+	move.w	#DEFAULT_SCROLL_VALUE,ground_strip_scroll_value
 	
 	clr.b	previous_blue_layer_y   | only done once!
 0:
@@ -1018,8 +1033,6 @@ update_background:
 	movem.w	d0-d5,-(a7)
 	bsr		really_clear_background
 	movem.w	(a7)+,d0-d5	
-	* blit the blue mountain strip
-	jbsr	blit_blue_mountain_strip
 	
 	jra		23f
 2:
@@ -1247,8 +1260,8 @@ update_hardware_sprites:
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
 	.endif
-	.ifne	SPRITE_X_CORRECTION
-	add.w	#SPRITE_X_CORRECTION,d0
+	.ifne	HW_SPRITE_X_CORRECTION
+	add.w	#HW_SPRITE_X_CORRECTION,d0
 	.endif
 
 
@@ -1975,10 +1988,7 @@ set_mountain_dynamic_colors:
 	
 
 	
-* done only when blue mountain is displayed again
-* TODO: maybe just hide colors!
-*
-* < D2: Y where to blit (should be fixed!!)
+
 blit_blue_mountain_strip:
 	movem.l	d0-a6,-(a7)
 	
@@ -2002,7 +2012,7 @@ blit_blue_mountain_strip:
 	WAIT_BLIT
     
     * blitter registers set
-
+	
 	* plane 0
 	move.l d3,bltcon0(a5)	| sets con0 and con1
     move.w  #0,bltamod(a5)	|A modulo: 128 bytes per row - 40 used, no shift
@@ -2023,7 +2033,8 @@ blit_blue_mountain_strip:
 	* this blits the pale blue layer of the back mountain
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	
-	* while this is blitting we can use CPU to just fill enough blue lines
+	* while this is blitting and since it's done only once
+	* at bootup, we can use CPU to just fill enough blue lines
 	move.l	bg_base_mountain_screen_ptr(pc),a1
 	lea		mulBG_NB_BYTES_PER_ROW_table(pc),a2
 	add.w	(a2,d7.w*2),a1
@@ -2038,7 +2049,7 @@ blit_blue_mountain_strip:
 	move.l	d5,(a2)+
 	dbf		d6,1b
 	dbf		d7,0b
-	
+
 	movem.l	(a7)+,d0-a6
 	
 	rts
@@ -2090,7 +2101,14 @@ update_scrollable_layers:
 	
 	sub.w	#PANEL_MAX_Y+8,d2
 	sub.w	#PANEL_MAX_Y+8,d3
-	sub.w	(a2,d2.w*2),d6
+	* we want to change copper wait before we change
+	* bitplane for blue mountain bitplane, much better than
+	* displaying empty data at a fixed location just after panel
+	* because it saves memory & also allows to print 
+	* "beginner/champion course go!" text using
+	* background layer so proper colors for tiles
+	
+	*sub.w	(a2,d2.w*2),d6
 	
 	move.l	bg_base_mountain_screen_ptr(pc),a1
 	add.w	d6,a1
@@ -2593,7 +2611,7 @@ platform_init:
 	* restrict borders: we don't see bobs on the borders!
     move.w #0x1CB8,diwstrt(a5)
 	*         VVHH
-    move.w #0x1890,diwstop(a5)
+    move.w #0x18A8,diwstop(a5)
 	* try to hide color 0 on the border (except on OCS)
     move.w #0x0611,bplcon0(a5) | 8 bitplanes, dual playfield, borderblank
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
@@ -2641,7 +2659,9 @@ platform_init:
     * init sprite, bitplane, whatever dma
 
     move.w #0x83E0,dmacon(a5)
-    *move.w #0x20,dmacon(a5)
+ 
+	* blit the blue mountain strip now, it's not going to change
+	jbsr	blit_blue_mountain_strip
 
 	* install keyboard and vblank/copper handler
 	pea		level2_interrupt(pc)
@@ -3216,14 +3236,27 @@ set_panel_bitplanes:
 	rts
 	
 set_mountain_bitplanes:
-	movem.l	a0/a1,-(a7)
+	movem.l	d0/d1/a0/a1,-(a7)
 	* share the buffer between the panel and background
 	* only the background gets a pointer refresh
+	* we also re-set the bitplanes as they may be cleared by 
+	* "clear_background"
+	lea	blue_mountains_bitplanes,a0
+	move.w	#NB_PLAYFIELD_PLANES-1,d1
+	move.w	#bplpt,d0
+0:
+	move.w	d0,(a0)
+	addq	#2,d0
+	addq.w	#4,a0
+	move.w	d0,(a0)
+	addq	#6,d0
+	addq.w	#4,a0
+	dbf		d1,0b
+	
 	move.l	bg_mountain_screen_ptr(pc),a1
-	subq.w	#8,a1
 	lea	blue_mountains_bitplanes+2,a0
 	bsr		set_bg_bitplanes
-	movem.l	(a7)+,a0/a1
+	movem.l	(a7)+,d0/d1/a0/a1
 	rts
 	
 set_ground_bitplanes:
@@ -3231,6 +3264,7 @@ set_ground_bitplanes:
 	* share the buffer between the panel and background
 	* only the background gets a pointer refresh
 	move.l	bg_ground_screen_ptr(pc),a1
+	
 	lea	ground_bitplanes+2,a0
 	bsr		set_bg_bitplanes
 	movem.l	(a7)+,a0/a1
@@ -3975,8 +4009,8 @@ tile_log_table:
 .macro	DECL_EVEN_BITPLANES	bpoff_start,nb_planes
 	.set	bpoff,\bpoff_start
 	.rept	\nb_planes
-	dc.w  0xe0+bpoff,0
-	dc.w  0xe2+bpoff,0
+	dc.w  bplpt+bpoff,0
+	dc.w  bplpt+bpoff+2,0
 	.set	bpoff,bpoff+8
 	.endr
 	.endm
@@ -4131,7 +4165,6 @@ post_pal_copper_rows:
 bg_screen_buffer:
 	.skip	BG_SCREEN_SIZE		| too big
 	.skip	8
-	.skip	BG_SCREEN_SIZE		| too big
 blue_mountain_buffer:
 	.skip	BG_SCREEN_SIZE		| too big
 	.skip	8

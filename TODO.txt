@@ -22,11 +22,7 @@ AGA:
 - draw "moon patrol" characters in front? or just ignore them, we'll paste
   the image
 
-- blue mountain double strip wrong cut (python script)
-- crash when showing "insert coin" screen: without "clear_background" no crash!
-- ground strip mirror??
-- align both playfields
-- sprite issue??? (space plant)
+- ground strip mirror: missing 8 pixels, same for mountain strip
 - add city layer: missing black color, redefine yellow, height issue
 - moon base almost ok (still color issues)
 

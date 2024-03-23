@@ -5,16 +5,23 @@ Credits:
 
 - jotd: Z80 to 68000 conversion, amiga graphics conversion, amiga sound effects
 - no9: amiga music
+- ross: help with AGA version and hardware scrolling. Big Kudos!!
 - http://www.computerarcheology.com/Arcade/MoonPatrol/ help with reverse-engineering
   (merged their comments & variable names after having started my RE)
 - PascalDe73: icon
 - mrv2k: boxart
 - DamienD: floppy menu
 
-Amiga version:
+Amiga version (ECS):
 
 - runs on 1MB ECS 68000 Amiga, 25 fps (some slowdowns to expect at times)
 - Uses AGA fast DMA mode if found and runs at 50fps on AGA+fastmem
+- adapted "low detail" graphics 
+
+Amiga version (AGA):
+
+- runs on vanilla A1200 at 50 fps, with smooth scrolling layers
+- original colors & graphics
 
 Controls:
 

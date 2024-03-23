@@ -9,7 +9,7 @@ def doit(asm_output):
     items = []
     for x in range(0,256):
         shift = (wmask-(x & wmask))
-        offset = (x // width)*4
+        offset = (x // width)*(width//8)
         # pre-encode shift for bplcon
 
         shiftval_msb = ((shift&(wmask & 0x30))>>2)
