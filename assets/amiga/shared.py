@@ -55,6 +55,8 @@ def define_sprites(add_sprite_block):
     add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
     add_sprite_block(5,8,"jeep_wheel",0,False)  #True,bob_backup=BB_WHEEL)
 
+# maybe it would have been more efficient to dump screens and add from here, as char by char
+# approach is tedious...
 def get_used_tile_cluts():
     used_cluts = collections.defaultdict(set)
     # letters beginner
@@ -68,6 +70,11 @@ def get_used_tile_cluts():
     # blanks for all cluts
     for i in range(0,22):
         used_cluts[0].add(i)
+    # letters, ground strip
+    for i in range(ord('A'),ord("Z")+1):
+        used_cluts[i].add(5)  # beginner
+        used_cluts[i].add(8)  # beginner/champion course
+    used_cluts[0x5B] = 8        # exclamation mark
 
     # letters, champion level, stupidly lots of cluts
     for i in range(0x30,0x60):
@@ -103,7 +110,7 @@ def get_used_tile_cluts():
 
     # moon base/platform
     for i in range(0x68,0x71):
-        used_cluts[i].add(0)
+        used_cluts[i].add(0xF)
     for i in range(0x81,0x85):
         used_cluts[i].add(0x13)
     for i in range(0x7C,0x81):
@@ -116,7 +123,7 @@ def get_used_tile_cluts():
         used_cluts[i].add(0X12)
     for i in range(0x87,0x8D):
         used_cluts[i].add(0X12)
-    used_cluts[85].add(0xF)
-    used_cluts[86].add(0x14)
+    used_cluts[0x85].add(0xF)
+    used_cluts[0x86].add(0x14)
 
     return used_cluts

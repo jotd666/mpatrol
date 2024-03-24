@@ -31,6 +31,9 @@ SCREEN_ADDRESS = 0x8000
 * max scroll
 DEFAULT_SCROLL_VALUE = 0xCCFF
 
+DARK_BLUE_MOUNTAIN_COLOR = 0x00F
+LIGHT_BLUE_MOUNTAIN_COLOR = 0x09A	
+
 * set to 1 to block ground scrolling, see what's
 * going on with the game scrolling system
 FIX_GROUND_SCROLL = 0
@@ -2087,7 +2090,8 @@ update_scrollable_layers:
 	******************
 	* blue mountains
 	******************
-		
+	sub.w	#0xF,d0
+	
 	and.w	#0xFF,d0
 	add.w	d0,d0
 	add.w	d0,d0
@@ -3265,7 +3269,7 @@ set_panel_bitplanes:
 	rts
 	
 set_mountain_bitplanes:
-	movem.l	d0/d1/a0/a1,-(a7)
+	movem.l	d0-d2/a0/a1,-(a7)
 	* share the buffer between the panel and background
 	* only the background gets a pointer refresh
 	* we also re-set the bitplanes as they may be cleared by 
@@ -3284,8 +3288,29 @@ set_mountain_bitplanes:
 	
 	move.l	bg_mountain_screen_ptr(pc),a1
 	lea	blue_mountains_bitplanes+2,a0
-	bsr		set_bg_bitplanes
-	movem.l	(a7)+,d0/d1/a0/a1
+	move.l	a1,d0
+ 	move.l	#BG_SCREEN_PLANE_SIZE,d2
+
+	* set 2 planes
+	.rept	2
+    swap d0
+    move.w d0,(a0)
+    swap d0
+    move.w d0,(4,a0)    
+    addq.w  #8,a0
+    add.l d2,d0
+	.endr
+	* set same empty plane
+	.rept	2
+    swap d0
+    move.w d0,(a0)
+    swap d0
+    move.w d0,(4,a0)    
+    addq.w  #8,a0
+	.endr
+
+
+	movem.l	(a7)+,d0-d2/a0/a1
 	rts
 	
 set_ground_bitplanes:
@@ -3306,7 +3331,7 @@ set_ground_bitplanes:
 
 set_bg_bitplanes:
 	movem.l	d0-d2,-(a7)
-    moveq #4-1,d1
+    moveq #NB_PLAYFIELD_PLANES-1,d1
 	move.l	a1,d0
  	move.l	#BG_SCREEN_PLANE_SIZE,d2
 1:
@@ -4122,6 +4147,10 @@ sprites_upper_cols:
 blue_mountains_start_copper_wait:
 	.word	0x0001
 	.word	0xFFFE
+
+mountain_colors:
+	.word	color+2,DARK_BLUE_MOUNTAIN_COLOR
+	.word	color+6,LIGHT_BLUE_MOUNTAIN_COLOR
 	
 	.word	bplcon1
 blue_mountains_scroll_value:
@@ -4134,7 +4163,7 @@ blue_mountains_end_copper_wait:
 	.word	0x0001
 	.word	0xFFFE
 	.word	color
-	.word	0x09A
+	.word	LIGHT_BLUE_MOUNTAIN_COLOR
 color_line_copper:
 	.rept	HALF_DYNAMIC_COPPER_ROWS
 	* room for 3 color registers to change dynamically each line
@@ -4206,7 +4235,7 @@ bg_screen_buffer:
 	.skip	BG_SCREEN_SIZE		| too big
 	.skip	8
 blue_mountain_buffer:
-	.skip	BG_SCREEN_SIZE		| too big
+	.skip	BG_SCREEN_PLANE_SIZE*3
 	.skip	8
 
 fg_screen_buffer_1:

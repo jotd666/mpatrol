@@ -93,6 +93,7 @@ sprite_palette = [tuple(x) for x in block_dict['sprite_palette']["data"]]
 # some colors for background palette
 background_palette = sorted(tuple(x) for x in block_dict["background_palette"]["data"])
 
+
 if dump_palettes:
     for name,p in zip(("tiles","sprites","background"),(tile_palette,sprite_palette,background_palette)):
         bitplanelib.palette_dump(p,os.path.join(dump_palettes_dir,name+".png"),bitplanelib.PALETTE_FORMAT_PNG)
@@ -105,7 +106,7 @@ green_background_mountain_color = (0,151,0)
 
 brown_rock_color = (0x84,0x51,0x00)
 blue_dark_mountain_color = (0,0,0xFF)
-blue_light_mountain_color = (0,0,0xFF)
+blue_light_mountain_color = (0, 151, 174)
 dark_brown_color = (0x3E,0x37,0)
 yellow_color = (0xC1,0xC8,00)
 dark_green_color = (0,81,0)  # in space plant base
@@ -147,7 +148,7 @@ def replace_color(img,color,replacement_color):
 
 
 def bob_color_change(img_to_raw):
-    #img_to_raw = replace_color(img_to_raw,brown_rock_color,blue_dark_mountain_color)
+    # color used in space plant base part, no conflict with green mountain dark color
     img_to_raw = replace_color(img_to_raw,dark_green_color,red_color)
 
     return img_to_raw
