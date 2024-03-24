@@ -93,7 +93,6 @@ sprite_palette = [tuple(x) for x in block_dict['sprite_palette']["data"]]
 # some colors for background palette
 background_palette = sorted(tuple(x) for x in block_dict["background_palette"]["data"])
 
-
 if dump_palettes:
     for name,p in zip(("tiles","sprites","background"),(tile_palette,sprite_palette,background_palette)):
         bitplanelib.palette_dump(p,os.path.join(dump_palettes_dir,name+".png"),bitplanelib.PALETTE_FORMAT_PNG)
@@ -107,6 +106,7 @@ green_background_mountain_color = (0,151,0)
 brown_rock_color = (0x84,0x51,0x00)
 blue_dark_mountain_color = (0,0,0xFF)
 blue_light_mountain_color = (0, 151, 174)
+green_dark_mountain_color = (0, 151, 0)
 dark_brown_color = (0x3E,0x37,0)
 yellow_color = (0xC1,0xC8,00)
 dark_green_color = (0,81,0)  # in space plant base
@@ -322,8 +322,14 @@ with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
 
     plant_color = bitplanelib.to_rgb4_color(dark_green_color)
     plant_color_index = bob_global_palette.index(red_color)
+    green_mountain_color = bitplanelib.to_rgb4_color(green_dark_mountain_color)
+    yellow_city_color = bitplanelib.to_rgb4_color(yellow_background_city_color)
+    green_mountain_color_index = bob_global_palette.index(green_dark_mountain_color)
     f.write("plant_color:\n\t.word\t0x{:x}\n".format(plant_color))
     f.write("plant_color_register:\n\t.word\t0x180+{}\n".format(plant_color_index*2))
+    f.write("green_mountain_color:\n\t.word\t0x{:x}\n".format(green_mountain_color))
+    f.write("yellow_city_color:\n\t.word\t0x{:x}\n".format(yellow_city_color))
+    f.write("green_mountain_color_index:\n\t.word\t{}\n".format(green_mountain_color_index))
 character_codes_list = []
 
 used_cluts = shared.get_used_tile_cluts()

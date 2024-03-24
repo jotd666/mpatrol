@@ -17,6 +17,7 @@ NO68020 = 0
 
 PREVIOUS_SPRITE_SIZE = 8
 BORDERBLANK = 1
+*STATIC_SCROLL_TEST = 1
 
 * bob backup flags for sprites
 BB_SHIP = 1+1
@@ -943,13 +944,13 @@ really_clear_background:
 	
 	rts
 
+
 current_x:
 	dc.w	0
 	
 * < A0: 
 update_background:
 	.ifdef	STATIC_SCROLL_TEST
-	jbsr	blit_blue_mountain_strip
 	move	current_x,d0
 	moveq	#1,d1
 	move.w	#150,d3
@@ -2071,9 +2072,10 @@ scroll_table:
 	
 * it also changes black background to the relevant background (blue or green)
 update_scrollable_layers:
-	
-	addq.b	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
-	addq.b	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
+
+
+	addq.w	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
+	addq.w	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
 	
 	* background is going to be non-zero
 	tst.b		background_cleared_flag
@@ -2145,11 +2147,16 @@ update_scrollable_layers:
 	******************
 	
 	bsr		get_green_mountains_data
-	
+
+	lea		playfield_colors+2,a3
+	move.w	#0,0x202
+	* set proper color depending on background
+	move.w	green_mountain_color_index,d2
+	move.w	d0,(a3,d2.w*4)
+
 	* clear the lower part of the mountain else some dark green remains
 	* and it's ugly. We'll optimize as most of the time blue mountain erases
 	* green mountain top, but at lowest level it can't erase all
-	
 
 	
 	move.w	d3,d2	| same as blue now
@@ -2277,12 +2284,17 @@ update_scrollable_layers:
 0:
 	rts
 
+* returns mountains/city depending on bit 0 of D4
+* > A0: pointer on bitmap
+* > D0: value of extra color (dark green or yellow)
 get_green_mountains_data:
 	lea		green_mountains,a0
+	move.w	green_mountain_color,d0
 	btst.b	#0,d4
 	bne.b	0f
 	* probably 0xFC (there are invalid/impossible combinations)
 	lea		green_city,a0
+	move.w	yellow_city_color,d0
 0:
 	rts
 	
@@ -2703,10 +2715,7 @@ load_palette_in_copperlist:
 	move.w	#TOTAL_NB_COLORS,d0
 	lea		panel_tiles_colors,a1
 	bsr		load_palette
-	movem.l	(a7)+,d0-d1/a0-a1
-	* pass through
-load_bobs_palette_in_playfield_copperlist:
-	movem.l	d0-d1/a0-a1,-(a7)
+
 	move.w	#TOTAL_NB_COLORS,d0
 	lea		bobs_palette(pc),a0
 	lea		playfield_colors,a1
