@@ -17,7 +17,6 @@
 AGA:
 
 - shots wrong draw/erase not working??
-- sprites far right don't appear
 - when ground is high, sprite multiplexing is limit clearly too high
 - slope+moon city: garbled moon city!!!
 - blue mountain a few characters top/left making a line...

@@ -1261,12 +1261,6 @@ update_hardware_sprites:
 *	beq.b	2f			| Y set to 255: not shown	
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
 
-	.ifne	SPRITE_Y_CORRECTION
-	add.w	#SPRITE_Y_CORRECTION,d1
-	.endif
-	.ifne	HW_SPRITE_X_CORRECTION
-	add.w	#HW_SPRITE_X_CORRECTION,d0
-	.endif
 
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
@@ -1362,6 +1356,13 @@ update_hardware_sprites:
 	add.w	d4,d4					| sprite index times 4 (pointer index)
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
+	* apply correction NOW, not earlier as it would wrap as a byte
+	.ifne	SPRITE_Y_CORRECTION
+	add.w	#SPRITE_Y_CORRECTION,d1
+	.endif
+	.ifne	HW_SPRITE_X_CORRECTION
+	add.w	#HW_SPRITE_X_CORRECTION,d0
+	.endif
 
 	move.w	(A5)+,d3
 	cmp.w	#16,d3
