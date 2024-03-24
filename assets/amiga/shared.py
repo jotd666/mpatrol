@@ -74,7 +74,7 @@ def get_used_tile_cluts():
     for i in range(ord('A'),ord("Z")+1):
         used_cluts[i].add(5)  # beginner
         used_cluts[i].add(8)  # beginner/champion course
-    used_cluts[0x5B] = 8        # exclamation mark
+    used_cluts[0x5B].add(8)        # exclamation mark
 
     # letters, champion level, stupidly lots of cluts
     for i in range(0x30,0x60):

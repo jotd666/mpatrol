@@ -16,13 +16,17 @@
 
 AGA:
 
-- beginner course go... should be white
-- blue mountain a line top/left
+- shots wrong draw/erase not working??
+- sprites far right don't appear
+- when ground is high, sprite multiplexing is limit clearly too high
+- slope+moon city: garbled moon city!!!
+- blue mountain a few characters top/left making a line...
 - borderblank not working???
-- shot erase not working??
 - ground strip mirror: missing 8 pixels, same for mountain strip
 - add city layer: missing black color, redefine yellow/add black
 - reinstate dynamic green
+- last letter not erased on "time to reach point".. screen
+- champion: scrolling letters not shown
 
 - dual playfield with characters on top except for lower strip >= 192 (if this can
   be dynamically switched 0x64 => 0x24 except in lower part!

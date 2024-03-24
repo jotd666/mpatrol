@@ -33,6 +33,7 @@ DEFAULT_SCROLL_VALUE = 0xCCFF
 
 DARK_BLUE_MOUNTAIN_COLOR = 0x00F
 LIGHT_BLUE_MOUNTAIN_COLOR = 0x09A	
+LIGHT_GREEN_MOUNTAIN_COLOR = 0x00D5
 
 * set to 1 to block ground scrolling, see what's
 * going on with the game scrolling system
@@ -1958,14 +1959,10 @@ set_mountain_dynamic_colors:
 	
 	* set copper color 0 to green (color 4 of bobs palette)
 	* at the proper row
-	lea		color_line_copper,a0
+	*lea		color_line_copper,a0
 	* Y minus panel Y max times 16 (3 longwords per line in copperlist + wait)
 	lea		bobs_palette(pc),a1
-
-	* the line list is not contiguous, we need to check size and skip sprite chunk
-	bsr		shift_d6_copper_y
 	
-
 	*move.w	#color,(A0,d6.w)
 	*move.w	(8,a1),(2,a0,d6.w)
 
@@ -1976,7 +1973,7 @@ set_mountain_dynamic_colors:
 	move.b	terrain_height_in_tiles_E514,d0
 	lsl.w	#3,d0		| times 8
 	sub.w	d0,d6
-	bsr		shift_d6_copper_y
+	*bsr		shift_d6_copper_y
 	
 	* change a dark red color (why not) by dark green used
 	* by space plant base. We put that here but we could even
@@ -2936,11 +2933,7 @@ update_bg_tile:
 	lsr.w	#5,d3		| this is Y (tile)
 	
 	
-	* TEMP
-*	cmp.w	#PANEL_MAX_Y/8,d3
-*	bcc		2f
-*	add.w	#(192/8),d3
-	
+
 	tst		d0
 	bne.b	112f
 	cmp.w	#PLAYFIELD_TILE_Y_MIN,d3	
@@ -3758,7 +3751,7 @@ reset_dynamic_colors:
 	rts
 	
 	movem.l	a0/d2-d4,-(a7)
-	lea	color_line_copper,a0
+	*lea	color_line_copper,a0
 	moveq	#1,d4
 	move.w	#0x1FE,d2
 0:
@@ -3782,7 +3775,7 @@ reset_background_dynamic_colors:
 	rts
 	
 	movem.l	a0/d2-d4,-(a7)
-	lea	color_line_copper,a0
+	*lea	color_line_copper,a0
 	moveq	#1,d4
 	move.w	#0x01FE,d2
 0:
@@ -4103,6 +4096,7 @@ blank_sprite_0:
 	.long	0
 	.endr
 	
+color_line_copper:
 
 
 	* main copperlist, get some aspirin!!
@@ -4148,6 +4142,16 @@ blue_mountains_start_copper_wait:
 	.word	0x0001
 	.word	0xFFFE
 
+	* multiplexed sprites + mid-screen interrupt (disabled ATM
+	* as it crashes the machine when calling mpatrol_irq from it...)
+sprites_lower_part:
+	DECL_SPRITES
+	DECL_COLOR_BANK	1
+sprites_lower_cols:
+	DECL_COLORS	0,16
+	DECL_COLOR_BANK	0		| back to bank	0
+
+* and mountain colors...
 mountain_colors:
 	.word	color+2,DARK_BLUE_MOUNTAIN_COLOR
 	.word	color+6,LIGHT_BLUE_MOUNTAIN_COLOR
@@ -4164,35 +4168,20 @@ blue_mountains_end_copper_wait:
 	.word	0xFFFE
 	.word	color
 	.word	LIGHT_BLUE_MOUNTAIN_COLOR
-color_line_copper:
-	.rept	HALF_DYNAMIC_COPPER_ROWS
-	* room for 3 color registers to change dynamically each line
-	* reserved only to set color bank 0!
-	.word	0x1FE,0
-	.word	0x1FE,0
-	.word	0x1FE,0
-	.set    beampos,beampos+0x100
-	.word	beampos,0xFFFE
-	.endr
-	* multiplexed sprites + mid-screen interrupt (disabled ATM
-	* as it crashes the machine when calling mpatrol_irq from it...)
-sprites_lower_part:
-	DECL_SPRITES
-	DECL_COLOR_BANK	1
-sprites_lower_cols:
-	DECL_COLORS	0,16
-	DECL_COLOR_BANK	0		| back to bank	0
+	.word	0xD401,0xFFFE
+	.word	color,LIGHT_GREEN_MOUNTAIN_COLOR
 	
 	
 	* rest of the color line copper stuff. Code knows that it must skip the sprites_lower_part sprite table
-	.rept	HALF_DYNAMIC_COPPER_ROWS-26
+	*.rept	HALF_DYNAMIC_COPPER_ROWS-26
 	* room for 3 color registers to change dynamically each line
-	.word	0x1FE,0
-	.word	0x1FE,0
-	.word	0x1FE,0
-	.set    beampos,beampos+0x100
-	.word	beampos,0xFFFE
-	.endr
+	*.word	0x1FE,0
+	*.word	0x1FE,0
+	*.word	0x1FE,0
+	*.set    beampos,beampos+0x100
+	*.word	beampos,0xFFFE
+	*.endr
+	.word	0xDB01,0xFFFE
 * probably not low enough
 	.word	bplcon1
 ground_strip_scroll_value:
