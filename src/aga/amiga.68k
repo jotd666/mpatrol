@@ -43,13 +43,14 @@ LIGHT_GREEN_MOUNTAIN_COLOR = 0x00D5
 * going on with the game scrolling system
 FIX_GROUND_SCROLL = 0
 
-
+* on blue mountain, height after which color 0 can be safely set to light blue
+BLUE_MOUNTAIN_OUTLINE_HEIGHT = 50
 PANEL_MAX_Y = 48
 SCROLL_MIN_Y = 192
 DYNAMIC_COPPER_ROWS = 210-PANEL_MAX_Y   | make sure it's even!!!!
 HALF_DYNAMIC_COPPER_ROWS = DYNAMIC_COPPER_ROWS/2
 SPRITE_COPPERLIST_CHUNK_SIZE = 64+64+8	| sprite copper (8*2 pointers) + color sprite copper (16 colors) + intreq
-SPRITE_Y_SPLIT_LIMIT = 96+PANEL_MAX_Y
+
 
 * with those, buggy wheels match perfectly the ground!
 SPRITE_Y_CORRECTION = -14
@@ -1055,6 +1056,7 @@ update_background:
 	* more diff than 2: brutal Y change: we have to clear the top of screen
 	* (happens when player killed after changing terrain height, and last
 	* checkpoint is on some other terrain height, rare but happens)
+	* with AGA, only green layer is impacted
 	movem.w	d0-d5,-(a7)
 	bsr		really_clear_background
 	movem.w	(a7)+,d0-d5
@@ -1126,8 +1128,9 @@ osd_update_sprites:
 	* count UFOs
 	* UFO: if too low, convert to bob to avoid conflict
 	not.b	d1		| convert to real coord
-	cmp.b	#SPRITE_Y_SPLIT_LIMIT-16,d1
-	bcc.b	convert_to_bob		| over this Y, HW sprite conflicts with lower part sprites
+	add.w	#16,d1	| add ufo sprite height
+	cmp.b	sprite_y_split_limit,d1
+	bcc.b	convert_to_bob		| over this Y (means below this line), HW sprite conflicts with lower part sprites
 	
 	* count how many we have
 	move.b	nb_displayed_ships,d0
@@ -1195,7 +1198,7 @@ really_update_sprites:
 	rts
 	
 	
-* SPRITE_Y_SPLIT_LIMIT has to be carefully computed from copper pos
+* sprite_y_split_limit has to be carefully computed from copper pos
 * where second sprite write is done
 
 update_hardware_sprites:
@@ -1252,12 +1255,12 @@ update_hardware_sprites:
 	tst.b	do_upper_part
 	beq.b	21f
 	* higher part
-	cmp.b	#SPRITE_Y_SPLIT_LIMIT,d1
+	cmp.b	sprite_y_split_limit,d1
 	bcc.b	2f		| low sprite: skip
 	bra.b	22f
 21:
 	* lower part
-	cmp.b	#SPRITE_Y_SPLIT_LIMIT,d1
+	cmp.b	sprite_y_split_limit,d1
 	bcs.b	2f		| high sprite: skip
 22:
 	.endif
@@ -1308,7 +1311,7 @@ update_hardware_sprites:
 	bne.b	20f
 101:
 	* slot free: replace sprite by blank
-	* this doesn't allow that a sprite crosses the SPRITE_Y_SPLIT_LIMIT
+	* this doesn't allow that a sprite crosses the sprite_y_split_limit
 	* boundary but in that case we'll switch for a BOB
 	* (there are potentially too many UFO ships for sprites anyway)
 	lea	blank_sprite_table,a1
@@ -2074,9 +2077,16 @@ update_scrollable_layers:
 	lea		mulBG_NB_BYTES_PER_ROW_table,a2
 	lea		scroll_table(pc),a3
 
-	******************
-	* blue mountains
-	******************
+	**************************************
+	* blue mountains: change scroll
+	* and bitplane set wait in copperlist
+	**************************************
+	move.b	d2,d6
+	* sprite split point. Beyond that Y(-16), ship sprites
+	* are bobs, not hardware sprites
+	add.b	#BLUE_MOUNTAIN_OUTLINE_HEIGHT/2,d6
+	move.b	d6,sprite_y_split_limit
+	
 	sub.w	#0xF,d0
 	
 	and.w	#0xFF,d0
@@ -2094,10 +2104,12 @@ update_scrollable_layers:
 	* "beginner/champion course go!" text using
 	* background layer so proper colors for tiles
 	
-	*sub.w	(a2,d2.w*2),d6
-	add.w	#84,d2		| empiric???
+	add.w	#84,d2		| empiric, match MAME display
 	move.b	d2,blue_mountains_start_copper_wait
-	add.w	#50,d2
+	add.w	#BLUE_MOUNTAIN_OUTLINE_HEIGHT/2,d2
+	* for sprite multiplexing split
+	move.b	d2,blue_mountains_mid_copper_wait
+	add.w	#BLUE_MOUNTAIN_OUTLINE_HEIGHT/2,d2
 	move.b	d2,blue_mountains_end_copper_wait
 	
 	move.l	bg_base_mountain_screen_ptr(pc),a1
@@ -2105,9 +2117,10 @@ update_scrollable_layers:
 	move.l	a1,bg_mountain_screen_ptr
 	bsr		set_mountain_bitplanes
 	
-	******************
-	* ground
-	******************
+	************************
+	* ground: change scroll
+	************************
+
 		
 	and.w	#0xFF,d5
 	add.w	d5,d5
@@ -2129,23 +2142,18 @@ update_scrollable_layers:
 	movem.l	d0-d5/a1,-(a7)
 
 	
-	******************
-	* green part
-	******************
+	************************************
+	* green mountains/city: brutal blit
+	************************************
 	
 	bsr		get_green_mountains_data
 
 	lea		playfield_colors+2,a3
-	move.w	#0,0x202
+
 	* set proper color depending on background
 	move.w	green_mountain_color_index,d2
 	move.w	d0,(a3,d2.w*4)
 
-	* clear the lower part of the mountain else some dark green remains
-	* and it's ugly. We'll optimize as most of the time blue mountain erases
-	* green mountain top, but at lowest level it can't erase all
-
-	
 	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
 
@@ -2159,6 +2167,10 @@ update_scrollable_layers:
 
 	
 	add.w	(a2,d2.w*2),a1	| adds Y*40
+	lea	(-FG_NB_BYTES_PER_ROW,a1),a4			| save line above mountain start for later
+	move.l	a1,a3			| compute mountain end
+	add.w	(a2,d4.w*2),a3	| adds height*40
+	
 	move.w	d0,d2
 	lsr.w	#3,d2
 	bclr	#0,d2
@@ -2199,6 +2211,12 @@ update_scrollable_layers:
 	add.w	d5,a0			| next source plane
 	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
 
+	* lets take advantage of that blit to clear below line with cpu (2 planes)
+	.rept	2
+	bsr		clear_green_mountain_line
+	lea		(FG_SCREEN_PLANE_SIZE,a3),a3
+	.endr
+	
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
 	* plane 1
@@ -2208,12 +2226,27 @@ update_scrollable_layers:
 
 	add.w	d5,a0			| next source plane
 	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
+
+	* lets take advantage of that blit to clear below line with cpu (last plane)
+	bsr		clear_green_mountain_line
+	* now lines above
+	move.l	a4,a3
+	* lets take advantage of that blit to clear above line with cpu (first plane)
+	bsr		clear_green_mountain_line
+	lea		(FG_SCREEN_PLANE_SIZE,a3),a3
+
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
 	* plane 2
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
+	* lets take advantage of that blit to clear above line with cpu (2 last planes)
+	.rept	2
+	bsr		clear_green_mountain_line
+	lea		(FG_SCREEN_PLANE_SIZE,a3),a3
+	.endr
 
 	movem.l	(a7)+,d0-d5/a1
 
@@ -2271,6 +2304,15 @@ update_scrollable_layers:
 0:
 	rts
 
+clear_green_mountain_line:
+	moveq	#0,d0
+0:
+	clr.l	(a3,d0.w)
+	addq	#4,d0
+	cmp.b	#FG_NB_BYTES_PER_ROW,d0
+	bne.b	0b
+	rts
+	
 * returns mountains/city depending on bit 0 of D4
 * > A0: pointer on bitmap
 * > D0: value of extra color (dark green or yellow)
@@ -3942,9 +3984,10 @@ _keyexit:
 	.byte	0x45	| ESC by default unless whdload overwrites it
 
 
-dynamic_color_mode:
-	.byte	0
 
+sprite_y_split_limit:
+	.byte	0
+	
 cheat_used:
 	.byte	0
 dosname:
@@ -4089,14 +4132,6 @@ blue_mountains_start_copper_wait:
 	.word	0x0001
 	.word	0xFFFE
 
-	* multiplexed sprites + mid-screen interrupt (disabled ATM
-	* as it crashes the machine when calling mpatrol_irq from it...)
-sprites_lower_part:
-	DECL_SPRITES
-	DECL_COLOR_BANK	1
-sprites_lower_cols:
-	DECL_COLORS	0,16
-	DECL_COLOR_BANK	0		| back to bank	0
 
 * and mountain colors...
 mountain_colors:
@@ -4108,6 +4143,20 @@ blue_mountains_scroll_value:
 	.word	0
 blue_mountains_bitplanes:
 	DECL_EVEN_BITPLANES	0,4
+	* insert the multiplexed sprites somewhere in the middle of
+	* the blue mountain outline. At start it's too early, 
+	* and in the end it could be too late
+blue_mountains_mid_copper_wait:
+	.word	0x0001
+	.word	0xFFFE
+	* multiplexed sprites
+sprites_lower_part:
+	DECL_SPRITES
+	DECL_COLOR_BANK	1
+sprites_lower_cols:
+	DECL_COLORS	0,16
+	DECL_COLOR_BANK	0		| back to bank	0
+
 	* now wait some lines until we're sure bitmap only contains
 	* non-black: we can set color 0 to light blue now
 blue_mountains_end_copper_wait:

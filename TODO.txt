@@ -14,6 +14,7 @@ OCS:
 - make OCS version with lq sfx, no blue mountain?
 
 ECS:
+
 - ECS version borderblank is gone even for AGA (whdload?)
 - highscore erased on section score screen
 - "TIME" not displayed sometimes
@@ -24,15 +25,14 @@ ECS:
 AGA:
 
 - reinstate dynamic green: complete broken specially on moon city
-- SPRITE_Y_SPLIT_LIMIT is now dynamic
-- when ground is high, sprite multiplexing is limit clearly too high
-- slope+moon city: garbled moon city!!!
 - blue mountain a few characters top/left making a line... memwatch after blitting it???
-- add city layer: missing black color if possible: caution!!! impact on ECS!!
-- last letter not erased on "time to reach point".. screen / bitplane flashing issue
+- last letter not erased on "time to reach point".. maybe just X scroll
+  not reset!
 - borderblank not working???
 - slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
-- shots are red, should be white, swapping colors doesn't work!!!
+- shots are red, should be white, swapping bob colors doesn't work!!!
+- missing dyn color for plant, maybe not needed as we have 1 spare bob color
+- city layer: missing black color: hack moon city locally for AGA (don't change convert graphics!)
 
 - "game over" should be displayed on front layer (on mountains)
 
