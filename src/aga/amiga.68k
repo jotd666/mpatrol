@@ -734,8 +734,8 @@ _vblank:
 	
 	tst.b	background_layer_control_E1C5
 	beq.b	0f
-	* mountains are active: set colors
-	bsr		set_mountain_dynamic_colors
+	* mountains are active: set other colors
+	bsr		set_plant_dynamic_colors
 0:
 
 	
@@ -903,7 +903,6 @@ clear_background:
 	rts
 0:
 	movem.l	d0-d7/A0-A6,-(a7)
-	bsr		reset_dynamic_colors
 	
 	bsr		really_clear_background
 	st		background_cleared_flag
@@ -939,16 +938,14 @@ really_clear_background:
 	move.l	fg_displayed_screen_ptr(pc),a1
 	jbsr		clear_fg_planes_any_blitter_internal
 	
-	* reset scrolling to default: max
-	move.w	#DEFAULT_SCROLL_VALUE,blue_mountains_scroll_value
-	move.w	#DEFAULT_SCROLL_VALUE,ground_strip_scroll_value
 	
 	clr.b	previous_blue_layer_y   | only done once!
+	
+	* color 0 for mountain fillers
+	bsr		reset_dynamic_colors
+	
 0:
-	
 
-	
-	
 	rts
 
 
@@ -1958,31 +1955,13 @@ start_process_1_plane:
 	move.l	a4,bltbpt(a5)	|source graphic top left corner
 	rts
 
-* uses green_y_end
-set_mountain_dynamic_colors:
-	* systematically reset dynamic colors as heights can change
-	bsr		reset_background_dynamic_colors
-	
-	move.w	green_y_end,d6			| Y pos to change color 0 for green
-	jeq	10f				| in case it's not set
-	
-	* set copper color 0 to green (color 4 of bobs palette)
-	* at the proper row
-	*lea		color_line_copper,a0
-	* Y minus panel Y max times 16 (3 longwords per line in copperlist + wait)
-	lea		bobs_palette(pc),a1
-	
-	*move.w	#color,(A0,d6.w)
-	*move.w	(8,a1),(2,a0,d6.w)
-
-
+set_plant_dynamic_colors:
 	* is tweaked to follow terrain_height_in_tiles_E514
 	move.w	#DYNAMIC_COPPER_ROWS-2+32,d6
 	moveq	#0,d0
 	move.b	terrain_height_in_tiles_E514,d0
 	lsl.w	#3,d0		| times 8
 	sub.w	d0,d6
-	*bsr		shift_d6_copper_y
 	
 	* change a dark red color (why not) by dark green used
 	* by space plant base. We put that here but we could even
@@ -2074,7 +2053,8 @@ scroll_table:
 	
 * it also changes black background to the relevant background (blue or green)
 update_scrollable_layers:
-
+	move.w	#LIGHT_BLUE_MOUNTAIN_COLOR,blue_mountain_filler
+	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,green_mountain_filler
 
 	.ifne	BACKGROUND_X_CORRECTION
 	add.w	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
@@ -2305,18 +2285,6 @@ get_green_mountains_data:
 0:
 	rts
 	
-shift_d6_copper_y:
-	lsl.w	#4,d6		| times 16
-	cmp.w	#DYNAMIC_COPPER_ROWS*16,d6
-	bcc.b	10f
-	cmp.w	#HALF_DYNAMIC_COPPER_ROWS*16,d6
-	bcs.b	9f
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,d6
-9:
-	rts
-10:
-	moveq	#0,d6
-	rts
 	
 * < D0: sprite X
 * < D1: sprite Y
@@ -3761,48 +3729,14 @@ handle_keyboard:
 	
 * reset all 3 slots for each line
 reset_dynamic_colors:
-	rts
+	* reset scrolling to default: max
+	move.w	#DEFAULT_SCROLL_VALUE,blue_mountains_scroll_value
+	move.w	#DEFAULT_SCROLL_VALUE,ground_strip_scroll_value
+	move.w	#0,blue_mountain_filler
+	move.w	#0,green_mountain_filler
 	
-	movem.l	a0/d2-d4,-(a7)
-	*lea	color_line_copper,a0
-	moveq	#1,d4
-	move.w	#0x1FE,d2
-0:
-	move.w	#HALF_DYNAMIC_COPPER_ROWS-1,d3
-1:
-	move.w	d2,(a0)
-	addq.w	#4,a0
-	move.w	d2,(a0)
-	addq.w	#4,a0
-	move.w	d2,(a0)
-	addq.w	#8,a0
-	dbf		d3,1b
-	* skip lower sprite part
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,a0
-	dbf		d4,0b
-	movem.l	(a7)+,a0/d2-d4
-	rts
-
-* only reset first slot (the one for the mountains/city colors)
-reset_background_dynamic_colors:
-	rts
 	
-	movem.l	a0/d2-d4,-(a7)
-	*lea	color_line_copper,a0
-	moveq	#1,d4
-	move.w	#0x01FE,d2
-0:
-	move.w	#HALF_DYNAMIC_COPPER_ROWS-1,d3
-1:
-	move.w	d2,(a0)
-	add.w	#16,a0
-	dbf		d3,1b
-	* skip lower sprite part
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,a0
-	dbf		d4,0b
-	movem.l	(a7)+,a0/d2-d4
 	rts
-
 
 toggle_pause:
 	* pause only within game
@@ -4179,12 +4113,13 @@ blue_mountains_bitplanes:
 blue_mountains_end_copper_wait:
 	.word	0x0001
 	.word	0xFFFE
-	.ifndef STATIC_SCROLL_TEST
 	.word	color
+blue_mountain_filler:
 	.word	LIGHT_BLUE_MOUNTAIN_COLOR
-	.endif
 	.word	0xD401,0xFFFE
-	.word	color,LIGHT_GREEN_MOUNTAIN_COLOR
+	.word	color
+green_mountain_filler:
+	.word	LIGHT_GREEN_MOUNTAIN_COLOR
 	
 	
 	* rest of the color line copper stuff. Code knows that it must skip the sprites_lower_part sprite table
