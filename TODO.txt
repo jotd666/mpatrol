@@ -23,24 +23,18 @@ ECS:
 
 AGA:
 
-- slowdowns chip only maybe use 30FPS too for BOBs in that case
-- at startup seems that bitplanes aren't seen soon enough (visible in cycle exact)
+- reinstate dynamic green: complete broken specially on moon city
 - SPRITE_Y_SPLIT_LIMIT is now dynamic
 - when ground is high, sprite multiplexing is limit clearly too high
 - slope+moon city: garbled moon city!!!
 - blue mountain a few characters top/left making a line... memwatch after blitting it???
-- borderblank not working???
-- ground strip mirror: missing 8 pixels, same for mountain strip but not
-  when testing statically!!!
 - add city layer: missing black color if possible: caution!!! impact on ECS!!
-- reinstate dynamic green: complete broken specially on moon city
 - last letter not erased on "time to reach point".. screen / bitplane flashing issue
+- borderblank not working???
+- slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
+- shots are red, should be white, swapping colors doesn't work!!!
 
-
-- dual playfield with characters on top except for lower strip >= 192 (if this can
-  be dynamically switched 0x64 => 0x24 except in lower part!
-- draw "moon patrol" characters in front? or just ignore them, we'll paste
-  the image
+- "game over" should be displayed on front layer (on mountains)
 
 
 

@@ -15,7 +15,7 @@ def doit(asm_output):
         shiftval_msb = ((shift&(wmask & 0x30))>>2)
         items.append(shiftval_msb | 0xC0) # put max shift for other playfield
         shiftval_lsb = (shift&0xF)
-        items.append(0xF0 | shiftval_lsb) # put max shift for other playfield
+        items.append(0x80 | shiftval_lsb) # put max shift for other playfield
 
         items.append(0)
         items.append(offset)

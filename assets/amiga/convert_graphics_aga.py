@@ -283,6 +283,7 @@ bg_copy = [x for x in background_palette if x != yellow_background_city_color]
 
 bob_global_palette = [x for x in bg_copy if x not in (blue_light_mountain_color,blue_dark_mountain_color)] + all_bob_colors
 
+
 if len(bob_global_palette) > 16:
     # error if not enough colors, no need to hack to shoehorn it
     # if too many colors, we can't use 4 bitplanes!
@@ -292,6 +293,8 @@ elif len(bob_global_palette) < 16:
     print(f'Free bob colors: {fbc}')
     bob_global_palette += [(1,2,3)] * fbc
 
+# we need color 8 to be white (vertical shots use plane 3 only!)
+#switch_values(bob_global_palette,8,14)
 
 ftc = 16-len(tile_global_palette)
 if ftc:

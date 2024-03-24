@@ -31,8 +31,9 @@ Y_MAX = 260
 BASE_BPLCON3_VALUE = (1<<12)|(1<<10)+(BORDERBLANK<<5)  | dpf second playfield palette starts at color 16!
 BASE_BPLCON2_VALUE = 0x0064
 SCREEN_ADDRESS = 0x8000
-* max scroll
-DEFAULT_SCROLL_VALUE = 0xCCFF
+DEFAULT_SCROLL_VALUE_BG = 0x0C07
+DEFAULT_SCROLL_VALUE_FG = 0x4080
+DEFAULT_SCROLL_VALUE = DEFAULT_SCROLL_VALUE_BG+DEFAULT_SCROLL_VALUE_FG
 
 DARK_BLUE_MOUNTAIN_COLOR = 0x00F
 LIGHT_BLUE_MOUNTAIN_COLOR = 0x09A	
@@ -55,11 +56,11 @@ SPRITE_Y_CORRECTION = -14
 SPRITE_X_CORRECTION = 17
 * with fixed playfield scrolling at max
 * HW sprites must be shifted to follow
-HW_SPRITE_X_CORRECTION = 31+SPRITE_X_CORRECTION
+HW_SPRITE_X_CORRECTION = 26+SPRITE_X_CORRECTION
 
 * exact match at 
-BACKGROUND_X_CORRECTION = 4
-
+BACKGROUND_X_CORRECTION = 12
+SCROLL_X_CORRECTION = 8
 SCROLLABLE_TILE_Y_START = 24
 
 
@@ -381,6 +382,7 @@ no_floppy:
 	bsr		align_for_fmode
 	move.l	a0,bg_panel_screen_ptr
 	lea		blue_mountain_buffer,a0
+	bsr		align_for_fmode
 	move.l	a0,bg_base_mountain_screen_ptr
 	move.l	a0,bg_mountain_screen_ptr
 	
@@ -1999,6 +2001,7 @@ set_mountain_dynamic_colors:
 blit_blue_mountain_strip:
 	movem.l	d0-a6,-(a7)
 	
+
 	lea		_custom,a5
 	move.l	bg_base_mountain_screen_ptr(pc),a1
 	
@@ -2043,13 +2046,7 @@ blit_blue_mountain_strip:
 	
 	add.w	#BG_SCREEN_PLANE_SIZE,a1
 
-    * now just wait for blitter ready to write all registers
-	WAIT_BLIT
-	* plane 2
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	* this blits the pale blue layer of the back mountain
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	* only 2 planes involved, the rest is blank
 
 
 	movem.l	(a7)+,d0-a6
@@ -2079,8 +2076,13 @@ scroll_table:
 update_scrollable_layers:
 
 
-	addq.w	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
-	addq.w	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
+	.ifne	BACKGROUND_X_CORRECTION
+	add.w	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
+	add.w	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
+	.endif
+	.ifne	SCROLL_X_CORRECTION
+	add.w	#SCROLL_X_CORRECTION,d5		| adjust vs MAME
+	.endif
 	
 	* background is going to be non-zero
 	tst.b		background_cleared_flag
@@ -2627,9 +2629,9 @@ platform_init:
     move.l  #-1,bltafwm(a5)
 	
 	* restrict borders: we don't see bobs on the borders!
-    move.w #0x1CB8,diwstrt(a5)
+    move.w #0x1CB0,diwstrt(a5)
 	*         VVHH
-    move.w #0x18A8,diwstop(a5)
+    move.w #0x18A0,diwstop(a5)
 	* try to hide color 0 on the border (except on OCS)
     move.w #0x0610+BORDERBLANK,bplcon0(a5) | 8 bitplanes, dual playfield, borderblank
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
@@ -4113,7 +4115,7 @@ color_line_copper:
 	* main copperlist, get some aspirin!!
 copperlist:
     *.word   0x1801,0xFFFE
-	* reset scrolling to max (panel)
+	* reset scrolling to default (panel)
 	.word	bplcon1,DEFAULT_SCROLL_VALUE
 
 panel_bitplanes:
@@ -4127,12 +4129,12 @@ panel_tiles_colors:
 
 	* sprites color bank
 	DECL_COLOR_BANK	1
+	* define upper sprites here, as sometimes ships can
+	* go wander in the panel area
 sprites_upper_part:
 	DECL_SPRITES
 	* default color bank again
 	DECL_COLOR_BANK	0
-
-
 
 	* wait until line 48, just after the status panel is displayed
 	* to change palette
@@ -4177,8 +4179,10 @@ blue_mountains_bitplanes:
 blue_mountains_end_copper_wait:
 	.word	0x0001
 	.word	0xFFFE
+	.ifndef STATIC_SCROLL_TEST
 	.word	color
 	.word	LIGHT_BLUE_MOUNTAIN_COLOR
+	.endif
 	.word	0xD401,0xFFFE
 	.word	color,LIGHT_GREEN_MOUNTAIN_COLOR
 	
