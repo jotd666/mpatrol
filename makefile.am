@@ -43,8 +43,12 @@ WHDASM = vasmm68k_mot -DDATETIME -I$(HDBASE)/amiga39_JFF_OS/include -I$(WHDBASE)
 # leave MAIN_OBJ first
 OBJS_ECS = $(ECS_MAIN_OBJ) game_rom.o sound_engine.o sounds.o $(PROGNAME).o vbr.o graphics_ecs.o ReadJoyPad.o ptplayer.o 
 OBJS_AGA = $(AGA_MAIN_OBJ) game_rom.o sound_engine.o sounds.o $(PROGNAME).o vbr.o graphics_aga.o ReadJoyPad.o ptplayer.o 
-all: $(AMIGA_ECS_SRC)/graphics.68k $(AMIGA_AGA_SRC)/graphics.68k $(AMIGA_SHARED_SRC)/sounds.68k $(MAIN_ECS) $(MAIN_AGA) \
- $(WHDLOADER) $(WHDLOADER_CHIP) $(WHDLOADER_AGA) $(WHDLOADER_AGA_CHIP)
+all: $(MAIN_AGA) $(MAIN_ECS)
+$(MAIN_ECS): $(AMIGA_ECS_SRC)/graphics.68k $(AMIGA_SHARED_SRC)/sounds.68k $(WHDLOADER) $(WHDLOADER_CHIP)
+$(MAIN_AGA): $(AMIGA_AGA_SRC)/graphics.68k $(AMIGA_SHARED_SRC)/sounds.68k $(WHDLOADER_AGA) $(WHDLOADER_AGA_CHIP)
+
+
+  
 
 
 clean:

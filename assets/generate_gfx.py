@@ -10,7 +10,7 @@ palette_name = "palette0 *_0000.txt"
 groups = {0:{"name":"tile"},1:{"name":"sprite"}}
 text_bitmap = " .=#"
 
-
+magenta = (255,0,255)
 
 def process_background_layer(layer_image_path,global_palette):
     img = Image.open(layer_image_path)
@@ -29,12 +29,16 @@ def process_background_layer(layer_image_path,global_palette):
         if len(line_colors) != 1:
             break
 
+    max_y = y
 
     for y in range(max_y):
         line_colors = set()
         line = []
         for x in range(img.size[0]):
             pixel = img.getpixel((x,y))
+            # discard magenta for now
+            if pixel==magenta:
+                pixel=(0,0,0)
             line.append(pixel)
             line_colors.add(pixel)
             palette.add(pixel)
@@ -59,6 +63,7 @@ backgrounds = ["green_mountains","blue_mountains","green_city"]
 for image in backgrounds:
     global_background_palette.update(bitplanelib.palette_extract(os.path.join(indir,image+".png")))
 
+global_background_palette.discard(magenta)
 global_background_palette = sorted(global_background_palette)
 
 background_dict = {image:process_background_layer(os.path.join(indir,image+".png"),global_background_palette) for image in backgrounds}

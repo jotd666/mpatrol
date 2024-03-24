@@ -281,7 +281,8 @@ all_bob_colors = sorted(bobs_used_colors)[1:]
 # remove yellow_background_city_color
 bg_copy = [x for x in background_palette if x != yellow_background_city_color]
 
-bob_global_palette = [x for x in bg_copy if x != blue_dark_mountain_color] + all_bob_colors
+bob_global_palette = [x for x in bg_copy if x not in (blue_light_mountain_color,blue_dark_mountain_color)] + all_bob_colors
+
 if len(bob_global_palette) > 16:
     # error if not enough colors, no need to hack to shoehorn it
     # if too many colors, we can't use 4 bitplanes!

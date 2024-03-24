@@ -1,30 +1,40 @@
-- make OCS version with lq sfx, no blue mountain?
-- ECS version borderblank is gone even for AGA (whdload?)
+general:
+
+- save highscore & best course times
+- custom2 bit jump with button 2 only
+- start lives is wrong
+- game is 10% slower than it should be. Adding extra call each 10 calls adds
+  nothing but more problems (demo not in sync, title not in sync, who knows what?),
+  and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
+- still floor tile missing after a slope
 - 99 credits after a while continuing
+
+OCS:
+
+- make OCS version with lq sfx, no blue mountain?
+
+ECS:
+- ECS version borderblank is gone even for AGA (whdload?)
 - highscore erased on section score screen
 - "TIME" not displayed sometimes
 - tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
-- save highscore & best course times
-- custom2 bit jump with button 2 only
-- start lives is wrong
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
-- still floor tile missing after a slope
-- game is 10% slower than it should be. Adding extra call each 10 calls adds
-  nothing but more problems (demo not in sync, title not in sync, who knows what?),
-  and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
 
 AGA:
 
+- at startup seems that bitplanes aren't seen soon enough (visible in cycle exact)
+- SPRITE_Y_SPLIT_LIMIT is now dynamic
 - shots wrong draw/erase not working??
 - when ground is high, sprite multiplexing is limit clearly too high
 - slope+moon city: garbled moon city!!!
-- blue mountain a few characters top/left making a line...
+- blue mountain a few characters top/left making a line... memwatch after blitting it???
 - borderblank not working???
-- ground strip mirror: missing 8 pixels, same for mountain strip
-- add city layer: missing black color, redefine yellow/add black
-- reinstate dynamic green
-- last letter not erased on "time to reach point".. screen
+- ground strip mirror: missing 8 pixels, same for mountain strip but not
+  when testing statically!!!
+- add city layer: missing black color if possible
+- reinstate dynamic green: complete broken specially on moon city
+- last letter not erased on "time to reach point".. screen / bitplane flashing issue
 - champion: scrolling letters not shown
 
 - dual playfield with characters on top except for lower strip >= 192 (if this can

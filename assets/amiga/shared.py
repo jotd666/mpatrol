@@ -73,7 +73,8 @@ def get_used_tile_cluts():
     # letters, ground strip
     for i in range(ord('A'),ord("Z")+1):
         used_cluts[i].add(5)  # beginner
-        used_cluts[i].add(8)  # beginner/champion course
+        used_cluts[i].add(6)  # champion
+        used_cluts[i].add(8)  # beginner/champion course text
     used_cluts[0x5B].add(8)        # exclamation mark
 
     # letters, champion level, stupidly lots of cluts
@@ -127,3 +128,4 @@ def get_used_tile_cluts():
     used_cluts[0x86].add(0x14)
 
     return used_cluts
+
