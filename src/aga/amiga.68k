@@ -1,8 +1,10 @@
 *
-*	Amiga-specific portions of Moon Patrol
+*	Amiga-specific portions of Moon Patrol (AGA version)
 *
 * (c) JOTD 2024
 *
+* thanks to Ross for invaluable help with scrolling & ddf/diwshit
+
 
 .include "../src/mpatrol.inc"
 .include "custom.i"
@@ -17,7 +19,7 @@ NO68020 = 0
 
 PREVIOUS_SPRITE_SIZE = 8
 BORDERBLANK = 1
-STATIC_SCROLL_TEST = 1
+*STATIC_SCROLL_TEST = 1
 
 * bob backup flags for sprites
 BB_SHIP = 1+1
@@ -395,8 +397,11 @@ no_floppy:
 	move.l	a0,fg_displayed_screen_ptr
 	.endif
 		
+	* set them even if reset by game afterwards
+	* avoiding ugly stripe bitplane effect at startup
 	bsr		set_panel_bitplanes
 	bsr		set_mountain_bitplanes
+	bsr		set_ground_bitplanes
 
 
 	move.l	dip_switch_start_course(pc),d0
@@ -3060,13 +3065,9 @@ update_bg_tile:
 	rts
 
 copy_third_plane:
-	bsr		switch_to_fg_bitplanes
+	bsr		load_3rd_fg_bitplane
 
 	.set	offset,0
-	move.w	d5,d0
-	add.w	d5,d5
-	add.w	d0,d5
-	add.w	d5,a1		| add D5 3 times
 	addq	#8,a0		| non-zero shot bitplane (first bitplane is empty)
 	.set	offset,0
 	.rept	8
@@ -3084,11 +3085,8 @@ copy_third_plane:
 	rts
 	
 erase_third_plane:
-	bsr		switch_to_fg_bitplanes
+	bsr		load_3rd_fg_bitplane
 	.set	offset,0
-	add.w	d5,a1
-	add.w	d5,a1
-	add.w	d5,a1
 	.rept	8
 	clr.b	(offset,a1)
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
@@ -3099,13 +3097,16 @@ erase_third_plane:
 
 	rts
 
-switch_to_fg_bitplanes:
+load_3rd_fg_bitplane:
 	lea		mulFG_NB_BYTES_PER_ROW_table(pc),a3
-	move.l	#FG_SCREEN_PLANE_SIZE,d5
+	
 	
 	move.l	fg_drawed_screen_ptr(pc),a1
+	move.l	#FG_SCREEN_PLANE_SIZE*3,d5
+	add.w	d5,a1		| add D5 3 times
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	move.l	fg_displayed_screen_ptr(pc),a2
+	add.w	d5,a2
 	.endif
 	
 	* D3 = Y

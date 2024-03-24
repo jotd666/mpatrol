@@ -288,13 +288,16 @@ if len(bob_global_palette) > 16:
     # if too many colors, we can't use 4 bitplanes!
     raise Exception("global bob palette should have exactly 16 colors, found {}".format(len(bob_global_palette)))
 elif len(bob_global_palette) < 16:
-    # can't really happen... but
-    bob_global_palette += [(1,2,3)] * (16-len(bob_global_palette))
+    fbc = (16-len(bob_global_palette))
+    print(f'Free bob colors: {fbc}')
+    bob_global_palette += [(1,2,3)] * fbc
 
 
+ftc = 16-len(tile_global_palette)
+if ftc:
+    print(f"Free tile colors: {ftc}")
 
-
-tile_global_palette += ((254,22,11),)*(16-len(tile_global_palette))
+tile_global_palette += ((254,22,11),)*ftc
 
 
 
