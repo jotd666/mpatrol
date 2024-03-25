@@ -2054,7 +2054,8 @@ scroll_table:
 * it also changes black background to the relevant background (blue or green)
 update_scrollable_layers:
 	move.w	#LIGHT_BLUE_MOUNTAIN_COLOR,blue_mountain_filler
-	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,green_mountain_filler
+	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,lower_green_mountain_filler
+	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,upper_green_mountain_filler
 
 	.ifne	BACKGROUND_X_CORRECTION
 	add.w	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
@@ -2118,7 +2119,6 @@ update_scrollable_layers:
 	* ground: change scroll
 	************************
 
-		
 	and.w	#0xFF,d5
 	add.w	d5,d5
 	add.w	d5,d5
@@ -2159,7 +2159,21 @@ update_scrollable_layers:
 	add.w	d3,d6			| Y pos to change color 0 for green
 	move.w	d6,green_y_end		| save green Y end
 
-	
+	* default: disable upper green filler
+	move.w	#color,upper_green_mountain_filler-2
+
+	* also change position of color0 turn to green
+	add.w	#84,d6			| empiric
+	cmp.b	#0xDC,d6
+	bcs.b	1f
+	* too low: don't early fill green
+	move.w	#0x1FE,upper_green_mountain_filler-2
+	* set high value (low screen pos) into lower green wait (after ground scroll)
+	move.b	d6,lower_green_mountain_end_copper_wait
+	bra.b	2f
+1:
+	move.b	d6,upper_green_mountain_end_copper_wait
+2:
 	move.w	(a0)+,d5		| number of bytes for the plane (height * 66)
 
 	
@@ -3771,7 +3785,8 @@ reset_colors_and_scrolling:
 	move.w	#DEFAULT_SCROLL_VALUE,blue_mountains_scroll_value
 	move.w	#DEFAULT_SCROLL_VALUE,ground_strip_scroll_value
 	move.w	#0,blue_mountain_filler
-	move.w	#0,green_mountain_filler
+	move.w	#0,upper_green_mountain_filler
+	move.w	#0,lower_green_mountain_filler
 	* also reset position for ground (no need for mountain)
 	move.l	bg_base_ground_screen_ptr,bg_ground_screen_ptr
 	bsr		set_ground_bitplanes	
@@ -4162,30 +4177,26 @@ blue_mountains_end_copper_wait:
 	.word	color
 blue_mountain_filler:
 	.word	LIGHT_BLUE_MOUNTAIN_COLOR
-green_mountain_end_copper_wait:
+upper_green_mountain_end_copper_wait:
 	.word	0xD401
 	.word	0xFFFE
 	.word	color
-green_mountain_filler:
+upper_green_mountain_filler:
 	.word	LIGHT_GREEN_MOUNTAIN_COLOR
 	
-	
-	* rest of the color line copper stuff. Code knows that it must skip the sprites_lower_part sprite table
-	*.rept	HALF_DYNAMIC_COPPER_ROWS-26
-	* room for 3 color registers to change dynamically each line
-	*.word	0x1FE,0
-	*.word	0x1FE,0
-	*.word	0x1FE,0
-	*.set    beampos,beampos+0x100
-	*.word	beampos,0xFFFE
-	*.endr
+	* fixed wait to trigger ground scroll part
 	.word	0xDB01,0xFFFE
-* probably not low enough
 	.word	bplcon1
 ground_strip_scroll_value:
 	.word	0
 ground_bitplanes:
 	DECL_EVEN_BITPLANES	0,4
+lower_green_mountain_end_copper_wait:
+	.word	0xE001
+	.word	0xFFFE
+	.word	color
+lower_green_mountain_filler:
+	.word	LIGHT_GREEN_MOUNTAIN_COLOR
 
 	* then we should wait a bit, and set palette to tiles palette definitely
 	* so scrolling letters have the proper colors TODO

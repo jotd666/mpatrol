@@ -25,7 +25,9 @@ ECS:
 
 AGA:
 
-- reinstate dynamic green: complete broken specially on moon city
+- point R: going down slope, blue flashing line
+  do not set blue color if green y is above, set green
+  instead
 - fixed: blue mountain a few characters top/left making a line... memwatch after blitting it???
 - fixed: last letter not erased on "time to reach point".. maybe just X scroll
   not reset! yes should reset also screen pointer not only scroll value
