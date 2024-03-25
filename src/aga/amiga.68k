@@ -28,7 +28,7 @@ BB_ROCK = 3+1
 
 Y_MAX = 260
 
-BASE_BPLCON3_VALUE = (1<<12)|(1<<10)+(BORDERBLANK<<5)  | dpf second playfield palette starts at color 16!
+BASE_BPLCON3_VALUE = (1<<12)+(BORDERBLANK<<5)  | dpf second playfield palette starts at color 16!
 BASE_BPLCON2_VALUE = 0x0064
 SCREEN_ADDRESS = 0x8000
 DEFAULT_SCROLL_VALUE_BG = 0x0C07
@@ -39,9 +39,6 @@ DARK_BLUE_MOUNTAIN_COLOR = 0x00F
 LIGHT_BLUE_MOUNTAIN_COLOR = 0x09A	
 LIGHT_GREEN_MOUNTAIN_COLOR = 0x00D5
 
-* set to 1 to block ground scrolling, see what's
-* going on with the game scrolling system
-FIX_GROUND_SCROLL = 0
 
 * on blue mountain, height after which color 0 can be safely set to light blue
 BLUE_MOUNTAIN_OUTLINE_HEIGHT = 50
@@ -943,7 +940,7 @@ really_clear_background:
 	clr.b	previous_blue_layer_y   | only done once!
 	
 	* color 0 for mountain fillers
-	bsr		reset_dynamic_colors
+	bsr		reset_colors_and_scrolling
 	
 0:
 
@@ -3769,15 +3766,15 @@ handle_keyboard:
 	movem.l	(a7)+,d0/a0/a5
 	rts
 	
-* reset all 3 slots for each line
-reset_dynamic_colors:
+reset_colors_and_scrolling:
 	* reset scrolling to default: max
 	move.w	#DEFAULT_SCROLL_VALUE,blue_mountains_scroll_value
 	move.w	#DEFAULT_SCROLL_VALUE,ground_strip_scroll_value
 	move.w	#0,blue_mountain_filler
 	move.w	#0,green_mountain_filler
-	
-	
+	* also reset position for ground (no need for mountain)
+	move.l	bg_base_ground_screen_ptr,bg_ground_screen_ptr
+	bsr		set_ground_bitplanes	
 	rts
 
 toggle_pause:
@@ -4165,7 +4162,9 @@ blue_mountains_end_copper_wait:
 	.word	color
 blue_mountain_filler:
 	.word	LIGHT_BLUE_MOUNTAIN_COLOR
-	.word	0xD401,0xFFFE
+green_mountain_end_copper_wait:
+	.word	0xD401
+	.word	0xFFFE
 	.word	color
 green_mountain_filler:
 	.word	LIGHT_GREEN_MOUNTAIN_COLOR

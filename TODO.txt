@@ -8,6 +8,7 @@ general:
   and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
 - still floor tile missing after a slope
 - 99 credits after a while continuing
+- shell to start version according to chipset + whdload ocs
 
 OCS:
 
@@ -25,14 +26,16 @@ ECS:
 AGA:
 
 - reinstate dynamic green: complete broken specially on moon city
-- blue mountain a few characters top/left making a line... memwatch after blitting it???
-- last letter not erased on "time to reach point".. maybe just X scroll
-  not reset!
-- borderblank not working???
-- slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
+- fixed: blue mountain a few characters top/left making a line... memwatch after blitting it???
+- fixed: last letter not erased on "time to reach point".. maybe just X scroll
+  not reset! yes should reset also screen pointer not only scroll value
+
+- slowdowns chip only when UFOs attacking (division by shifting issue???) maybe use 30FPS too for BOBs in that case
 - shots are red, should be white, swapping bob colors doesn't work!!!
 - missing dyn color for plant, maybe not needed as we have 1 spare bob color
-- city layer: missing black color: hack moon city locally for AGA (don't change convert graphics!)
+- city layer: missing black color:
+  change magenta by black but first black by (0,0,26) in convert graphics!
+  
 
 - "game over" should be displayed on front layer (on mountains)
 
