@@ -84,6 +84,18 @@ with open(os.path.join(this_dir,"..","mpatrol_gfx.c")) as f:
 # block_dict structure is as follows:
 # dict_keys(['tile', 'sprite', 'sprite_clut', 'sprite_palette', 'tile_palette', 'background_palette', 'green_mountains', 'blue_mountains', 'green_city'])
 
+yellow_background_city_color = (255,222,81)
+green_background_mountain_color = (0,151,0)
+almost_black = (0,0,26)
+
+brown_rock_color = (0x84,0x51,0x00)
+blue_dark_mountain_color = (0,0,0xFF)
+dark_brown_color = (0x3E,0x37,0)
+yellow_color = (0xC1,0xC8,00)
+dark_green_color = (0,81,0)  # in space plant base
+red_color = (132, 0, 0)
+
+
 # 88 colors but only 15 unique colors, but organized like linear cluts which probably explains
 # the high number of color slots but low number of colors. 88 = 11 cluts for 4 consecutive colors
 tile_palette = [tuple(x) for x in block_dict['tile_palette']["data"]]
@@ -91,6 +103,8 @@ tile_palette = [tuple(x) for x in block_dict['tile_palette']["data"]]
 sprite_palette = [tuple(x) for x in block_dict['sprite_palette']["data"]]
 # some colors for background palette
 background_palette = sorted(tuple(x) for x in block_dict["background_palette"]["data"])
+background_palette.remove(almost_black)
+background_palette.append(almost_black)
 
 if dump_palettes:
     for name,p in zip(("tiles","sprites","background"),(tile_palette,sprite_palette,background_palette)):
@@ -99,15 +113,6 @@ if dump_palettes:
 # cluts
 sprite_cluts = [[sprite_palette[i] for i in clut] for clut in block_dict['sprite_clut']["data"]]
 
-yellow_background_city_color = (255,222,81)
-green_background_mountain_color = (0,151,0)
-
-brown_rock_color = (0x84,0x51,0x00)
-blue_dark_mountain_color = (0,0,0xFF)
-dark_brown_color = (0x3E,0x37,0)
-yellow_color = (0xC1,0xC8,00)
-dark_green_color = (0,81,0)  # in space plant base
-red_color = (132, 0, 0)
 
 bitplane_cache = dict()
 plane_next_index = 0
@@ -285,8 +290,8 @@ def switch_values(t,a,b):
 all_bob_colors = sorted(bobs_used_colors)[1:]
 all_bob_colors.remove(brown_rock_color)
 
-# remove yellow_background_city_color
-bg_copy = [x for x in background_palette if x != yellow_background_city_color]
+# remove yellow_background_city_color and almost black color: city is not displayed in ECS
+bg_copy = [x for x in background_palette if x != yellow_background_city_color and x != almost_black]
 
 bob_global_palette = bg_copy + all_bob_colors
 if len(bob_global_palette) > 16:

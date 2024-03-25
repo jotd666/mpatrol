@@ -4143,11 +4143,9 @@ dynamic_color_mode:
 cheat_used:
 	.byte	0
 dosname:
-	.ascii	"dos.library"
-	.byte	0
+	.asciz	"dos.library"
 graphicsname:
-	.ascii	"graphics.library"
-	.byte	0
+	.asciz	"graphics.library"
 normal_hiscorename:
 	.asciz	"mpatrol.high"
 floppy_file:

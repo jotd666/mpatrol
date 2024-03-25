@@ -11,6 +11,8 @@ groups = {0:{"name":"tile"},1:{"name":"sprite"}}
 text_bitmap = " .=#"
 
 magenta = (255,0,255)
+black = (0,0,0)
+almost_black = (0,0,26)
 
 def process_background_layer(layer_image_path,global_palette):
     img = Image.open(layer_image_path)
@@ -36,9 +38,10 @@ def process_background_layer(layer_image_path,global_palette):
         line = []
         for x in range(img.size[0]):
             pixel = img.getpixel((x,y))
-            # discard magenta for now
-            if pixel==magenta:
-                pixel=(0,0,0)
+            if pixel==black:
+                pixel=almost_black
+            elif pixel==magenta:
+                pixel=black
             line.append(pixel)
             line_colors.add(pixel)
             palette.add(pixel)
@@ -47,6 +50,7 @@ def process_background_layer(layer_image_path,global_palette):
 
     # convert RGB to palette
     palette = sorted(palette)  # black is first this way
+    print(palette)
     if len(palette)>4:
         raise Exception(f"Palette is too big for {layer_image_path}")
 
@@ -64,7 +68,7 @@ for image in backgrounds:
     global_background_palette.update(bitplanelib.palette_extract(os.path.join(indir,image+".png")))
 
 global_background_palette.discard(magenta)
-global_background_palette = sorted(global_background_palette)
+global_background_palette = sorted(global_background_palette) + [almost_black]
 
 background_dict = {image:process_background_layer(os.path.join(indir,image+".png"),global_background_palette) for image in backgrounds}
 

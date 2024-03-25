@@ -66,7 +66,7 @@ DECL_VERSION:MACRO
 	ENDC
 	ENDM
 _data   dc.b    0
-_name	dc.b	'Moon Patrol',0
+_name	dc.b	'Moon Patrol (OCS/ECS)',0
 _copy	dc.b	'2024 JOTD',0
 _info
     dc.b    "Music by no9",0
@@ -131,5 +131,5 @@ _resload:
 progstart
     dc.l    0
 exe
-	dc.b	"mpatrol",0
+	dc.b	"mpatrol_ecs",0
 	
