@@ -2836,7 +2836,7 @@ sfx_index_table:
 *	rts                                    	| [$0d8c: ret] -  Done
 
 draw_ground_0d8d:
-	jbsr	l_2948                            	| [$0d8d: call $2948] -  * C0C05
+	jbsr	clear_sprites_and_playfield_chars_2948                            	| [$0d8d: call $2948] -  * C0C05
 	jbsr	l_0cc2                            	| [$0d90: call $0CC2]
 	move.b	#0x20,d1                        	| [$0d93: ld   b,$20]
 l_0d95:
@@ -3314,6 +3314,7 @@ l_10d2:
 	lea	game_rom+0x3100,a0                      	| [$10d2: ld   hl,$3100] -  * J10C1
 	add.w	d0,a0                            	| [$10d5: add  a,l]
 												| [$10d6: ld   l,a]
+	moveq	#0,d3		| make sure D3.W < 0x100 for division
 	move.b	(a0),d3                         	| [$10d7: ld   d,(hl)]
 	* set bomb X from ufo X
 	move.b	(obj_x,a3),d0                    	| [$10d8: ld   a,(iy+$03)]
@@ -3323,42 +3324,56 @@ l_10d2:
 	lsr.b	#1,d0                            	| [$10de: srl  a]
 	sub.b	d1,d0                            	| [$10e0: sub  b]
 	jcc	l_10e5                             	| [$10e1: jr   nc,$10E5]
+	* make it positive
 	neg.b	d0                               	| [$10e3: neg]
 l_10e5:
-	st.b	d4                                	| [$10e5: ld   e,$FF] -  * J10E1
-l_10e7:
-	addq.b	#1,d4                           	| [$10e7: inc  e] -  * J10E9
-	sub.b	d3,d0                            	| [$10e8: sub  d]
-	jcc	l_10e7                             	| [$10e9: jr   nc,$10E7]
-	add.b	d3,d0                            	| [$10eb: add  a,d]
-	move.b	d4,(0x05,a2)                    	| [$10ec: ld   (ix+$05),e]
+* now all this complex code purpose it to compute a 16 bit slope value
+*
+* D0*0x100 / D3
+*
+* find roughly how many times d3 holds in d0
+* not very good as a division, but values range from 0 to 2 so...
+*
+*	st.b	d4                                	| [$10e5: ld   e,$FF] -  * J10E1
+*l_10e7:
+*	addq.b	#1,d4                           	| [$10e7: inc  e] -  * J10E9
+*	sub.b	d3,d0                            	| [$10e8: sub  d]
+*	jcc	l_10e7                             	| [$10e9: jr   nc,$10E7]
+*	add.b	d3,d0                            	| [$10eb: add  a,d]
+*	move.b	d4,(0x05,a2)                    	| [$10ec: ld   (ix+$05),e]
 	
-	* the following loop divides D0*0x100 by D3 to compute slope
+	* the following loop divides D0*0x100 by D3 to compute slope where
+	* D0 can't be > D3 (as ensure by the loop above)
 	* it seems to behave the same way between MAME & this version but probably
 	* costs a lot more than a simple divide
-	move.b	#0x08,d1                        	| [$10ef: ld   b,$08]
-l_10f1:
-	asl.b	#1,d0                            	| [$10f1: sla  a] -  * J10FB
-	cmp.b	d3,d0                            	| [$10f3: cp   d]
-	SET_X_FROM_C
-	roxl.b	#1,d4                           	| [$10f4: rl   e]
- 	btst.b	#0,d4                           	| [$10f6: bit  0,e]
-	jne	l_10fb                             	| [$10f8: jr   nz,$10FB]
-	sub.b	d3,d0                            	| [$10fa: sub  d]
-l_10fb:
-	subq.b	#1,d1                           	| [...]
-	jne	l_10f1                             	| [$10fb: djnz $10F1] -  * J10F8
-	move.b	d4,d0                           	| [$10fd: ld   a,e]
-	not.b	d0                               	| [$10fe: cpl]
-		
-	* we could have replaced by simpler & faster operations! mul by 256 then divide
-	* but the case where the code loops in 10e7 isn't clear, d4 could start at !=0.
-	* Since code works the same
-	* I'm leaving that here, but at least I know what this does
-	*lsl.w	#8,d0
-	*divu	d3,d0
+	* note that start value of D4 doesn't matter, there are 8 rotations
+	* with 8 carry set/clears so all bits entering are from carry not
+	* from previous value
 	
+*	move.b	#0x08,d1                        	| [$10ef: ld   b,$08]
+*l_10f1:
+*	asl.b	#1,d0                            	| [$10f1: sla  a] -  * J10FB
+*	cmp.b	d3,d0                            	| [$10f3: cp   d]
+*	SET_X_FROM_C
+*	roxl.b	#1,d4                           	| [$10f4: rl   e]
+* 	btst.b	#0,d4                           	| [$10f6: bit  0,e]
+*	jne	l_10fb                             	| [$10f8: jr   nz,$10FB]
+*	sub.b	d3,d0                            	| [$10fa: sub  d]
+*l_10fb:
+*	subq.b	#1,d1                           	| [...]
+*	jne	l_10f1                             	| [$10fb: djnz $10F1] -  * J10F8
+*	move.b	d4,d0                           	| [$10fd: ld   a,e]
+*	not.b	d0                               	| [$10fe: cpl]
+		
+* the whole code can be done easily with a simple DIVU statement
+* I suspect that the original code costs a lot on amiga
+
+	lsl.w	#8,d0		| times 0x100
+	divu	d3,d0
 	move.b	d0,(0x04,a2)                    	| [$10ff: ld   (ix+$04),a] slope?
+	rol.w	#8,d0
+	move.b	d0,(0x05,a2)		| store high byte like at $10ec
+	
 	move.b	d2,(obj_command,a2)                    	| [$1102: ld   (ix+$00),c]
 	rts                                    	| [$1105: ret]
 	
@@ -6014,7 +6029,7 @@ l_27d2:
 	clr.b	(a0)+                             	| [$27dd: ld   (hl),$00]
 	                           	| [$27df: inc  hl] -  Now E510
 	addq.b	#1,(a0)                         	| [$27e0: inc  (hl)] -  Increment the course number
-	jbsr	l_2948                            	| [$27e1: call $2948]
+	jbsr	clear_sprites_and_playfield_chars_2948                            	| [$27e1: call $2948]
 	jbsr	delay3_sec_05e8                            	| [$27e4: call $05E8]
 	lea	game_rom+0x2C24,a0                      	| [$27e7: ld   hl,$2C24] -  "CONGRATULATIONS" script
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$27ea: call $0300]
@@ -6092,7 +6107,7 @@ l_285e:
 	jbsr	queue_sound_effect_if_game_playing_0d75                            	| [$2860: call $0D75] -  ... reached goal
 	jbsr	l_29d6                            	| [$2863: call $29D6]
 	jbsr	l_0d12                            	| [$2866: call $0D12]
-	jbsr	l_2948                            	| [$2869: call $2948]
+	jbsr	clear_sprites_and_playfield_chars_2948                            	| [$2869: call $2948]
 	move.b	#0x30,d0                        	| [$286c: ld   a,$30]
 	jbsr	wait_for_sync_05ea                            	| [$286e: call $05EA]
 	jbsr	display_section_results_28ba                            	| [$2871: call $28BA]
@@ -6211,7 +6226,7 @@ l_2915:
 	                              	| [$2944: and  a]
 	sub.w	d3,d5                            	| [$2945: sbc  hl,de]
 	rts                                    	| [$2947: ret]
-l_2948:
+clear_sprites_and_playfield_chars_2948:
 	lea	sprite_shadow_E100,a0          	| [$2948: ld   hl,sprite_shadow_E100] -  * C0D8D,C27E1,C2869
 	move.w	#0xa4,d1                        	| [$294b: ld   bc,$00A4] 164
 	jbsr	clear_area_05fa                   	| [$294e: call clear_area_05fa]

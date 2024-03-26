@@ -26,17 +26,17 @@ ECS:
 
 AGA:
 
-- moon city: display it a few pixels higher? (slope bitplane pri conflict)
-- point R: going down slope, blue flashing line
+- moon city: display it a few pixels higher? (slope bitplane pri conflict): to test
+- point R: going up/down slope, blue flashing line
   do not set blue color if green y is above, set green
   instead
 
-- slowdowns chip only when UFOs attacking (division by shifting issue???) maybe use 30FPS too for BOBs in that case
-- shots are red, should be white, swapping bob colors doesn't work!!!
+- slowdowns chip only when UFOs attacking
+  maybe use 30FPS too for BOBs in that case
+- shots are blue, should be white, swapping bob colors doesn't work!!!
 - missing dyn color for plant, maybe not needed as we have 1 spare bob color
-- city layer: missing black color:
-  change magenta by black but first black by (0,0,26) in convert graphics!
-- colon not going away after end section screen
+- colon not going away after end section screen: 8197 address break in clear_video_area
+
   
 
 - "game over" should be displayed on front layer (on mountains)

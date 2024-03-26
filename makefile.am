@@ -1,7 +1,7 @@
 PROGNAME = mpatrol
 MAIN_ECS = ..\$(PROGNAME)_ecs
 MAIN_AGA = ..\$(PROGNAME)_aga
-AMIGA_SHELL = ..\shell
+AMIGA_SHELL = ..\$(PROGNAME)
 
 
 ifdef RELEASE_BUILD

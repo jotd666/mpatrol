@@ -8,11 +8,7 @@
 _base	SLAVE_HEADER					; ws_security + ws_id
 	dc.w	17					; ws_version (was 10)
 	dc.w	WHDLF_NoError|WHDLF_ReqAGA|WHDLF_Req68020
-    IFD CHIP_ONLY
-	dc.l	$1A0000					; ws_basememsize
-    ELSE
-	dc.l	$80000					; ws_expmem
-    ENDC
+	dc.l	$180000					; ws_basememsize
 	dc.l	0					; ws_execinstall
 	dc.w	start-_base		; ws_gameloader
 	dc.w	_data-_base					; ws_currentdir
