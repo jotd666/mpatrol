@@ -1,10 +1,8 @@
 *
-*	Amiga-specific portions of Moon Patrol (AGA version)
+*	Amiga-specific portions of Moon Patrol
 *
 * (c) JOTD 2024
 *
-* thanks to Ross for invaluable help with scrolling & ddf/diwshit
-
 
 .include "../src/mpatrol.inc"
 .include "custom.i"
@@ -15,11 +13,10 @@
 AttnFlags = 0x128
 AFB_68010 = 0
 AFB_68020 = 1
-NO68020 = 0
+NO68020 = 1
 
 PREVIOUS_SPRITE_SIZE = 8
 BORDERBLANK = 1
-*STATIC_SCROLL_TEST = 1
 
 * bob backup flags for sprites
 BB_SHIP = 1+1
@@ -28,39 +25,31 @@ BB_ROCK = 3+1
 
 Y_MAX = 260
 
-BASE_BPLCON3_VALUE = (1<<12)+(BORDERBLANK<<5)  | dpf second playfield palette starts at color 16!
-BASE_BPLCON2_VALUE = 0x0064
+BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x8000
-DEFAULT_SCROLL_VALUE_BG = 0x0C07
-DEFAULT_SCROLL_VALUE_FG = 0x4080
-DEFAULT_SCROLL_VALUE = DEFAULT_SCROLL_VALUE_BG+DEFAULT_SCROLL_VALUE_FG
 
-DARK_BLUE_MOUNTAIN_COLOR = 0x00F
-LIGHT_BLUE_MOUNTAIN_COLOR = 0x09A	
-LIGHT_GREEN_MOUNTAIN_COLOR = 0x00D5
+* set to 1 to block ground scrolling, see what's
+* going on with the game scrolling system
+FIX_GROUND_SCROLL = 0
+* don't display mountains
+OPT_NO_BACKGROUND_MOUNTAINS = 0
 
-
-* on blue mountain, height after which color 0 can be safely set to light blue
-BLUE_MOUNTAIN_OUTLINE_HEIGHT = 50
 PANEL_MAX_Y = 48
-SCROLL_MIN_Y = 192
 DYNAMIC_COPPER_ROWS = 210-PANEL_MAX_Y   | make sure it's even!!!!
 HALF_DYNAMIC_COPPER_ROWS = DYNAMIC_COPPER_ROWS/2
-SPRITE_COPPERLIST_CHUNK_SIZE = 64+64+8	| sprite copper (8*2 pointers) + color sprite copper (16 colors) + intreq
-
+SPRITE_COPPERLIST_CHUNK_SIZE = 64+64+4	| sprite copper (8*2 pointers) + color sprite copper (16 colors) + intreq
+SPRITE_Y_SPLIT_LIMIT = 96+PANEL_MAX_Y
 
 * with those, buggy wheels match perfectly the ground!
 SPRITE_Y_CORRECTION = -14
 SPRITE_X_CORRECTION = 17
-* with fixed playfield scrolling at max
-* HW sprites must be shifted to follow
-HW_SPRITE_X_CORRECTION = 26+SPRITE_X_CORRECTION
-
 * exact match at 
-BACKGROUND_X_CORRECTION = 12
-SCROLL_X_CORRECTION = 8
-SCROLLABLE_TILE_Y_START = 24
+BACKGROUND_X_CORRECTION = 4
 
+SCROLLABLE_TILE_Y_START = 24
+SCROLLABLE_STRIP_NB_COLS = 66
+NB_BYTES_PER_SCROLLABLE_STRIP_ROW = SCROLLABLE_STRIP_NB_COLS
+SCROLLABLE_PLANE_SIZE = SCROLLABLE_STRIP_NB_COLS*8*(32-SCROLLABLE_TILE_Y_START)
 
 SCORE_FILE_SIZE = 0x6
 
@@ -113,14 +102,13 @@ OPT_ENABLE_MULTIPLEXED_SPRITES = 1
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
-FG_NB_BYTES_PER_ROW = 40		| could be 32
-BG_NB_BYTES_PER_ROW = 64
+NB_BYTES_PER_ROW = 40
 NB_LINES = 256
 NB_PLAYFIELD_LINES = NB_LINES
 
-BG_SCREEN_PLANE_SIZE = BG_NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
+BG_SCREEN_PLANE_SIZE = NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
 BG_SCREEN_SIZE =  BG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
-FG_SCREEN_PLANE_SIZE = FG_NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
+FG_SCREEN_PLANE_SIZE = BG_SCREEN_PLANE_SIZE
 FG_SCREEN_SIZE =  FG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
 
 NB_HOST_SPRITES = 8
@@ -220,6 +208,7 @@ start:
 		.global osd_write_high_scores
 		.global	osd_get_random
 		.global	osd_wait
+
 		
 	
 	.include	"ReadJoypad.i"
@@ -257,19 +246,24 @@ _user:
     moveq.l #0,d0
     jsr _LVOOpenLibrary(a6)
     move.l  d0,_dosbase
+
 	bsr		load_highscores
+
     * check if "floppy" file is here
+    
     move.l  _dosbase(pc),a6
     move.l   #floppy_file,d1
     move.l  #1005,d2   | MODE_OLDFILE
     jsr     _LVOOpen(a6)
     move.l  d0,d1
     beq.b   no_floppy
+    
     * "floppy" file found
     jsr     _LVOClose(a6)
     * wait 2 seconds for floppy drive to switch off
     move.l  #100,d1
     jsr     _LVODelay(a6)
+	
 no_floppy:
 
 	lea	read_args_string(pc),a0
@@ -324,18 +318,15 @@ no_floppy:
 2:
 	move.l	#2,dip_switch_start_lives		| 3 lives default
 3:
-
-	
-
-
-    
-    
-	
-
-.startup:
 	lea		_custom,a5
 	lea		debug_copperlist,a0
 	move.l	a0,cop1lc(a5)
+
+	
+
+
+
+.startup:
 
 * no multitask
     tst.l   _resload
@@ -370,39 +361,19 @@ no_floppy:
 
 .no_forbid:
 	* align bitplanes
-	lea		fg_screen_buffer_1,a0
-	bsr		align_for_fmode
-	move.l	a0,fg_screen_data_1
-	move.l	a0,fg_drawed_screen_ptr
-	move.l	a0,fg_displayed_screen_ptr
-	
-	lea		bg_screen_buffer,a0
-	bsr		align_for_fmode
-	move.l	a0,bg_panel_screen_ptr
-	lea		blue_mountain_buffer,a0
-	bsr		align_for_fmode
-	move.l	a0,bg_base_mountain_screen_ptr
-	move.l	a0,bg_mountain_screen_ptr
-	
-
-	move.l	bg_panel_screen_ptr,a0
-	add.w	#BG_NB_BYTES_PER_ROW*SCROLL_MIN_Y,a0
-	move.l	a0,bg_base_ground_screen_ptr
-	move.l	a0,bg_ground_screen_ptr
+	lea		bg_screen_buffer_1,a0
+	bsr		align_8
+	move.l	a0,bg_screen_data_1
+	move.l	a0,bg_drawed_screen_ptr
+	move.l	a0,bg_displayed_screen_ptr
 	
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
-	lea		fg_screen_buffer_2,a0
-	bsr		align_for_fmode
-	move.l	a0,fg_screen_data_2
-	move.l	a0,fg_displayed_screen_ptr
+	lea		bg_screen_buffer_2,a0
+	bsr		align_8
+	move.l	a0,bg_screen_data_2
+	move.l	a0,bg_displayed_screen_ptr
 	.endif
-		
-	* set them even if reset by game afterwards
-	* avoiding ugly stripe bitplane effect at startup
-	bsr		set_panel_bitplanes
-	bsr		set_mountain_bitplanes
-	bsr		set_ground_bitplanes
-
+	
 
 	move.l	dip_switch_start_course(pc),d0
 	move.b	d0,start_level_flag
@@ -418,16 +389,15 @@ no_floppy:
 	
 	
 	move.l	misc_options,d1
-	btst	#0,d1
-	*sne		hard_bags_flag
-	btst	#1,d1
-	beq.b	0f
-	bset	#5,d0
-0:
-	btst	#2,d1
-	beq.b	0f
-	bset	#6,d0
-0:
+
+*	btst	#1,d1
+*	beq.b	0f
+*	bset	#5,d0
+*0:
+*	btst	#2,d1
+*	beq.b	0f
+*	bset	#6,d0
+*0:
 	.ifndef	RELEASE
 	btst	#31,d1
 	sne		break_at_startup_flag
@@ -453,8 +423,9 @@ no_floppy:
 	beq.b	0f
 	bset	#5,dip_switches_2
 0:
-	
+	move.w	#0x4000,_custom+intena
 	jsr	 _detect_controller_types 
+	move.w	#0xC000,_custom+intena
 	clr.b	controller_joypad_0
 	clr.b	controller_joypad_1
 
@@ -464,11 +435,11 @@ lives_table:
 	.byte	3,2,1,1,0
 	.align	2
 
-* so memory is longword-aligned (not trusting .align directives)
-align_for_fmode:
+* so memory is 8-aligned (not trusting .align directives)
+align_8:
 	add.w	#0x10,a0
 	move.l	a0,d0
-	and.b	#0xFC,d0
+	and.b	#0xF8,d0
 	move.l	d0,a0
 	rts
 	
@@ -599,7 +570,8 @@ call_bcpl:
 	move.l d7,a1
 	lea 3*4(a1),a1
 	move.l 136(a4),a2
-	move.l 0(a2,d6.w*4),a4
+	lsl.w #2,d6
+	move.l 0(a2,d6.w),a4
 	movem.l 46(a5),a5/a6
 	jsr (a5) | call bcpl!
 	
@@ -668,7 +640,6 @@ save_highscores:
     
 	
 
-
 demo_game:
 		move		#0x4000,_custom+intena						| disable interrupts
 		move		#0x7FFF,_custom+intreq						| ack all interrupts
@@ -732,8 +703,8 @@ _vblank:
 	
 	tst.b	background_layer_control_E1C5
 	beq.b	0f
-	* mountains are active: set other colors
-	bsr		set_plant_dynamic_colors
+	* mountains are active: set colors
+	bsr		set_mountain_dynamic_colors
 0:
 
 	
@@ -747,9 +718,7 @@ _vblank:
 	* also set SR accordingly
 	st.b	interrupt_mode
 0:
-	.ifndef	STATIC_SCROLL_TEST
 	jbsr		mpatrol_irq
-	.endif
 	* re-set SR to 0x2300, game calls osd_enable_interrupts from here and if
 	* something is too slow, then game crashes/trashes display because of re-entering
 	* in IRQ! At least with this it just slows down
@@ -760,7 +729,11 @@ _vblank:
 	clr.b	interrupt_mode
 	* AGA/AA: fmode=3 allows much faster blitter operation
 	* allowing 50 fps without a hitch :)
-
+	tst.b	update_at_50Hz
+	bne.b	0f
+	eor.b	#1,toggle_blitter_draw
+	beq.b	23f
+0:
 	bsr		really_update_sprites
 	
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
@@ -790,6 +763,32 @@ _vblank:
 4:
     rte
 	
+_mid_screen_interrupt:
+	movem.l	d0-a6,-(a7)
+	* usually does nothing, or a irq to simulate extra 12% speed
+	* (vblank triggered each 56.74Hz)
+	* but without doing it twice as it confuses game logic
+	* - game demo plays incorrectly
+	* - "moon patrol" title is displayed with delay
+	
+    move.w  vbl_counter(pc),d0
+    addq.w  #1,d0
+    cmp.w   #9,d0
+    bne.b   22f
+	
+	st.b	interrupt_mode
+	**jbsr		mpatrol_irq
+	clr.b	interrupt_mode
+
+	clr.w d0    
+22:
+    move.w  d0,vbl_counter
+	lea		_custom,a5
+	* ack interrupt
+	move.w	#0x0004,(intreq,a5)
+	move.w	#0x0004,(intreq,a5)
+	movem.l	(a7)+,d0-a6
+	rte
 	
 osd_blitz:
 	blitz
@@ -894,69 +893,29 @@ refresh_tiles:
 	rts
 	
 clear_background:
-	
 	tst.b	background_cleared_flag
 	beq.b	0f
 	* already cleared: don't redo it
 	rts
 0:
 	movem.l	d0-d7/A0-A6,-(a7)
+	bsr		reset_dynamic_colors
 	
 	bsr		really_clear_background
+
 	st		background_cleared_flag
+	bsr		load_tiles_palette_in_playfield_copperlist
+	
 	WAIT_BLIT
+
 	bsr		refresh_tiles
+	
+	
 	movem.l	(A7)+,d0-d7/A0-A6
 	rts
 	
-* called when player killed, game briefly sets y layer to 0
-* which should trigger erasure of top of the mountain/city
-* just in case the game then resets to a lower/upper checkpoint
-
-clear_previous_green_layer:
-	movem.l	d0-d7/A0-A6,-(a7)
+really_clear_background:	
 	lea		_custom,a5
-	moveq	#0,d1
-	move.b	previous_green_layer_y,d1
-	jeq		1f		| safety
-	* top (in case new layer is lower)
-	move.w	#32,d4		| should do it for all cases
-	* now D4 is the full height to clear
-	move	#NB_PLAYFIELD_PLANES,d3
-	moveq	#34,d2			| width = 32 (all screen width)
-	moveq	#0,d0			| X=0 (all screen)
-	move.l	fg_drawed_screen_ptr(pc),a1
-	movem.l	d0-d4/A2-A6,-(a7)
-	jbsr		clear_fg_planes_any_blitter_internal
-	movem.l	(A7),d0-d4/A2-A6
-	move.l	fg_displayed_screen_ptr(pc),a1
-	jbsr		clear_fg_planes_any_blitter_internal
-	movem.l	(A7)+,d0-d4/A2-A6
-
-	* bottom (in case new layer is upper)
-	add.w	green_height,d1
-	sub.w	d4,d1
-	move.l	fg_drawed_screen_ptr(pc),a1
-	movem.l	d0-d4/A2-A6,-(a7)
-	jbsr		clear_fg_planes_any_blitter_internal
-	movem.l	(A7),d0-d4/A2-A6
-	move.l	fg_displayed_screen_ptr(pc),a1
-	jbsr		clear_fg_planes_any_blitter_internal
-	movem.l	(A7)+,d0-d4/A2-A6
-1:
-	movem.l	(a7)+,d0-d7/a0-a6
-	rts
-	
-really_clear_background:
-	lea		_custom,a5
-	lea		blue_mountains_bitplanes,a0
-	move.w	#NB_PLAYFIELD_PLANES*2-1,d1
-0:
-	move.w	#0x1fe,d0		| noop, let panel show
-	move.w	d0,(a0)
-	addq.w	#4,a0
-	dbf		d1,0b
-
 	* compute height
 	moveq	#0,d1
 	tst.b	previous_blue_layer_y
@@ -967,53 +926,18 @@ really_clear_background:
 	move	#NB_PLAYFIELD_PLANES,d3
 	moveq	#34,d2			| width = 32 (all screen width)
 	moveq	#0,d0			| X=0 (all screen)
-	move.l	fg_drawed_screen_ptr(pc),a1
+	move.l	bg_drawed_screen_ptr(pc),a1
 	movem.l	d0-d4/A2-A6,-(a7)
-	jbsr		clear_fg_planes_any_blitter_internal
+	jbsr		clear_planes_any_blitter_internal
 	movem.l	(A7)+,d0-d4/A2-A6
-	move.l	fg_displayed_screen_ptr(pc),a1
-	jbsr		clear_fg_planes_any_blitter_internal
-	
-	
+	move.l	bg_displayed_screen_ptr(pc),a1
+	jbsr		clear_planes_any_blitter_internal
 	clr.b	previous_blue_layer_y   | only done once!
-	
-	* color 0 for mountain fillers
-	bsr		reset_colors_and_scrolling
-	
 0:
-
 	rts
-
-
-current_x:
-	dc.w	0
 	
 * < A0: 
 update_background:
-	.ifdef	STATIC_SCROLL_TEST
-	move	current_x,d0
-	moveq	#1,d1
-	move.w	#150,d3
-	move.w	#0,d5
-	BTST	#7,0xBFE001
-	bne		0f
-	add.w	#1,current_x
-0:
-	BTST	#6,0xBFE001
-	bne		0f
-	sub.w	#1,current_x
-0:
-	* < D0.W: X position of blue layer (0-256)
-* < D1.W: X position of green layer (0-256)
-* < D2.W: Y position of blue layer
-* < D3.W: Y position of green layer
-* < D4.B: 0xFB: green mountains, 0xFC: green city, 0: no layers
-* < D5.W: X position of the ground layer
-*
-
-	jra		update_scrollable_layers
-	.endif
-
 	move.l	a0,a2		| a2 points to shadow mem E1C0
 	* don't update scroll if title displayed and the values are the same as before
 	jbsr	is_title_displayed
@@ -1058,14 +982,6 @@ update_background:
 	move.b	d4,(a1)
 	jeq		clear_background	| layer control = 0 + ground was moving: clear
 	
-	* if player killed while climbing slope, we have to reset green layer
-	* as some would remain
-	move.b	previous_green_layer_y,d6
-	beq.b	1f
-	tst.b	d3
-	bne.b	1f
-	jbsr	clear_previous_green_layer
-1:
 	not.b	d0
 	not.b	d1
 	not.b	d5
@@ -1083,10 +999,11 @@ update_background:
 	tst.b	previous_blue_layer_y
 	bne.b	2f
 	* was previously at 0: screen switch to mountains display
+	* we have to re-set bobs palette, and also clear remaining tile shit
 	movem.w	d0-d5,-(a7)
 	bsr		really_clear_background
 	movem.w	(a7)+,d0-d5	
-	
+	bsr		load_bobs_palette_in_playfield_copperlist
 	jra		23f
 2:
 	move.b	previous_blue_layer_y,d6
@@ -1099,13 +1016,12 @@ update_background:
 	* more diff than 2: brutal Y change: we have to clear the top of screen
 	* (happens when player killed after changing terrain height, and last
 	* checkpoint is on some other terrain height, rare but happens)
-	* with AGA, only green layer is impacted
 	movem.w	d0-d5,-(a7)
 	bsr		really_clear_background
 	movem.w	(a7)+,d0-d5
 23:
 	move.b	d2,previous_blue_layer_y
-	jra		update_scrollable_layers
+	jra		blit_scrollable_layers
 1:
 	rts
 	
@@ -1171,9 +1087,8 @@ osd_update_sprites:
 	* count UFOs
 	* UFO: if too low, convert to bob to avoid conflict
 	not.b	d1		| convert to real coord
-	add.w	#16,d1	| add ufo sprite height
-	cmp.b	sprite_y_split_limit,d1
-	bcc.b	convert_to_bob		| over this Y (means below this line), HW sprite conflicts with lower part sprites
+	cmp.b	#SPRITE_Y_SPLIT_LIMIT-16,d1
+	bcc.b	convert_to_bob		| over this Y, HW sprite conflicts with lower part sprites
 	
 	* count how many we have
 	move.b	nb_displayed_ships,d0
@@ -1241,7 +1156,7 @@ really_update_sprites:
 	rts
 	
 	
-* sprite_y_split_limit has to be carefully computed from copper pos
+* SPRITE_Y_SPLIT_LIMIT has to be carefully computed from copper pos
 * where second sprite write is done
 
 update_hardware_sprites:
@@ -1298,12 +1213,12 @@ update_hardware_sprites:
 	tst.b	do_upper_part
 	beq.b	21f
 	* higher part
-	cmp.b	sprite_y_split_limit,d1
+	cmp.b	#SPRITE_Y_SPLIT_LIMIT,d1
 	bcc.b	2f		| low sprite: skip
 	bra.b	22f
 21:
 	* lower part
-	cmp.b	sprite_y_split_limit,d1
+	cmp.b	#SPRITE_Y_SPLIT_LIMIT,d1
 	bcs.b	2f		| high sprite: skip
 22:
 	.endif
@@ -1312,6 +1227,12 @@ update_hardware_sprites:
 *	beq.b	2f			| Y set to 255: not shown	
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
 
+	.ifne	SPRITE_Y_CORRECTION
+	add.w	#SPRITE_Y_CORRECTION,d1
+	.endif
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif
 
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
@@ -1354,7 +1275,7 @@ update_hardware_sprites:
 	bne.b	20f
 101:
 	* slot free: replace sprite by blank
-	* this doesn't allow that a sprite crosses the sprite_y_split_limit
+	* this doesn't allow that a sprite crosses the SPRITE_Y_SPLIT_LIMIT
 	* boundary but in that case we'll switch for a BOB
 	* (there are potentially too many UFO ships for sprites anyway)
 	lea	blank_sprite_table,a1
@@ -1407,14 +1328,6 @@ update_hardware_sprites:
 	add.w	d4,d4					| sprite index times 4 (pointer index)
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
-	* apply correction NOW, not earlier as it would wrap as a byte
-	.ifne	SPRITE_Y_CORRECTION
-	add.w	#SPRITE_Y_CORRECTION,d1
-	.endif
-	.ifne	HW_SPRITE_X_CORRECTION
-	add.w	#HW_SPRITE_X_CORRECTION,d0
-	.endif
-
 	move.w	(A5)+,d3
 	cmp.w	#16,d3
 	bne.b	221f
@@ -1450,6 +1363,7 @@ update_hardware_sprites:
 	* but doing so makes lower sprites blink when activated
 	* anyway we make lower sprites point on blanks when not used so
 	* we can leave that untouched, let the lower sprite write it
+		
 	lea		upper_sprite_buffers(pc),a1
 	move.l	a5,(a1,d4.w)	| store pointer on control word for lower matching sprite
 	move.l	(a7)+,a5
@@ -1546,14 +1460,14 @@ update_bobs:
 	move.w	(a4),d0
 	and.w	#0x1F0,d0		| align on 16 lower bound
 	* clear area where the sprite was
-	move.l	fg_drawed_screen_ptr(pc),a1
+	move.l	bg_drawed_screen_ptr(pc),a1
 	move.w	#4,d2
 	moveq	#NB_PLAYFIELD_PLANES,d3
 	clr.l	(a4)+ 			| ack deletion
 	move.w	(a4),d2			| width in bytes (16 pixels: 4 bytes)
 	move.w	(2,a4),d4		| height
 	clr.l	(a4)+			| ack deletion
-	bsr		clear_fg_planes_any_blitter_internal
+	bsr		clear_planes_any_blitter_internal
 	bra.b	12f
 11:
 	addq	#8,a4
@@ -1642,7 +1556,7 @@ update_bobs:
 	move.l	(a7)+,a0
 	bra.b	2f
 12:
-	move.l		fg_drawed_screen_ptr(pc),a1
+	move.l		bg_drawed_screen_ptr(pc),a1
 	* D0 and D1 are already set
 	move.l	d4,a0	| plane list (+ mask)
 	move.l	(NB_PLAYFIELD_PLANES*4,a0),d2
@@ -1678,7 +1592,7 @@ update_bobs:
 * < D4: blit height
 * trashes D0-D6
 * > A1: even address where blit was done
-clear_fg_plane_any_blitter_internal:
+clear_plane_any_blitter_internal:
 	moveq	#1,d3
 * < A5: custom
 * < D0,D1: x,y
@@ -1688,7 +1602,7 @@ clear_fg_plane_any_blitter_internal:
 * < D4: blit height
 * < D7: mask (disabled, -1 set at start)
 * trashes D0-D6
-clear_fg_planes_any_blitter_internal:
+clear_planes_any_blitter_internal:
     * pre-compute the maximum of shit here
 	move.w	d1,d6
     beq.b   1f    | optim
@@ -1705,7 +1619,7 @@ clear_fg_planes_any_blitter_internal:
 	* null or negative height after clipping: out
 	rts
 0:
-    lea mulFG_NB_BYTES_PER_ROW_table(pc),a2
+    lea mulNB_BYTES_PER_ROW_table(pc),a2
     add.w   d1,d1
     move.w  (a2,d1.w),d1
 1:
@@ -1725,7 +1639,7 @@ clear_fg_planes_any_blitter_internal:
 2:   
     add.w   d1,a1       | plane position (always even)
 
-	move.w #FG_NB_BYTES_PER_ROW,d0
+	move.w #NB_BYTES_PER_ROW,d0
     sub.w   d2,d0       | blit width
 
     lsl.w   #6,d4
@@ -1749,7 +1663,7 @@ clear_fg_planes_any_blitter_internal:
 3:
 	move.l a1,bltdpt(a5)	|destination top left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 	WAIT_BLIT
 	dbf		d3,3b
 4:
@@ -1757,93 +1671,6 @@ clear_fg_planes_any_blitter_internal:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	
     rts
-
-* < A5: custom
-* < D0,D1: x,y
-* < A1: plane pointer
-* < D2: width in bytes (inc. 2 extra for shifting)
-* < D4: blit height
-* trashes D0-D6
-* > A1: even address where blit was done
-clear_bg_plane_any_blitter_internal:
-	moveq	#1,d3
-* < A5: custom
-* < D0,D1: x,y
-* < A1: foreground plane pointer (often first plane!)
-* < D2: width in bytes (inc. 2 extra for shifting)
-* < D3: number of planes to clear
-* < D4: blit height
-* < D7: mask (disabled, -1 set at start)
-* trashes D0-D6
-clear_bg_planes_any_blitter_internal:
-    * pre-compute the maximum of shit here
-	move.w	d1,d6
-    beq.b   1f    | optim
-	* check if y start + height > Y_MAX
-	* (ignores case where y = 0, no risk)
-	add.w	d4,d6
-	sub.w	#Y_MAX,d6
-	bmi.b	0f
-	* y start + height > Y_MAX: clip height
-	sub.w	d6,d4
-	beq.b	10f
-	bpl.b	0f
-10:
-	* null or negative height after clipping: out
-	rts
-0:
-    lea mulBG_NB_BYTES_PER_ROW_table(pc),a2
-    move.w  (a2,d1.w*2),d1
-1:
-    move.l  #0x01000000,d5   | minterm useD & rect clear (0xA) 
-    move    d0,d6
-    beq.b   2f
-    MOVEQ #15,D6
-    AND.W D0,D6
-    and.w   #0x1F0,d0
-    lsr.w   #3,d0
-    add.w   d0,d1
-    LSL.W #8,D6
-    LSL.W #4,D6
-
-    swap    d6
-    or.l    d6,d5            | add shift
-2:   
-    add.w   d1,a1       | plane position (always even)
-
-	move.w #BG_NB_BYTES_PER_ROW,d0
-    sub.w   d2,d0       | blit width
-
-    lsl.w   #6,d4
-    lsr.w   #1,d2
-    add.w   d2,d4       | blit height
-
-    * now just wait for blitter ready to write all registers
-	WAIT_BLIT
-    
-    * blitter registers set
-	.ifdef	VARIABLE_BLITTER_MASKS_AND_MODS
-    move.l  d7,bltafwm(a5)
-	.endif
-	
-	move.l d5,bltcon0(a5)	
-    move.w  d0,bltdmod(a5)	|D modulo
-	
-	subq	#1,d3
-	beq.b	4f
-	subq	#1,d3
-3:
-	move.l a1,bltdpt(a5)	|destination top left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	add.w		#BG_SCREEN_PLANE_SIZE,a1
-	WAIT_BLIT
-	dbf		d3,3b
-4:
-	move.l a1,bltdpt(a5)	|destination top left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	
-    rts
-
 
 * what: blits 16x? data on one plane, cookie cut
 * args:
@@ -1901,7 +1728,7 @@ blit_planes_any_internal_cookie_cut:
 1:	
 	tst	d1
     beq.b   2f    | optim
-    lea		mulFG_NB_BYTES_PER_ROW_table,a4
+    lea		mulNB_BYTES_PER_ROW_table,a4
 	.ifdef	NO68020
 	add.w	d1,d1
     move.w  (a4,d1.w),d1	| y times 40
@@ -1932,7 +1759,7 @@ blit_planes_any_internal_cookie_cut:
     * but a 68000 CPU doesn't and since we RETURN A1...
     bclr    #0,d1
     add.w   d1,a1       | plane position (D1 < 0x7FFF, 288*40=0x2D00)
-	move.w	#FG_NB_BYTES_PER_ROW,d0
+	move.w	#NB_BYTES_PER_ROW,d0
 	tst.w	d4
 	bpl.b	5f
 	neg.w	d0
@@ -1969,7 +1796,7 @@ blit_planes_any_internal_cookie_cut:
 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 	WAIT_BLIT
 	dbf		d3,6b
 7:
@@ -2001,91 +1828,89 @@ start_process_1_plane:
 	move.l	a4,bltbpt(a5)	|source graphic top left corner
 	rts
 
-set_plant_dynamic_colors:
+* uses green_y_end blue_y_end
+set_mountain_dynamic_colors:
+	* systematically reset dynamic colors as heights can change
+	bsr		reset_background_dynamic_colors
+	
+	move.w	green_y_end,d6			| Y pos to change color 0 for green
+	jeq	10f				| in case it's not set
+	
+	* set copper color 0 to green (color 4 of bobs palette)
+	* at the proper row
+	lea		color_line_copper,a0
+	* Y minus panel Y max times 16 (3 longwords per line in copperlist + wait)
+	lea		bobs_palette(pc),a1
+
+	* the line list is not contiguous, we need to check size and skip sprite chunk
+	bsr		shift_d6_copper_y
+	
+	tst.b	no_green_layer_flag
+	bne.b	0f
+	move.w	#color,(A0,d6.w)
+	move.w	(8,a1),(2,a0,d6.w)
+0:
+	* set rock color (using same color as mountain dark blue)
+	move.w	rock_color_register,(4,a0,d6.w)
+	move.w	rock_color,(6,a0,d6.w)
+
 	* is tweaked to follow terrain_height_in_tiles_E514
 	move.w	#DYNAMIC_COPPER_ROWS-2+32,d6
 	moveq	#0,d0
 	move.b	terrain_height_in_tiles_E514,d0
 	lsl.w	#3,d0		| times 8
 	sub.w	d0,d6
+	bsr		shift_d6_copper_y
 	
 	* change a dark red color (why not) by dark green used
 	* by space plant base. We put that here but we could even
 	* put it a few lines below, as the plant base is lower (lowest
 	* object). This saves just enough colors for a 16 color playfield
 	* display, if we use HW sprites for some objects (shoehorned!!)
-	*move.w	plant_color_register,(4,a0,d6.w)
-	*move.w	plant_color,(6,a0,d6.w)
-
+	move.w	plant_color_register,(4,a0,d6.w)
+	move.w	plant_color,(6,a0,d6.w)
+	* now change ground color to orange, trying to respect the ground Y
+	move.l	#((color+16)<<16)+0xF95,(8,a0,d6.w)
+	* now change red to dark green (space plant)
+	
+	* now blue
+	tst.B	no_blue_layer_flag
+	jne	10f
+	
+	move.w	blue_y_end,d7
+	lsl.w	#4,d7
+	
+	cmp.w	#DYNAMIC_COPPER_ROWS*16,d7
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS*16,d7
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,d7
+9:
+	move.w	#color,(A0,d7.w)
+	move.w	(6,a1),(2,a0,d7.w)
 10:	
 	rts
 	
-
-	
-
-blit_blue_mountain_strip:
+clear_credits_remaining_bitmap:
 	movem.l	d0-a6,-(a7)
-	
-
-	lea		_custom,a5
-	move.l	bg_base_mountain_screen_ptr(pc),a1
-	
-	lea		blue_mountains,a0
-	
-	move.w	(a0)+,d4		| source height
-	move.w	(a0)+,d5		| number of bytes for the image (height * 64)
-	move.w	d4,d7			| D7=Y end position
-	
-    move.l  #0x09f00000,d3    | A->D copy, ascending mode
-	* blit height
-	lsl.w	#6,d4
-	add.w	#BG_NB_BYTES_PER_ROW/2,d4		| size: the whole bg screen in words
-    * always the same settings
-
-
-    * now just wait for blitter ready to write all registers
-	WAIT_BLIT
-    
-    * blitter registers set
-	
-	* plane 0
-	move.l d3,bltcon0(a5)	| sets con0 and con1
-    move.w  #0,bltamod(a5)	|A modulo: 128 bytes per row - 40 used, no shift
-    move.w  #0,bltdmod(a5)	|D modulo: 0 full line is drawn
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	add.w	d5,a0			| next source plane
-	
-	
-	add.w	#BG_SCREEN_PLANE_SIZE,a1
-
-    * now just wait for blitter ready to write all registers
-	WAIT_BLIT
-	* plane 1
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	* this blits the pale blue layer of the back mountain
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	add.w	d5,a0			| next source plane
-	
-	add.w	#BG_SCREEN_PLANE_SIZE,a1
-
-	* only 2 planes involved, the rest is blank
-
-
-	movem.l	(a7)+,d0-a6
-	
+	move.w	#Y_MAX-24,d1
+	move.w	#16,d4
+	move	#NB_PLAYFIELD_PLANES,d3
+	moveq	#10,d2			| width = 10
+	move.w	#22*8,d0
+	move.l	bg_drawed_screen_ptr(pc),a1
+	move.l	bg_drawed_screen_ptr(pc),a1
+	movem.l	d0-d4/A2-A6,-(a7)
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-d4/A2-A6
+	move.l	bg_displayed_screen_ptr(pc),a1
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-a6
 	rts
 	
-* 2 words: first shift (as bplcon value), then
-* offset in bytes
-
-scroll_table:
-	.include	"scroll_table.68k"
-
-* blit the mountains/city green layer
-* green mountains is blit using blitter copy
+* blit the blue mountains + green layer
+* blue mountains is blit using blitter copy
+* green mountains is blit using cookie cut over blue mountains
 * data is: 2 bitplanes; no blit pad, width = 512 bytes, height: custom
 * palette is shared between both layers
 * < D0.W: X position of blue layer (0-256)
@@ -2098,158 +1923,90 @@ scroll_table:
 
 	
 * it also changes black background to the relevant background (blue or green)
-update_scrollable_layers:
-	move.l	#(color<<16)+LIGHT_BLUE_MOUNTAIN_COLOR,blue_mountain_filler-2	| enabled by default
-	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,lower_green_mountain_filler
-	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,upper_green_mountain_filler
-
-	.ifne	BACKGROUND_X_CORRECTION
-	add.w	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
-	add.w	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
-	.endif
-	.ifne	SCROLL_X_CORRECTION
-	add.w	#SCROLL_X_CORRECTION,d5		| adjust vs MAME
-	.endif
+blit_scrollable_layers:
+	
+	addq.b	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
+	addq.b	#BACKGROUND_X_CORRECTION,d1		| adjust vs MAME
 	
 	* background is going to be non-zero
 	tst.b		background_cleared_flag
 	beq.b	0f
 	clr.b		background_cleared_flag
 	* scrollable layer just enabled
-
+	* "CREDIT xx" string is still in the bottom right corner
+	* remove it
+	bsr		clear_credits_remaining_bitmap
 0:
-	lea		mulBG_NB_BYTES_PER_ROW_table,a2
-	lea		scroll_table(pc),a3
-
-	**************************************
-	* blue mountains: change scroll
-	* and bitplane set wait in copperlist
-	**************************************
-	move.b	d2,d6
-	* sprite split point. Beyond that Y(-16), ship sprites
-	* are bobs, not hardware sprites
-	add.b	#BLUE_MOUNTAIN_OUTLINE_HEIGHT/2,d6
-	move.b	d6,sprite_y_split_limit
-
-	* blue mountain start y minus panel h
+	.ifeq	OPT_NO_BACKGROUND_MOUNTAINS
 	sub.w	#PANEL_MAX_Y+8,d2
-	* store for later
-	move.w	d2,d6
-	add.w	#BLUE_MOUNTAIN_OUTLINE_HEIGHT,d6
-	move.w	d6,blue_y_end
-	
-	* green mountain start y minus panel h
 	sub.w	#PANEL_MAX_Y+8,d3
-	
-	sub.w	#0xF,d0
-	
-	and.w	#0xFF,d0
-	add.w	d0,d0
-	add.w	d0,d0
-	move.w	(a3,d0.w),blue_mountains_scroll_value
-	move.w	(2,a3,d0.w),d6
-	
-
-	* we want to change copper wait before we change
-	* bitplane for blue mountain bitplane, much better than
-	* displaying empty data at a fixed location just after panel
-	* because it saves memory & also allows to print 
-	* "beginner/champion course go!" text using
-	* background layer so proper colors for tiles
-	
-	add.w	#84,d2		| empiric, match MAME display
-	move.b	d2,blue_mountains_start_copper_wait
-	add.w	#BLUE_MOUNTAIN_OUTLINE_HEIGHT/2,d2
-	* for sprite multiplexing split
-	move.b	d2,blue_mountains_mid_copper_wait
-	add.w	#BLUE_MOUNTAIN_OUTLINE_HEIGHT/2,d2
-	move.b	d2,blue_mountains_end_copper_wait
-	
-	move.l	bg_base_mountain_screen_ptr(pc),a1
-	add.w	d6,a1
-	move.l	a1,bg_mountain_screen_ptr
-	bsr		set_mountain_bitplanes
-	
-	************************
-	* ground: change scroll
-	************************
-
-	and.w	#0xFF,d5
-	add.w	d5,d5
-	add.w	d5,d5
-	move.w	(a3,d5.w),ground_strip_scroll_value
-	move.w	(2,a3,d5.w),d6
-	
-	move.l	bg_base_ground_screen_ptr(pc),a1
-	add.w	d6,a1
-	move.l	a1,bg_ground_screen_ptr
-	bsr		set_ground_bitplanes
-
-
 	lea		_custom,A5
-	move.l	fg_drawed_screen_ptr(pc),a1
-	add.w	#(PANEL_MAX_Y+8)*FG_NB_BYTES_PER_ROW,a1
-	lea		mulFG_NB_BYTES_PER_ROW_table,a2
-	
+	move.l	bg_drawed_screen_ptr(pc),a1
+	add.w	#(PANEL_MAX_Y+8)*NB_BYTES_PER_ROW,a1
+	lea		mulNB_BYTES_PER_ROW_table,a2
 	movem.l	d0-d5/a1,-(a7)
+	
 
 	
-	************************************
-	* green mountains/city: brutal blit
-	************************************
+
+	******************
+	* green part
+	******************
 	
+
+	movem.l	(a7),d0-d5/a1
 	bsr		get_green_mountains_data
+	
+	* clear the lower part of the mountain else some dark green remains
+	* and it's ugly. We'll optimize as most of the time blue mountain erases
+	* green mountain top, but at lowest level it can't erase all
+	
+	tst.B	no_green_layer_flag
+	jne	0f		| no need to erase green layer: no layer
+	tst.B	no_blue_layer_flag
+	jne	0f		| no need to erase+cookie cut green layer: no blue layer
 
-	lea		playfield_colors+2,a3
+	movem.l	d0-d4/A1-A6,-(a7)
+	move.w	d2,d1				| Y blue
+	add.w	#60,d1				| Y height for blue mountains????
+	move.w	#26,d4		| empiric
+	add.w	#PANEL_MAX_Y+8,d1
 
-	* set proper color depending on background
-	move.w	green_mountain_color_index,d2
-	move.w	d0,(a3,d2.w*4)
-
+	move	#NB_PLAYFIELD_PLANES-2,d3
+	move.w	#NB_BYTES_PER_ROW,d2			| width = all screen width
+	moveq	#0,d0			| X=0 (all screen)
+	move.l	bg_drawed_screen_ptr(pc),a1
+	jbsr		clear_planes_any_blitter_internal
+	movem.l	(A7)+,d0-d4/A1-A6
+0:
+	
+	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
 
 	move.w	(a0)+,d4		| source height
-	move.w	d4,green_height
 	move.w	d4,d6
 	add.w	d3,d6			| Y pos to change color 0 for green
 	move.w	d6,green_y_end		| save green Y end
+	move.w	d7,blue_y_end		| save blue Y end
 
-	* default: enable upper green filler
-	move.w	#color,upper_green_mountain_filler-2
+	tst.B	no_green_layer_flag
+	jne	2f
 
-	* also change position of color0 turn to green
-	add.w	#84,d6			| empiric
-	cmp.b	#0xDC,d6
-	bcs.b	1f
-	
-	* too low: don't early fill green
-	move.w	#0x1FE,upper_green_mountain_filler-2
-	* set high value (low screen pos) into lower green wait (after ground scroll)
-	move.b	d6,lower_green_mountain_end_copper_wait
-	bra.b	2f
-1:
-	move.b	d6,upper_green_mountain_end_copper_wait
-*	move.w	blue_y_end,d6
-*	cmp.w	green_y_end,d6
-*	jcc		2f
-*	* blue filler lower than green filler
-*	* disable blue mountain filler
-*	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,blue_mountain_filler
-2:
 	move.w	(a0)+,d5		| number of bytes for the plane (height * 66)
 
 	
-	add.w	(a2,d3.w*2),a1	| adds Y*40
-	lea	(-FG_NB_BYTES_PER_ROW,a1),a4			| save line above mountain start for later
-	move.l	a1,a3			| compute mountain end
-	add.w	(a2,d4.w*2),a3	| adds height*40
-	
+	add.w	d2,d2
+	add.w	(a2,d2.w),a1	| adds Y*40
 	move.w	d0,d2
 	lsr.w	#3,d2
 	bclr	#0,d2
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
-	move.l	#0x09f00000,d3		| brutal copy
 
+    move.l  #0x0fca0000,d3    | B+C-A->D cookie cut   
+	tst.b	no_blue_layer_flag
+	jeq	0f
+	move.l	#0x09f00000,d3		| brutal copy
+0:
 	* blit height
 	lsl.w	#6,d4
 	add.w	#20,d4		| size: the whole screen
@@ -2266,6 +2023,9 @@ update_scrollable_layers:
 	or.l	d0,d3
 	swap	d3
 	
+	tst.b	no_blue_layer_flag
+	jeq	0f
+
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
     
@@ -2282,14 +2042,8 @@ update_scrollable_layers:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
-	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
-	* lets take advantage of that blit to clear below line with cpu (2 planes)
-	.rept	2
-	bsr		clear_green_mountain_line
-	lea		(FG_SCREEN_PLANE_SIZE,a3),a3
-	.endr
-	
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
 	* plane 1
@@ -2298,62 +2052,221 @@ update_scrollable_layers:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
 	add.w	d5,a0			| next source plane
-	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
-
-	* lets take advantage of that blit to clear below line with cpu (last plane)
-	bsr		clear_green_mountain_line
-	* now lines above
-	move.l	a4,a3
-	* lets take advantage of that blit to clear above line with cpu (first plane)
-	bsr		clear_green_mountain_line
-	lea		(FG_SCREEN_PLANE_SIZE,a3),a3
-
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
 	* plane 2
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	jra		2f				| done with mountains
 
-	* lets take advantage of that blit to clear above line with cpu (2 last planes)
-	.rept	2
-	bsr		clear_green_mountain_line
-	lea		(FG_SCREEN_PLANE_SIZE,a3),a3
-	.endr
+0:
+	* green over blue: compute mask
+	move.l	a0,a3
+	add.w	d5,a3
+	add.w	d5,a3
+	add.w	d5,a3
 
+	
+    * always the same settings
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+
+	* plane 0
+	move.l d3,bltcon0(a5)	| sets con0 and con1
+    move.w  #26,bltamod(a5)	|A (mask) modulo: 66 bytes per row - 40 used
+    move.w  #26,bltbmod(a5)	|B (data) modulo: 66 bytes per row - 40 used
+    move.w  #0,bltcmod(a5)	|D modulo: 0 full line is drawn
+    move.w  #0,bltdmod(a5)	|D modulo: 0 full line is drawn
+
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	add.w	d5,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	* plane 1
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
+	add.w	d5,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	* plane 2
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	move.l a0,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
+
+2:
 	movem.l	(a7)+,d0-d5/a1
+	.endif
+	
+	
+	* now blit the scrollable ground strip, with some optimization
+	* when the ground is low: no need to blit the upper part
+	move	d5,d0
+	
+	lea		bg_scrollable_strip+2,a0		| source
+	move.l	bg_drawed_screen_ptr(pc),a1
+	add.w	#(SCROLLABLE_TILE_Y_START*8)*NB_BYTES_PER_ROW,a1	| dest: bottom of screen
 
+	move.w	#(32-SCROLLABLE_TILE_Y_START)*8,d4		| max source height (64)
+
+	bsr		is_moonbase_displayed
+	beq.b	55f				| moonbase is displayed: don't optimize
+	move.b	terrain_slope_type_E508,d2
+	cmp.b	#4,d2
+	beq.b	55f				| descending slope: we can't optimize
+	move.w	descending_slope_delay,d3
+	beq.b	54f
+	* previous slope descending set the timer: is the timer running?
+	subq	#1,d3
+	move.w	d3,descending_slope_delay
+	bra.b	56f			| can't optimize
+54:
+	moveq	#0,d2
+	move.b	terrain_height_in_tiles_E514,d2		 | lower = 4, higher = 7
+	lea		height_to_skip_table,a2
+	move.b	(a2,d2.w),d2
+	beq.b	55f				| high terrain: don't skip bitmap data
+
+	sub.w	d2,d4			| sub blit height
+	add.w	d2,d2			| double
+	lea		mulNB_BYTES_PER_SCROLLABLE_STRIP_ROW_table,a2
+	add.w	(a2,d2.w),a0	| skip data start
+	lea		mulNB_BYTES_PER_ROW_table,a2
+	add.w	(a2,d2.w),a1	| lower destination
+	jra		56f
+55:
+	* descending slope: set delay to screen width as slope changed
+	* on the right, so we need to erase the remaining slope on the left
+	move.w	#NB_BYTES_PER_ROW*8,descending_slope_delay
+56:
+	move.l	#SCROLLABLE_PLANE_SIZE,d5
+	move.w	d0,d2		 	| X
+	lsr.w	#3,d2
+	bclr	#0,d2
+	add.w	d2,a0			| adds X/8 to source (destination X = 0)
+    move.l  #0x09f00000,d3    | A->D copy, ascending mode
+	* blit height
+	lsl.w	#6,d4
+	add.w	#20,d4		| size: the whole screen width
+	* insert shifting in D3 bltcon config
+	and.w	#0xF,d0		| shifting 0-15
+	not.w	d0
+	* apply to bltcon (destination)
+    swap    d0
+    clr.w   d0
+    lsl.l   #8,d0
+    lsl.l   #4,d0
+    or.l    d0,d3
+    * always the same settings
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+
+	* plane 0
+	move.l d3,bltcon0(a5)	| sets con0 and con1
+    move.w  #26,bltamod(a5)	|A modulo: 66 bytes per row - 40 used
+    move.w  #0,bltdmod(a5)	|D modulo: 0 full line is drawn
+	lea		(BG_SCREEN_PLANE_SIZE*3,a1),a1
+    * now just wait for blitter ready to write all registers
+	* plane 3
+	move.l a0,bltapt(a5)	|source graphic top left corner
+	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
+	
+	.ifdef	FUCK_IT
+	* check if a checkpoint letter needs to be drawn in the strip
+	move.b		bg_videoram+0x3DF,d0
+	cmp.b	#0x41,d0
+	bcs.b	0f
+	cmp.b	#0x5a+1,d0
+	bcc.b	0f
+	* A->Z is in videoram: blit the scroll_letter_buffer buffer at the proper location
+	* using ground scroll value. This is a really small blit
+	move.w	#8*64+2,d4		| height=8, width=2 words
+	move.l	bg_drawed_screen_ptr,a1
+	add.w	#30*8*NB_BYTES_PER_ROW+14,a1		| TEMP 14
+	move.l	#0x09f00000,d3					| brutal copy, no cookie cut
+	lea		scroll_letter_buffer,a0
+	WAIT_BLIT
+	move.l d3,bltcon0(a5)	| sets con0 and con1
+    move.w  #0,bltamod(a5)	|A (mask) modulo: object data is contiguous
+    move.w  #NB_BYTES_PER_ROW-32/8,bltdmod(a5)	|D modulo
+
+	move.w	#NB_PLAYFIELD_PLANES-1,d3
+1:
+	move.l	a0,bltapt(a5)	|source graphic top left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	add.w	#32,a0			| next source plane
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+	dbf		d3,1b
+0:
+	.endif
+	
+	
+	WAIT_BLIT
 	
 	
 	* hack: if title "moon patrol" is shown on screen, we have to redraw it
 	* as the mountains share the same layer and have clobbered it partially
 	jbsr		is_title_displayed
 	jne	0f
+
 	lea		title_bitmap,a0
-	move.l	fg_drawed_screen_ptr,a1
-	add.w	#TITLE_X/8+(TITLE_Y*FG_NB_BYTES_PER_ROW),a1	| fixed position
+	move.l	bg_drawed_screen_ptr,a1
+	add.w	#TITLE_X/8+(TITLE_Y*NB_BYTES_PER_ROW),a1	| fixed position
 	
     move.l  #0x0fca0000,d3    | B+C-A->D cookie cut, no shift
+
 	move.w	#(TITLE_WIDTH/8)*TITLE_HEIGHT,d5	| plane size
 	* compute mask
 	move.l	a0,a3
 	move.w	d5,d4
 	lsl.w	#2,d4
 	add.w	d4,a3		| plus 4 bitplanes
+
 	* blit height + width, hardcoded
 	move.w	#TITLE_HEIGHT*64+TITLE_WIDTH/16,d4
+
     * always the same settings
+
 	move.l	#0x09f00000,d6
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
+    
     * blitter registers set
 
 	* planes 0-2
 	move.l d3,bltcon0(a5)	| sets con0 and con1
     move.w  #0,bltamod(a5)	|A (mask) modulo: object data is contiguous
     move.w  #0,bltbmod(a5)	|B (data) modulo: object data is contiguous
-    move.w  #FG_NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltcmod(a5)	|C modulo
-    move.w  #FG_NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltdmod(a5)	|D modulo
+    move.w  #NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltcmod(a5)	|C modulo
+    move.w  #NB_BYTES_PER_ROW-TITLE_WIDTH/8,bltdmod(a5)	|D modulo
+
 	move.w	#NB_PLAYFIELD_PLANES-2,d3
 1:
 	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
@@ -2362,7 +2275,7 @@ update_scrollable_layers:
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	add.w	d5,a0			| next source plane
-	lea		(FG_SCREEN_PLANE_SIZE,a1),a1
+	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
@@ -2377,32 +2290,35 @@ update_scrollable_layers:
 0:
 	rts
 
-clear_green_mountain_line:
-	moveq	#0,d0
-0:
-	clr.l	(a3,d0.w)
-	addq	#4,d0
-	cmp.b	#FG_NB_BYTES_PER_ROW,d0
-	bne.b	0b
-	rts
-	
-* returns mountains/city depending on bit 0 of D4
-* > A0: pointer on bitmap
-* > D0: value of extra color (dark green or yellow)
-* <> D3: Y start, changed to upper Y if green city to avoid
-* priority conflict with ground on slopes
 get_green_mountains_data:
 	lea		green_mountains,a0
-	move.w	green_mountain_color,d0
-	btst.b	#0,d4
-	bne.b	0f
+	*btst.b	#0,d4
+	*bne.b	0f
 	* probably 0xFC (there are invalid/impossible combinations)
-	lea		green_city,a0
-	move.w	yellow_city_color,d0
-	sub.w	#4,d3
+	*lea		green_city,a0
 0:
 	rts
 	
+shift_d6_copper_y:
+	lsl.w	#4,d6		| times 16
+	cmp.w	#DYNAMIC_COPPER_ROWS*16,d6
+	bcc.b	10f
+	cmp.w	#HALF_DYNAMIC_COPPER_ROWS*16,d6
+	bcs.b	9f
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,d6
+9:
+	rts
+10:
+	moveq	#0,d6
+	rts
+	
+erase_mountain_line:
+	sub.w	#NB_BYTES_PER_ROW,a1
+	move.w	#NB_BYTES_PER_ROW/4-1,d0
+0:
+	clr.l	(a1)+
+	dbf		d0,0b
+	rts
 	
 * < D0: sprite X
 * < D1: sprite Y
@@ -2512,10 +2428,7 @@ alloc_sprite:
 	rts
 	
 
-	
-	
-	
-	
+		
 	.ifndef		RELEASE
 test_sprites:
 .byte  0xad,0x07,0x42,0x78,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00	|	0x0000
@@ -2552,7 +2465,6 @@ bob_previous_positions_2:
 sprite_registers:
 	ds.l	NB_TARGET_SPRITES+2		| we need more room for background scroll regs
 	
-	
 
 switch_screen_buffers:
 
@@ -2560,11 +2472,11 @@ switch_screen_buffers:
 	* let's switch screen buffers, background (chars)
 	* toggle fg planes (double buffering)
 	* also toggle previous sprite positions
-	lea		fg_drawed_screen_ptr(pc),a0
+	lea		bg_drawed_screen_ptr(pc),a0
 	lea		bob_previous_positions_1(pc),a2
 	lea		bob_previous_positions_2(pc),a3
-	move.l	fg_screen_data_1,a1
-	move.l	fg_screen_data_2,a5
+	move.l	bg_screen_data_1,a1
+	move.l	bg_screen_data_2,a5
 	* also switch previous state memory
 	cmp.l	(a0),a1
 	bne.b	2f
@@ -2574,10 +2486,9 @@ switch_screen_buffers:
 	exg		a2,a3
 2:
 	move.l	a1,(a0)
-	move.l	a5,fg_displayed_screen_ptr
+	move.l	a5,bg_displayed_screen_ptr
 	move.l	a2,bob_previous_drawed_sprites
-
-	jbsr		set_fg_bitplanes
+	jbsr		set_bitplanes
 	.endif
 	
 	rts
@@ -2599,7 +2510,15 @@ store_system:
 	move.l	d0,system_vbr
 1:
 	
-
+	move.w	AttnFlags(a6),d0
+	btst	#AFB_68020,d0
+	bne.b	1f
+	* no whdload, no 68020: assume slow
+	* if running on PiStorm, well, too bad use whdload
+	
+	* to save speed, disable blue mountain layer
+	st.b	no_blue_layer_flag
+1:
 	lea	_custom,a6
 	move.w	intenar(a6),old_intena
 	move.w	dmaconr(a6),old_dmacon
@@ -2658,7 +2577,12 @@ restore_system:
 
 	move.l	old_syscoplist,cop1lc(a6)
 	move.l	_gfxbase,a6
+	
+	* set chip rev bits in whdload flags so A1200 floppy
+	* also detects AGA
+	
 	move.b	gb_ChipRevBits0(a6),chiprevbits+3
+	
 	move.l	old_actiview,a1
 	jsr	_LVOLoadView(a6)
 
@@ -2715,22 +2639,48 @@ platform_init:
     move.l  #-1,bltafwm(a5)
 	
 	* restrict borders: we don't see bobs on the borders!
-    move.w #0x1CB0,diwstrt(a5)
+    move.w #0x1C99,diwstrt(a5)
 	*         VVHH
-    move.w #0x18A0,diwstop(a5)
-	* try to hide color 0 on the border (except on OCS)
-    move.w #0x0610+BORDERBLANK,bplcon0(a5) | 8 bitplanes, dual playfield, borderblank
+    move.w #0x2289,diwstop(a5)
+	* 4 bitplanes, try to hide color 0 on the border (except on OCS)
+    move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
     move.w #BASE_BPLCON2_VALUE,bplcon2(a5)
-	* AGA-compatible ECS default values
-	*move.w	#0x32,bplcon4(a5)	| odd sprites palette start at color 48, even at 32
-	move.w	#0x22,bplcon4(a5)	| sprites palette start at color 32, keep coupling for now
-    move.w #0x1,fmode(a5)
-    move.w #0x0038,ddfstrt(a5)
-    move.w #0x00B0,ddfstop(a5)
 
-	move.w	#0,bplcon1(a5)
-    move.w #(BG_NB_BYTES_PER_ROW-36),bpl1mod(a5)
-    move.w #4,bpl2mod(a5)
+	move.l	chiprevbits,d0
+	and.l	#SETCHIPREV_AA,d0
+	cmp.l	#SETCHIPREV_AA,d0
+	bne.b	0f
+        move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank	
+	* check one of the variables, see if fastmem is used
+	lea		chiprevbits(pc),a0
+	cmp.l	#0x200000,a0
+	* AGA & fastmem
+	scc.b	update_at_50Hz		| enable 50 Hz if fastmem
+	* AGA: enable fast bitplane fetch
+	* (A1200/nofast is not powerful enough for 50Hz)		
+	* AGA-compatible ECS default values
+    move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
+    move.w #3,fmode(a5)
+    move.w #0x0030,ddfstrt(a5)
+    move.w #0x00C8,ddfstop(a5)
+	move.w	#-8,d0
+	bra.b	1f
+0:
+	* OCS/ECS
+	and.l	#SETCHIPREV_ECS,d0
+	cmp.l	#SETCHIPREV_ECS,d0
+	bne.b	0f
+	* ECS
+    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS, borderblank	
+0:
+    move.w #0x0038,ddfstrt(a5)
+    move.w #0x00D0,ddfstop(a5)
+    move.w #0,fmode(a5)			
+	move.w	#0,d0
+1:
+    move.w #0,bplcon1(a5)
+    move.w d0,bpl1mod(a5)
+    move.w d0,bpl2mod(a5)
 
 	* set sprite registers in copperlist for the upper part
 	lea		sprites_upper_part,a0
@@ -2744,7 +2694,7 @@ platform_init:
 	.endif
 	
 	
-	bsr		set_fg_bitplanes
+	bsr		set_bitplanes
 	
 	bsr		load_palette_in_copperlist
 	
@@ -2765,9 +2715,7 @@ platform_init:
     * init sprite, bitplane, whatever dma
 
     move.w #0x83E0,dmacon(a5)
- 
-	* blit the blue mountain strip now, it's not going to change
-	jbsr	blit_blue_mountain_strip
+    *move.w #0x20,dmacon(a5)
 
 	* install keyboard and vblank/copper handler
 	pea		level2_interrupt(pc)
@@ -2775,6 +2723,8 @@ platform_init:
 	move.l	(a7)+,(0x68,a1)
 	pea		_vblank(pc)
 	move.l	(a7)+,(0x6C,a1)
+	pea		_mid_screen_interrupt(pc)
+	move.l	(a7)+,(0x64,a1)
 	pea		_nmi(pc)
 	move.l	(a7)+,(0x7C,a1)
 
@@ -2808,19 +2758,54 @@ load_palette_in_copperlist:
 	move.w	#TOTAL_NB_COLORS,d0
 	lea		panel_tiles_colors,a1
 	bsr		load_palette
-
+	movem.l	(a7)+,d0-d1/a0-a1
+	* pass through
+load_bobs_palette_in_playfield_copperlist:
+	movem.l	d0-d1/a0-a1,-(a7)
 	move.w	#TOTAL_NB_COLORS,d0
 	lea		bobs_palette(pc),a0
 	lea		playfield_colors,a1
 	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
 	
+**	bsr		load_moonbase_palette	| TEMP
 	
 	rts
 	
 
+* moonbase is shown: set tiles palette low enough so it doesn't
+* interfere with mountains. Jeep is a sprite so it's not affected, and
+* no other bob is shown at this point. We keep being lucky :)
 
+load_moonbase_palette:
+	movem.l	d0-d1/a0-a1,-(a7)
+	move.w	#TOTAL_NB_COLORS-1,d0
+	lea		tiles_palette+2(pc),a0
+	lea		moonbase_colors,a1
+	bsr		load_palette
+	movem.l	(a7)+,d0-d1/a0-a1
+	rts
 	
+* moonbase isn't shown anymore: reset colors to bob palette
+reset_moonbase_palette:
+	movem.l	d0-d1/a0-a1,-(a7)
+	move.w	#TOTAL_NB_COLORS-1,d0
+	lea		bobs_palette+2(pc),a0
+	lea		moonbase_colors,a1
+	bsr		load_palette
+	movem.l	(a7)+,d0-d1/a0-a1
+	rts
+
+* when playfield isn't displayed, better use tiles palette
+* will save a lot of headaches trying to match bob & tiles palette
+load_tiles_palette_in_playfield_copperlist:
+	movem.l	d0-d1/a0-a1,-(a7)
+	move.w	#TOTAL_NB_COLORS,d0
+	lea		tiles_palette(pc),a0
+	lea		playfield_colors,a1
+	bsr		load_palette
+	movem.l	(a7)+,d0-d1/a0-a1
+	rts
 
 * < A0: palette
 * < A1: copperlist
@@ -3003,7 +2988,6 @@ update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 	and.w	#0xFF,d1	| mask up to 255
 
-
 	.ifne	OPT_ENABLE_LOGGING
 	* when logging is enabled, play a while
 	* and break. Get the address in 0x100 then do
@@ -3036,8 +3020,6 @@ update_bg_tile:
 	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y (tile)
 	
-	
-
 	tst		d0
 	bne.b	112f
 	cmp.w	#PLAYFIELD_TILE_Y_MIN,d3	
@@ -3047,44 +3029,67 @@ update_bg_tile:
 	tst		d0
 	bne.b	112f
 	cmp.b	#1,d1
-	bne.b	1112f
-	clr.b	d1
-	bra.b	112f
-1112:
+	seq		d1
+	jeq		112f
 	cmp.b	#0xC,d1
-	bne.b	112f
-	clr.b	d1
+	seq		d1
 112:
 
 	move.w	d7,d6
-	
 	and.w	#0x1F,d7	| this is X (tile)
 	addq.w	#2,d7
 
-	lea		mulBG_NB_BYTES_PER_ROW_table(pc),a0
+	lea		mulNB_BYTES_PER_ROW_table(pc),a0
 
-	moveq	#NB_PLAYFIELD_PLANES-1,d4		| 4 bitplanes for all layers
-	cmp.w	#SCROLL_MIN_Y/8,d3
-	bcc		update_ground_strip_character
-	
-* right now not necessary as bitplanes written by CPU & blitter don't collide
-*	cmp.w	#PANEL_MAX_Y/8,d3
-*	bcs.b	23f
-*	* always wait for blitter operation before writing to chip with CPU
-*	WAIT_BLIT
-*23:
+	moveq	#NB_PLAYFIELD_PLANES-1,d4		| 4 bitplanes for the panel
+	cmp.w	#PANEL_MAX_Y/8,d3
+	bcs.b	23f
+	* always wait for blitter operation before writing to chip with CPU
+	WAIT_BLIT
+23:
+	* do special stuff for tiles that go into scrollable strip
+	cmp.w	#0x100,d0
+	bcc.b	230f
+	cmp.w	#0x68,d0
+	jcc	update_scrollable_bottom
 
-	move.l	#BG_SCREEN_PLANE_SIZE,d5
+	* for 0 char we have to decide according to Y tile
+	tst.b	d0
+	bne.b	230f
+	cmp.w	#SCROLLABLE_TILE_Y_START,d3
+	bcc		update_scrollable_bottom
+230:
+	* ignore checkpoint letters, pity
+	cmp.w	#0x3DE,d6
+	beq.b	231f
+	cmp.w	#0x3DF,d6
+	bne.b	24f
+231:
+	* this is where the game writes the checkpoint letters in the
+	* scrollable strip. We're just drawing one plane, so we cannot
+	* display that properly: make a special case
+	cmp.w	#0x41,d0		| A
+	bcs.b	24f
+	cmp.w	#0x5a+1,d0		| Z
+	jcs	render_letter_checkpoint
+24:
+	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
-	move.l	bg_panel_screen_ptr(pc),a1
+	move.l	bg_drawed_screen_ptr(pc),a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	move.l	bg_displayed_screen_ptr(pc),a2
+	.endif
 	
 	* D3 = Y
 
-	move.w	(a0,d3.w*2),d6
-	lsl.w	#3,d6		| times 8
-	add.w	d6,a1		| add Y offset
-	add.w	d7,a1		| add X offset
-
+	add.w	d3,d3
+	move.w	(a0,d3.w),d3
+	lsl.w	#3,d3		| times 8
+	add.w	d3,d7
+	add.w	d7,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d7,a2
+	.endif
 
 	* optimization when a well-known
 	* empty character is passed (standard charset)
@@ -3098,19 +3103,17 @@ update_bg_tile:
 	move.b	d0,d2		| store character
 
 	lea		character_table,a0
-
-	move.l	(a0,d0.w*4),d0
+	add.w	d0,d0
+	add.w	d0,d0
+	move.l	(a0,d0.w),d0
 	jeq	2f
 	move.l	d0,a0		| pointer on clut table
 	* now we use d1 (attribute)
-	add.w	(a0,d1.w*2),a0
+	add.w	d1,d1
+	add.w	(a0,d1.w),a0
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
-	* TODO: we have to copy the shot on the FRONT layer, not back
-	* (as it would be hidden by the green mountains / lost in the blue
-	* mountains)
-	*
 	* special case for vertical shots. We managed to put the color in the 4th
 	* plane so it doesn't interact with the mountain background which only use 3
 	* the color change a bit and it's yellow instead of white but it's already
@@ -3124,15 +3127,26 @@ update_bg_tile:
 4:
 	.set	offset,0
 	.rept	8
+	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
 	move.b	(a0)+,(offset,a1)
+	.else
+	move.b	(a0)+,d0
+	move.b	d0,(offset,a1)
+	move.b	d0,(offset,a2)
+	.endif
 
-	.set	offset,offset+BG_NB_BYTES_PER_ROW
+	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
-	add.l	d5,a1
+	add.w	d5,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+	.endif
 	dbf		d4,4b
 0:
 	rts
 
+
+	
 	* clear tile
 
 11:
@@ -3144,9 +3158,15 @@ update_bg_tile:
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
-	.set	offset,offset+BG_NB_BYTES_PER_ROW
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	clr.b	(offset,a2)
+	.endif
+	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+	.endif
 	dbf		d4,111b
 2:
 	rts
@@ -3157,19 +3177,27 @@ update_bg_tile:
 	rts
 
 copy_third_plane:
-	bsr		load_3rd_fg_bitplane
-
 	.set	offset,0
+	move.w	d5,d0
+	add.w	d5,d5
+	add.w	d0,d5
+	add.w	d5,a1		| add D5 3 times
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+
+	.endif
 	addq	#8,a0		| non-zero shot bitplane (first bitplane is empty)
 	.set	offset,0
 	.rept	8
-	move.b	(a0),d0
+	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
+	move.b	(a0)+,(offset,a1)
+	.else
+	move.b	(a0)+,d0
 	move.b	d0,(offset,a1)
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	move.b	d0,(offset,a2)
 	.endif
 
-	.set	offset,offset+FG_NB_BYTES_PER_ROW
+	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 
 
@@ -3177,121 +3205,146 @@ copy_third_plane:
 	rts
 	
 erase_third_plane:
-	bsr		load_3rd_fg_bitplane
 	.set	offset,0
+	add.w	d5,a1
+	add.w	d5,a1
+	add.w	d5,a1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
+	add.w	d5,a2
+	add.w	d5,a2
+	.endif
 	.rept	8
 	clr.b	(offset,a1)
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	clr.b	(offset,a2)
 	.endif
-	.set	offset,offset+FG_NB_BYTES_PER_ROW
+	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 
 	rts
 
-load_3rd_fg_bitplane:
-	lea		mulFG_NB_BYTES_PER_ROW_table(pc),a3
-	
-	
-	move.l	fg_drawed_screen_ptr(pc),a1
-	move.l	#FG_SCREEN_PLANE_SIZE*3,d5
-	add.w	d5,a1		| add D5 3 times
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
-	move.l	fg_displayed_screen_ptr(pc),a2
-	add.w	d5,a2
-	.endif
-	
-	* D3 = Y
-
-	move.w	(a3,d3.w*2),d6
-	lsl.w	#3,d6		| times 8
-	add.w	d6,d7
-	add.w	d7,a1
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
-	add.w	d7,a2
-	.endif
+* called for 83DF address with 'A' <= D0 <= 'Z'
+render_letter_checkpoint:
 	rts
 	
-* ground strip, lots of copy paste here...
+	lea		character_table,a0
+	add.w	d0,d0
+	add.w	d0,d0
+	move.l	(a0,d0.w),d0
+	move.l	d0,a0		| pointer on clut table
+	* now we use d1 (attribute)
+	add.w	d1,d1
+	add.w	(a0,d1.w),a0
+	lea		scroll_letter_buffer,a1
+	
+	move.w	#NB_PLAYFIELD_PLANES-1,d4
+4:
+	.rept	8
+	move.b	(a0)+,(a1)
+	addq.w	#4,a1		| next row
+	.endr
+	dbf		d4,4b
+0:
+	
+	rts
+	
+latest_overwritten_tile_code:
+	dc.w	0
 
-update_ground_strip_character:
-	move.l	#BG_SCREEN_PLANE_SIZE,d5
-	
-	move.l	bg_base_ground_screen_ptr(pc),a1
-	
+
+update_scrollable_bottom:
+	lea		mulNB_BYTES_PER_SCROLLABLE_STRIP_ROW_table(pc),a0
+	lea		bg_scrollable_strip,a1		| backbuffer
 	* D3 = Y
-	sub.w	#SCROLL_MIN_Y/8,d3
+	move.w	#SCROLLABLE_PLANE_SIZE,d5
 
-	move.w	(a0,d3.w*2),d3
+	* recenter on 0
+	sub.w	#SCROLLABLE_TILE_Y_START,d3
+	add.w	d3,d3
+	move.w	(a0,d3.w),d3
 	lsl.w	#3,d3		| times 8
 	add.w	d3,a1
 	add.w	d7,a1
 
-
-	* optimization when a well-known
-	* empty character is passed (standard charset)
 	tst.b	d1
 	bne.b	23f
 	tst.w	d0	| empty character
 	jeq	11f
-	cmp.w	#0x20,d0
-	jeq	11f		| space
 23:
-	move.b	d0,d2		| store character
-
+	* optimization when a well-known
+	* uniform character is passed (standard charset)
+	*cmp.b	#0xF3,d0	| uniform ground
+	
+	
 	lea		character_table,a0
-
-	move.l	(a0,d0.w*4),d0
+	add.w	d0,d0
+	add.w	d0,d0
+	move.l	(a0,d0.w),d0
 	jeq	2f
 	move.l	d0,a0		| pointer on clut table
 	* now we use d1 (attribute)
-	add.w	(a0,d1.w*2),a0
+	add.w	d1,d1
+	add.w	(a0,d1.w),a0
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
+	* skip empty data/one bitplane for ground strip (first 3 ones)
+	add.w	#8*3,a0
 	
-	* just copy
 4:
+	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
+	bcc		42f		| single copy, never wraps that high
 	.set	offset,0
 	.rept	8
 	move.b	(a0)+,d0
-	move.b	d0,(offset,a1)
-	cmp.w	#32,d7
-	bcc.b	6f
-	move.b	d0,(offset+32,a1)
-6:
-	.set	offset,offset+BG_NB_BYTES_PER_ROW
+	move.b	d0,(offset,a1)	
+	move.b	d0,(offset+32,a1)		| mirror
+	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
 	.endr
-	add.l	d5,a1
-	dbf		d4,4b
+
 0:
 	rts
+42:
+	.set	offset,0
+	.rept	8
+	move.b	(a0)+,(offset,a1)	
+	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
+	.endr
 
-	* clear tile
+	rts
 
+* clear tile(s)
 11:
+	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
+	bcc		112f		| single clear
+	* mirror
 111:
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
-	cmp.w	#32,d7
-	bcc.b	6f
 	clr.b	(offset+32,a1)
-6:
-	.set	offset,offset+BG_NB_BYTES_PER_ROW
+	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
 	.endr
 	add.w	d5,a1
 	dbf		d4,111b
 2:
 	rts
-
+	* no mirror
+112:
+	.set	offset,0
+	.rept	8
+	clr.b	(offset,a1)
+	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
+	.endr
+	add.w	d5,a1
+	dbf		d4,12b
+	rts
+	
 12:
 	* clut/tile combo not declared as used
 	**blitz
 	rts
-latest_overwritten_tile_code:
-	dc.w	0
-
 			
 store_sprite_pos_16:
 	move.l	a1,-(a7)
@@ -3355,93 +3408,8 @@ HW_SpriteYTable_\height:
 	DEF_HW_SPRITE_Y_TABLE	32
 
 
-* done once at start
-set_panel_bitplanes:
-	movem.l	a0/a1,-(a7)
-    move.l	bg_panel_screen_ptr(pc),a1
-	lea	panel_bitplanes+2,a0
-	bsr		set_bg_bitplanes
-	movem.l	(a7)+,a0/a1
-	rts
-	
-set_mountain_bitplanes:
-	movem.l	d0-d2/a0/a1,-(a7)
-	* share the buffer between the panel and background
-	* only the background gets a pointer refresh
-	* we also re-set the bitplanes as they may be cleared by 
-	* "clear_background"
-	lea	blue_mountains_bitplanes,a0
-	move.w	#NB_PLAYFIELD_PLANES-1,d1
-	move.w	#bplpt,d0
-0:
-	move.w	d0,(a0)
-	addq	#2,d0
-	addq.w	#4,a0
-	move.w	d0,(a0)
-	addq	#6,d0
-	addq.w	#4,a0
-	dbf		d1,0b
-	
-	move.l	bg_mountain_screen_ptr(pc),a1
-	lea	blue_mountains_bitplanes+2,a0
-	move.l	a1,d0
- 	move.l	#BG_SCREEN_PLANE_SIZE,d2
 
-	* set 2 planes
-	.rept	2
-    swap d0
-    move.w d0,(a0)
-    swap d0
-    move.w d0,(4,a0)    
-    addq.w  #8,a0
-    add.l d2,d0
-	.endr
-	* set same empty plane
-	.rept	2
-    swap d0
-    move.w d0,(a0)
-    swap d0
-    move.w d0,(4,a0)    
-    addq.w  #8,a0
-	.endr
-
-
-	movem.l	(a7)+,d0-d2/a0/a1
-	rts
-	
-set_ground_bitplanes:
-	movem.l	a0/a1,-(a7)
-	* share the buffer between the panel and background
-	* only the background gets a pointer refresh
-	move.l	bg_ground_screen_ptr(pc),a1
-	
-	lea	ground_bitplanes+2,a0
-	bsr		set_bg_bitplanes
-	movem.l	(a7)+,a0/a1
-	rts
-	
-* set_bg_bitplanes
-* what: sets bitplanes in copperlist
-* < A0: copperlist pointer on first bitplane nibble
-* < A1: first bg plane address
-
-set_bg_bitplanes:
-	movem.l	d0-d2,-(a7)
-    moveq #NB_PLAYFIELD_PLANES-1,d1
-	move.l	a1,d0
- 	move.l	#BG_SCREEN_PLANE_SIZE,d2
-1:
-    swap d0
-    move.w d0,(a0)
-    swap d0
-    move.w d0,(4,a0)    
-    addq.w  #8,a0
-    add.l d2,d0
-    dbf d1,1b
-	movem.l	(a7)+,d0-d2
-    rts
-
-* set_fg_bitplanes
+* set_bitplanes
 * what: sets bitplanes in copperlist
 * sets 6 bitplanes at start even if only 4 are used in the panel
 * or it will just be big headaches to compute...
@@ -3449,13 +3417,13 @@ set_bg_bitplanes:
 * in the first 48 lines but we're talking about 48*40*2 = 3840 bytes...
 * maybe we can use that memory for something at some point.
 
-set_fg_bitplanes:
-    move.l	fg_displayed_screen_ptr(pc),a0
+set_bitplanes:
+    move.l	bg_displayed_screen_ptr(pc),a0
     moveq #4-1,d1
 	move.l	a0,d0
-    lea	bobs_bitplanes+2,a0
+    lea	panel_bitplanes+2,a0
 	moveq	#0,d2
-	move.w	#FG_SCREEN_PLANE_SIZE,d2
+	move.w	#BG_SCREEN_PLANE_SIZE,d2
 1:
     swap d0
     move.w d0,(a0)
@@ -3514,7 +3482,6 @@ osd_r_videoram:
 2:
 	movem.l	(a7)+,a0/d7
 	rts
-
 
 	
 osd_read_in_2:
@@ -3849,17 +3816,48 @@ handle_keyboard:
 	movem.l	(a7)+,d0/a0/a5
 	rts
 	
-reset_colors_and_scrolling:
-	* reset scrolling to default: max
-	move.w	#DEFAULT_SCROLL_VALUE,blue_mountains_scroll_value
-	move.w	#DEFAULT_SCROLL_VALUE,ground_strip_scroll_value
-	move.w	#0,blue_mountain_filler
-	move.w	#0,upper_green_mountain_filler
-	move.w	#0,lower_green_mountain_filler
-	* also reset position for ground (no need for mountain)
-	move.l	bg_base_ground_screen_ptr,bg_ground_screen_ptr
-	bsr		set_ground_bitplanes	
+* reset all 3 slots for each line
+reset_dynamic_colors:
+	
+	movem.l	a0/d2-d4,-(a7)
+	lea	color_line_copper,a0
+	moveq	#1,d4
+	move.w	#0x1FE,d2
+0:
+	move.w	#HALF_DYNAMIC_COPPER_ROWS-1,d3
+1:
+	move.w	d2,(a0)
+	addq.w	#4,a0
+	move.w	d2,(a0)
+	addq.w	#4,a0
+	move.w	d2,(a0)
+	addq.w	#8,a0
+	dbf		d3,1b
+	* skip lower sprite part
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,a0
+	dbf		d4,0b
+	movem.l	(a7)+,a0/d2-d4
 	rts
+
+* only reset first slot (the one for the mountains/city colors)
+reset_background_dynamic_colors:
+	
+	movem.l	a0/d2-d4,-(a7)
+	lea	color_line_copper,a0
+	moveq	#1,d4
+	move.w	#0x01FE,d2
+0:
+	move.w	#HALF_DYNAMIC_COPPER_ROWS-1,d3
+1:
+	move.w	d2,(a0)
+	add.w	#16,a0
+	dbf		d3,1b
+	* skip lower sprite part
+	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,a0
+	dbf		d4,0b
+	movem.l	(a7)+,a0/d2-d4
+	rts
+
 
 toggle_pause:
 	* pause only within game
@@ -3884,9 +3882,11 @@ beamdelay:
 	dbf	d0,0b
 	rts
 
+height_to_skip_table:
+	.byte	24,24,24,24,16,8,0,0
 	
-	MUL_TABLE	FG_NB_BYTES_PER_ROW,256
-	MUL_TABLE	BG_NB_BYTES_PER_ROW,256
+	MUL_TABLE	NB_BYTES_PER_ROW,256
+	MUL_TABLE	NB_BYTES_PER_SCROLLABLE_STRIP_ROW,256
 
 	.align	4		| leave this long word alignment
 program_args:	ds.l	64,0
@@ -3974,7 +3974,12 @@ do_upper_part:
 	.byte	0
 background_cleared_flag:
 	.byte	0
-
+no_green_layer_flag:
+	.byte	0
+no_blue_layer_flag:
+	.byte	0
+update_at_50Hz:
+	.byte	0
 	.align	2
 system_vbr:
 	.long	0
@@ -4029,26 +4034,16 @@ delay_timer:
 	.word	0
 one_out_of_five:
 	.word	0
-fg_screen_data_1:
+bg_screen_data_1:
 	.long	0
-fg_screen_data_2:
+bg_screen_data_2:
 	.long	0
 	
 upper_sprite_buffers:
 	ds.l	8			| 8 pointers to 8 upper sprite end control words
-bg_panel_screen_ptr:
+bg_drawed_screen_ptr:
 	.long	0
-bg_base_mountain_screen_ptr:
-	.long	0
-bg_mountain_screen_ptr:
-	.long	0
-bg_base_ground_screen_ptr:
-	.long	0
-bg_ground_screen_ptr:
-	.long	0
-fg_drawed_screen_ptr:
-	.long	0
-fg_displayed_screen_ptr:
+bg_displayed_screen_ptr:
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	.long	0
 	.else
@@ -4058,28 +4053,24 @@ fg_displayed_screen_ptr:
 
 	.include	"sound_entries.68k"
 
-blue_y_end:
+descending_slope_delay:
 	.word	0
 green_y_end:
 	.word	0
-green_height:
+blue_y_end:
 	.word	0
 _keyexit:
 	.byte	0x45	| ESC by default unless whdload overwrites it
 
 
-
-sprite_y_split_limit:
+dynamic_color_mode:
 	.byte	0
-	
 cheat_used:
 	.byte	0
 dosname:
-	.ascii	"dos.library"
-	.byte	0
+	.asciz	"dos.library"
 graphicsname:
-	.ascii	"graphics.library"
-	.byte	0
+	.asciz	"graphics.library"
 normal_hiscorename:
 	.asciz	"mpatrol.high"
 floppy_file:
@@ -4127,19 +4118,15 @@ tile_log_table:
 
 	.section	.datachip
 	
-.macro	DECL_EVEN_BITPLANES	bpoff_start,nb_planes
+.macro	DECL_BITPLANES	bpoff_start,nb_planes
 	.set	bpoff,\bpoff_start
 	.rept	\nb_planes
-	dc.w  bplpt+bpoff,0
-	dc.w  bplpt+bpoff+2,0
-	.set	bpoff,bpoff+8
+	dc.w  0xe0+bpoff,0
+	dc.w  0xe2+bpoff,0
+	.set	bpoff,bpoff+4
 	.endr
 	.endm
 
-.macro	DECL_COLOR_BANK	bankno
-	.word	bplcon3,BASE_BPLCON3_VALUE+(\bankno<<13)
-	.endm
-	
 .macro	DECL_COLORS	offset,nb_colors
 	.set	colidx,\offset
 	.rept	\nb_colors
@@ -4170,105 +4157,80 @@ blank_sprite_0:
 	.long	0
 	.endr
 	
-color_line_copper:
+	* right after that, we leave room to be able to set palette to tiles palette again
+	* (for moon base at start only)
+moonbase_colors:
+	DECL_COLORS	1,TOTAL_NB_COLORS-1	| 15 colors, no bg color change
 
 
 	* main copperlist, get some aspirin!!
 copperlist:
     *.word   0x1801,0xFFFE
-	* reset scrolling to default (panel)
-	.word	bplcon1,DEFAULT_SCROLL_VALUE
+
 
 panel_bitplanes:
-	DECL_EVEN_BITPLANES	0,4
-bobs_bitplanes:
-	DECL_EVEN_BITPLANES	4,4
-	* default color bank
-	DECL_COLOR_BANK	0
+	DECL_BITPLANES	0,4
 panel_tiles_colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
 
-	* sprites color bank
-	DECL_COLOR_BANK	1
-	* define upper sprites here, as sometimes ships can
-	* go wander in the panel area
+sprites_upper_cols:
+	DECL_COLORS	16,16
 sprites_upper_part:
 	DECL_SPRITES
-	* default color bank again
-	DECL_COLOR_BANK	0
+
+
 
 	* wait until line 48, just after the status panel is displayed
 	* to change palette
  	.set    beampos,0x5401
     .word  beampos,0xFFFE
 
-	
 playfield_colors:
-	DECL_COLORS	16,TOTAL_NB_COLORS
-	* now set color bank 1
-	DECL_COLOR_BANK	1
-sprites_upper_cols:
-	DECL_COLORS	0,16
-	DECL_COLOR_BANK	0
-
-* wait before setting mountains planes
-blue_mountains_start_copper_wait:
-	.word	0x0001
-	.word	0xFFFE
+	DECL_COLORS	0,TOTAL_NB_COLORS
 
 
-* and mountain colors...
-mountain_colors:
-	.word	color+2,DARK_BLUE_MOUNTAIN_COLOR
-	.word	color+6,LIGHT_BLUE_MOUNTAIN_COLOR
+	* now use the dynamic color changing technique to make up for the sudden
+	* loss of 8 (24 if we were considering using 32) colors thanks to cheap
+	* Commodore design unable to reproduce a 1982 game easily :)
+	* AGA could do this game in a breeze but with ECS we need to use our
+	* imagination...
 	
-	.word	bplcon1
-blue_mountains_scroll_value:
-	.word	0
-blue_mountains_bitplanes:
-	DECL_EVEN_BITPLANES	0,4
-	* insert the multiplexed sprites somewhere in the middle of
-	* the blue mountain outline. At start it's too early, 
-	* and in the end it could be too late
-blue_mountains_mid_copper_wait:
-	.word	0x0001
-	.word	0xFFFE
-	* multiplexed sprites
+	
+color_line_copper:
+	.rept	HALF_DYNAMIC_COPPER_ROWS
+	* room for 3 color registers to change dynamically each line
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.set    beampos,beampos+0x100
+	.word	beampos,0xFFFE
+	.endr
+	* multiplexed sprites + mid-screen interrupt (disabled ATM
+	* as it crashes the machine when calling mpatrol_irq from it...)
+	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
+	*.word	intreq
+	*.word	0x8004
+	.word	0x1FE,0
+sprites_lower_cols:
+	DECL_COLORS	16,16
 sprites_lower_part:
 	DECL_SPRITES
-	DECL_COLOR_BANK	1
-sprites_lower_cols:
-	DECL_COLORS	0,16
-	DECL_COLOR_BANK	0		| back to bank	0
-
-	* now wait some lines until we're sure bitmap only contains
-	* non-black: we can set color 0 to light blue now
-blue_mountains_end_copper_wait:
-	.word	0x0001
-	.word	0xFFFE
-	.word	color
-blue_mountain_filler:
-	.word	LIGHT_BLUE_MOUNTAIN_COLOR
-upper_green_mountain_end_copper_wait:
-	.word	0xD401
-	.word	0xFFFE
-	.word	color
-upper_green_mountain_filler:
-	.word	LIGHT_GREEN_MOUNTAIN_COLOR
+	.else
+	* reserve room
+	.rept	33
+	.word	0x1FE,0
+	.endr
+	.endif
 	
-	* fixed wait to trigger ground scroll part
-	.word	0xDB01,0xFFFE
-	.word	bplcon1
-ground_strip_scroll_value:
-	.word	0
-ground_bitplanes:
-	DECL_EVEN_BITPLANES	0,4
-lower_green_mountain_end_copper_wait:
-	.word	0xE001
-	.word	0xFFFE
-	.word	color
-lower_green_mountain_filler:
-	.word	LIGHT_GREEN_MOUNTAIN_COLOR
+	* rest of the color line copper stuff. Code knows that it must skip the sprites_lower_part sprite table
+	.rept	HALF_DYNAMIC_COPPER_ROWS
+	* room for 3 color registers to change dynamically each line
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.word	0x1FE,0
+	.set    beampos,beampos+0x100
+	.word	beampos,0xFFFE
+	.endr
 
 	* then we should wait a bit, and set palette to tiles palette definitely
 	* so scrolling letters have the proper colors TODO
@@ -4300,24 +4262,25 @@ post_pal_copper_rows:
 	* in the next datachip sections
 	.align	8
 	
-		.section .bsschip
-bg_screen_buffer:
-	.skip	BG_SCREEN_SIZE		| too big
-	.skip	8
-blue_mountain_buffer:
-	.skip	BG_SCREEN_PLANE_SIZE*3
-	.skip	8
-
-fg_screen_buffer_1:
-	.skip	FG_SCREEN_SIZE
-	.skip	FG_NB_BYTES_PER_ROW*12*3
+	.section .bsschip
+scroll_letter_buffer:
+	.skip	4*8*NB_PLAYFIELD_PLANES
+	
+bg_screen_buffer_1:
+	.skip	BG_SCREEN_SIZE
+	.skip	NB_BYTES_PER_ROW*12*3
 	.skip	8
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
-fg_screen_buffer_2:
-	.skip	FG_SCREEN_SIZE
-	.skip	FG_NB_BYTES_PER_ROW*12*3
+bg_screen_buffer_2:
+	.skip	BG_SCREEN_SIZE
+	.skip	NB_BYTES_PER_ROW*12*3
 	.skip	8
 	.endif
-
+	* draw the rows 24->31 in a buffer to be able
+	* to blit it with scroll effect afterwards
+	* double the buffer as we need to emulate revolving scroll
+bg_scrollable_strip:
+	ds.b	SCROLLABLE_PLANE_SIZE
+	.align	8
 
 		

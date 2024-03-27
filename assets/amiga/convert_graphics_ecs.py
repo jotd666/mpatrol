@@ -11,6 +11,7 @@ transparent = (60,100,200)  # whatever is not a used RGB is ok
 
 this_dir = os.path.dirname(__file__)
 src_dir = os.path.join(this_dir,"../../src/ecs")
+ocs_src_dir = os.path.join(this_dir,"../../src/ocs")
 dump_dir = os.path.join(this_dir,"dumps/ecs")
 dump_tiles_dir = os.path.join(dump_dir,"tiles")
 dump_palettes_dir = os.path.join(dump_dir,"palettes")
@@ -321,26 +322,29 @@ if dump_palettes:
 
 
 # dump cluts as RGB4 for sprites
-with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:
-    for clut in sprite_cluts:
-        rgb4 = [bitplanelib.to_rgb4_color(x) for x in clut]
-        bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
 
 
+rock_color = bitplanelib.to_rgb4_color(brown_rock_color)
+plant_color = bitplanelib.to_rgb4_color(dark_green_color)
+rock_color_index = bob_global_palette.index(blue_dark_mountain_color)
+plant_color_index = bob_global_palette.index(red_color)
 
-with open(os.path.join(src_dir,"tiles_palette.68k"),"w") as f:
-    bitplanelib.palette_dump(tile_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
-with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
-    bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
+for sd in [src_dir,ocs_src_dir]:
+    with open(os.path.join(sd,"palette_cluts.68k"),"w") as f:
+        for clut in sprite_cluts:
+            rgb4 = [bitplanelib.to_rgb4_color(x) for x in clut]
+            bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
 
-    rock_color = bitplanelib.to_rgb4_color(brown_rock_color)
-    plant_color = bitplanelib.to_rgb4_color(dark_green_color)
-    rock_color_index = bob_global_palette.index(blue_dark_mountain_color)
-    plant_color_index = bob_global_palette.index(red_color)
-    f.write("rock_color:\n\t.word\t0x{:x}\n".format(rock_color))
-    f.write("rock_color_register:\n\t.word\t0x180+{}\n".format(rock_color_index*2))
-    f.write("plant_color:\n\t.word\t0x{:x}\n".format(plant_color))
-    f.write("plant_color_register:\n\t.word\t0x180+{}\n".format(plant_color_index*2))
+    with open(os.path.join(sd,"bobs_palette.68k"),"w") as f:
+        bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
+    with open(os.path.join(sd,"tiles_palette.68k"),"w") as f:
+        bitplanelib.palette_dump(tile_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
+
+        f.write("rock_color:\n\t.word\t0x{:x}\n".format(rock_color))
+        f.write("rock_color_register:\n\t.word\t0x180+{}\n".format(rock_color_index*2))
+        f.write("plant_color:\n\t.word\t0x{:x}\n".format(plant_color))
+        f.write("plant_color_register:\n\t.word\t0x180+{}\n".format(plant_color_index*2))
+
 character_codes_list = []
 
 used_cluts = shared.get_used_tile_cluts()
@@ -540,232 +544,233 @@ cropped = replace_color(cropped,(255, 33, 0),(193,0,0))
 
 title_bitmap = bitplanelib.palette_image2raw(cropped,None,bob_global_palette,forced_nb_planes=4,generate_mask=True)
 
-with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
-    f.write("\t.global\tcharacter_table\n")
-    f.write("\t.global\tsprite_table\n")
-    f.write("\t.global\tbob_table\n")
-    f.write("\t.global\tblue_mountains\n")
-    f.write("\t.global\tgreen_mountains\n")
-    #f.write("\t.global\tgreen_city\n")
-    f.write("\t.global\ttitle_bitmap\n")
-    f.write("\t.global\thardware_sprite_flag_table\n")
+with open(os.path.join(src_dir,"graphics.68k"),"w") as f_ecs, open(os.path.join(ocs_src_dir,"graphics.68k"),"w") as f_ocs:
+    f_ecs.write("\t.global\tblue_mountains\n")
+    for f in f_ecs,f_ocs:
+        f.write("\t.global\tcharacter_table\n")
+        f.write("\t.global\tsprite_table\n")
+        f.write("\t.global\tbob_table\n")
+        f.write("\t.global\tgreen_mountains\n")
+        #f.write("\t.global\tgreen_city\n")
+        f.write("\t.global\ttitle_bitmap\n")
+        f.write("\t.global\thardware_sprite_flag_table\n")
 
 
-    hw_sprite_flag = [0]*256
-    for k,v in sprite_config.items():
-        sprite_type = v["is_sprite"]
-        if sprite_type:
-            hw_sprite_flag[k] = 1+v.get("bob_backup",0)
+        hw_sprite_flag = [0]*256
+        for k,v in sprite_config.items():
+            sprite_type = v["is_sprite"]
+            if sprite_type:
+                hw_sprite_flag[k] = 1+v.get("bob_backup",0)
 
 
-    f.write("\nhardware_sprite_flag_table:")
-    bitplanelib.dump_asm_bytes(hw_sprite_flag,f,mit_format=True)
+        f.write("\nhardware_sprite_flag_table:")
+        bitplanelib.dump_asm_bytes(hw_sprite_flag,f,mit_format=True)
 
-    f.write("character_table:\n")
-    for i,c in enumerate(character_codes_list):
-        # c is the list of the same character with 11 different cluts
-        if c is not None:
-            f.write(f"\t.long\tchar_{i}\n")
-        else:
-            f.write("\t.long\t0\n")
-    for i,c in enumerate(character_codes_list):
-        if c is not None:
-            f.write(f"char_{i}:\n")
-            # this is a table
-            for j,cc in enumerate(c):
-                if cc is None:
-                    f.write(f"\t.word\t0\n")
-                else:
-                    f.write(f"\t.word\tchar_{i}_{j}-char_{i}\n")
-
-            for j,cc in enumerate(c):
-                if cc is not None:
-                    f.write(f"char_{i}_{j}:")
-                    bitplanelib.dump_asm_bytes(cc,f,mit_format=True)
-
-    f.write("sprite_table:\n")
-
-    sprite_names = [None]*NB_POSSIBLE_SPRITES
-    for i in range(NB_POSSIBLE_SPRITES):
-        sprite = sprites.get(i)
-        f.write("\t.long\t")
-        if sprite:
-            if sprite == True:
-                f.write("-1,-1,-1,-1")  # not displayed but legal
+        f.write("character_table:\n")
+        for i,c in enumerate(character_codes_list):
+            # c is the list of the same character with 11 different cluts
+            if c is not None:
+                f.write(f"\t.long\tchar_{i}\n")
             else:
-                if sprite["is_sprite"]:
-                    name = sprite['name']
-                    sprite_names[i] = name
-                    f.write(name+"_left,")
-                    if sprite["mirror"]:
-                        f.write(name+"_right,")
+                f.write("\t.long\t0\n")
+        for i,c in enumerate(character_codes_list):
+            if c is not None:
+                f.write(f"char_{i}:\n")
+                # this is a table
+                for j,cc in enumerate(c):
+                    if cc is None:
+                        f.write(f"\t.word\t0\n")
                     else:
-                        f.write("0,")
-                    if sprite["flip"]:
-                        f.write(name+"_flip_left,")
+                        f.write(f"\t.word\tchar_{i}_{j}-char_{i}\n")
+
+                for j,cc in enumerate(c):
+                    if cc is not None:
+                        f.write(f"char_{i}_{j}:")
+                        bitplanelib.dump_asm_bytes(cc,f,mit_format=True)
+
+        f.write("sprite_table:\n")
+
+        sprite_names = [None]*NB_POSSIBLE_SPRITES
+        for i in range(NB_POSSIBLE_SPRITES):
+            sprite = sprites.get(i)
+            f.write("\t.long\t")
+            if sprite:
+                if sprite == True:
+                    f.write("-1,-1,-1,-1")  # not displayed but legal
+                else:
+                    if sprite["is_sprite"]:
+                        name = sprite['name']
+                        sprite_names[i] = name
+                        f.write(name+"_left,")
                         if sprite["mirror"]:
-                            f.write(name+"_flip_right")
+                            f.write(name+"_right,")
                         else:
-                            f.write("0")
-                    else:
-                        f.write("0,0")
-                else:
-                    f.write("0,0,0,0")
-        else:
-            f.write("0,0")
-        f.write("\n")
-
-    # pointers to 8/16-group sprites for each pic
-    for i in range(NB_POSSIBLE_SPRITES):
-        sprite = sprites.get(i)
-        name = sprite_names[i]
-        if name:
-            f.write(f"{name}_left:\n")
-            for j in range(8):
-                f.write(f"\t.long\t{name}_{j}_left\n")
-            if sprite["mirror"]:
-                f.write(f"{name}_right:\n")
-                for j in range(8):
-                    f.write(f"\t.long\t{name}_{j}_right\n")
-            if sprite["flip"]:
-                f.write(f"{name}_flip_left:\n")
-                for j in range(8):
-                    f.write(f"\t.long\t{name}_{j}_flip_left\n")
-                if sprite["mirror"]:
-                    f.write(f"{name}_flip_right:\n")
-                    for j in range(8):
-                        f.write(f"\t.long\t{name}_{j}_flip_right\n")
-
-
-    f.write("bob_table:\n")
-
-    bob_names = [None]*NB_POSSIBLE_SPRITES
-    for i in range(NB_POSSIBLE_SPRITES):
-        sprite = sprites.get(i)
-        f.write("\t.long\t")
-        if sprite:
-            if sprite == True or sprite["is_sprite"]:
-                f.write("-1,-1")  # hardware sprite: ignore
-            else:
-                name = sprite["name"]
-                bob_names[i] = name
-                f.write(f"{name}_left,")
-                if sprite["mirror"]:
-                    f.write(f"{name}_right")
-                else:
-                    f.write("0")
-
-        else:
-            f.write("0,0")
-        f.write("\n")
-
-    for i in range(NB_POSSIBLE_SPRITES):
-        name = bob_names[i]
-        if name:
-            sprite = sprites.get(i)
-            for k,dir in enumerate(("left","right")):
-                csb = sprite["bitmap"]
-                if csb:
-                    vsize = sprite['vsize']//8 + 2
-                    f.write(f"{name}_{dir}:\n")
-                    # useless comment as code is generated but helpful when you're coding the engine...
-                    f.write(f"\t* h size, v size in bytes, y offset, pad)\n")
-                    f.write(f"\t.word\t{sprite['hsize']},{vsize},{sprite['yoffset']},0\n")
-
-
-                for j in range(16):
-                    b = csb.get(j)
-                    f.write("\t.long\t")
-                    if b and b[k]:
-                        f.write(f"{name}_{dir}_{j}")
-                    else:
-                        f.write("0")   # clut not active
-                    f.write("\n")
-
-    # blitter objects (bitplanes refs, can be in fastmem)
-    for i in range(NB_POSSIBLE_SPRITES):
-        name = bob_names[i]
-        if name:
-            sprite = sprites.get(i)
-            bitmap = sprite["bitmap"]
-
-            for k,dir in enumerate(("left","right")):
-                for j in range(16):
-                    bm = bitmap.get(j)
-                    if bm and bm[k]:
-
-                        sprite_label = f"{name}_{dir}_{j}"
-                        f.write(f"{sprite_label}:\n")
-                        for plane_id in bm[k]:
-                            f.write("\t.long\t")
-                            if plane_id is None:
-                                f.write("0")
+                            f.write("0,")
+                        if sprite["flip"]:
+                            f.write(name+"_flip_left,")
+                            if sprite["mirror"]:
+                                f.write(name+"_flip_right")
                             else:
-                                f.write(f"plane_{plane_id}")
-                            f.write("\n")
+                                f.write("0")
+                        else:
+                            f.write("0,0")
+                    else:
+                        f.write("0,0,0,0")
+            else:
+                f.write("0,0")
+            f.write("\n")
 
-    f.write("\t.section\t.datachip\n")
-    # hardware sprites
-    for i in range(NB_POSSIBLE_SPRITES):
-        name = sprite_names[i]
-        if name:
+        # pointers to 8/16-group sprites for each pic
+        for i in range(NB_POSSIBLE_SPRITES):
             sprite = sprites.get(i)
-            for k,bitmap in zip(("left","right","flip_left","flip_right"),sprite["bitmap"]):
-                if bitmap:
+            name = sprite_names[i]
+            if name:
+                f.write(f"{name}_left:\n")
+                for j in range(8):
+                    f.write(f"\t.long\t{name}_{j}_left\n")
+                if sprite["mirror"]:
+                    f.write(f"{name}_right:\n")
                     for j in range(8):
-                        # clut is valid for this sprite
-                        sprite_label = f"{name}_{j}_{k}"
-                        f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
-                        bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
-
-    f.write("\n* bitplanes\n")
-    # dump bitplanes
-    for k,v in bitplane_cache.items():
-        f.write(f"plane_{v}:")
-        bitplanelib.dump_asm_bytes(k,f,mit_format=True)
-
-    f.write("\n* backgrounds\n")
-    backgrounds = ['blue_mountains', 'green_mountains'] #, 'green_city']
-
-    # we only need 8 first colors (actually even less)
-    bg_palette = background_palette
+                        f.write(f"\t.long\t{name}_{j}_right\n")
+                if sprite["flip"]:
+                    f.write(f"{name}_flip_left:\n")
+                    for j in range(8):
+                        f.write(f"\t.long\t{name}_{j}_flip_left\n")
+                    if sprite["mirror"]:
+                        f.write(f"{name}_flip_right:\n")
+                        for j in range(8):
+                            f.write(f"\t.long\t{name}_{j}_flip_right\n")
 
 
-    for b in backgrounds:
-        f.write(f"{b}:\n")
-        data = block_dict[b]["data"]
-        nb_rows = len(data)
-        is_green = "green" in b
+        f.write("bob_table:\n")
 
-        hsize = 256+32*8
-        # first write number of rows, then number of bytes total, which differ from one background to another
-        # = number of rows * ((512/16)+2) (there's a blit shift mask like all shiftable bobs)
-        f.write(f"\t.word\t{nb_rows},{nb_rows*((hsize//8)+2)}")
-        # then the data itself
-        img = Image.new("RGB",(hsize,nb_rows))
-        # convert data to picture, twice as large so can be blit-scrolled
-        for y,d in enumerate(data):
-            v = iter(d)
-            for x in range(256):
-                cidx = next(v)
-                rgb = bg_palette[cidx]
-                img.putpixel((x,y),rgb)
-                ax = x+256
-                if ax < hsize:
-                    img.putpixel((ax,y),rgb)
+        bob_names = [None]*NB_POSSIBLE_SPRITES
+        for i in range(NB_POSSIBLE_SPRITES):
+            sprite = sprites.get(i)
+            f.write("\t.long\t")
+            if sprite:
+                if sprite == True or sprite["is_sprite"]:
+                    f.write("-1,-1")  # hardware sprite: ignore
+                else:
+                    name = sprite["name"]
+                    bob_names[i] = name
+                    f.write(f"{name}_left,")
+                    if sprite["mirror"]:
+                        f.write(f"{name}_right")
+                    else:
+                        f.write("0")
 
-        # replace yellow by dark green if found, we'll switch to yellow dynamically (saves 1 precious color slot
-        # as both backgrounds can't be present at the same time)
-        img = replace_color(img,yellow_background_city_color,green_background_mountain_color)
-        # dump, we don't need a mask for the blue layer as it's behind
+            else:
+                f.write("0,0")
+            f.write("\n")
 
-        raw = bitplanelib.palette_image2raw(img,None,bob_global_palette[:8],forced_nb_planes=3,
-                    palette_precision_mask=0xFF,generate_mask=is_green,blit_pad=True)
-        nb_planes = 4 if "green" in b else 3
-        plane_size = len(raw)//nb_planes
-        for z in range(nb_planes):
-            f.write(f"\n* plane {z} ({plane_size} bytes)")
-            dump_asm_bytes(raw[z*plane_size:(z+1)*plane_size],f)
+        for i in range(NB_POSSIBLE_SPRITES):
+            name = bob_names[i]
+            if name:
+                sprite = sprites.get(i)
+                for k,dir in enumerate(("left","right")):
+                    csb = sprite["bitmap"]
+                    if csb:
+                        vsize = sprite['vsize']//8 + 2
+                        f.write(f"{name}_{dir}:\n")
+                        # useless comment as code is generated but helpful when you're coding the engine...
+                        f.write(f"\t* h size, v size in bytes, y offset, pad)\n")
+                        f.write(f"\t.word\t{sprite['hsize']},{vsize},{sprite['yoffset']},0\n")
 
-    f.write("title_bitmap:")
-    dump_asm_bytes(title_bitmap,f)
+
+                    for j in range(16):
+                        b = csb.get(j)
+                        f.write("\t.long\t")
+                        if b and b[k]:
+                            f.write(f"{name}_{dir}_{j}")
+                        else:
+                            f.write("0")   # clut not active
+                        f.write("\n")
+
+        # blitter objects (bitplanes refs, can be in fastmem)
+        for i in range(NB_POSSIBLE_SPRITES):
+            name = bob_names[i]
+            if name:
+                sprite = sprites.get(i)
+                bitmap = sprite["bitmap"]
+
+                for k,dir in enumerate(("left","right")):
+                    for j in range(16):
+                        bm = bitmap.get(j)
+                        if bm and bm[k]:
+
+                            sprite_label = f"{name}_{dir}_{j}"
+                            f.write(f"{sprite_label}:\n")
+                            for plane_id in bm[k]:
+                                f.write("\t.long\t")
+                                if plane_id is None:
+                                    f.write("0")
+                                else:
+                                    f.write(f"plane_{plane_id}")
+                                f.write("\n")
+
+        f.write("\t.section\t.datachip\n")
+        # hardware sprites
+        for i in range(NB_POSSIBLE_SPRITES):
+            name = sprite_names[i]
+            if name:
+                sprite = sprites.get(i)
+                for k,bitmap in zip(("left","right","flip_left","flip_right"),sprite["bitmap"]):
+                    if bitmap:
+                        for j in range(8):
+                            # clut is valid for this sprite
+                            sprite_label = f"{name}_{j}_{k}"
+                            f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
+                            bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
+
+        f.write("\n* bitplanes\n")
+        # dump bitplanes
+        for k,v in bitplane_cache.items():
+            f.write(f"plane_{v}:")
+            bitplanelib.dump_asm_bytes(k,f,mit_format=True)
+
+        f.write("\n* backgrounds\n")
+        backgrounds = ['green_mountains'] if f is f_ocs else ['blue_mountains', 'green_mountains'] #, 'green_city']
+
+        # we only need 8 first colors (actually even less)
+        bg_palette = background_palette
+
+
+        for b in backgrounds:
+            f.write(f"{b}:\n")
+            data = block_dict[b]["data"]
+            nb_rows = len(data)
+            is_green = "green" in b
+
+            hsize = 256+32*8
+            # first write number of rows, then number of bytes total, which differ from one background to another
+            # = number of rows * ((512/16)+2) (there's a blit shift mask like all shiftable bobs)
+            f.write(f"\t.word\t{nb_rows},{nb_rows*((hsize//8)+2)}")
+            # then the data itself
+            img = Image.new("RGB",(hsize,nb_rows))
+            # convert data to picture, twice as large so can be blit-scrolled
+            for y,d in enumerate(data):
+                v = iter(d)
+                for x in range(256):
+                    cidx = next(v)
+                    rgb = bg_palette[cidx]
+                    img.putpixel((x,y),rgb)
+                    ax = x+256
+                    if ax < hsize:
+                        img.putpixel((ax,y),rgb)
+
+            # replace yellow by dark green if found, we'll switch to yellow dynamically (saves 1 precious color slot
+            # as both backgrounds can't be present at the same time)
+            img = replace_color(img,yellow_background_city_color,green_background_mountain_color)
+            # dump, we don't need a mask for the blue layer as it's behind
+
+            raw = bitplanelib.palette_image2raw(img,None,bob_global_palette[:8],forced_nb_planes=3,
+                        palette_precision_mask=0xFF,generate_mask=is_green,blit_pad=True)
+            nb_planes = 4 if "green" in b else 3
+            plane_size = len(raw)//nb_planes
+            for z in range(nb_planes):
+                f.write(f"\n* plane {z} ({plane_size} bytes)")
+                dump_asm_bytes(raw[z*plane_size:(z+1)*plane_size],f)
+
+        f.write("title_bitmap:")
+        dump_asm_bytes(title_bitmap,f)

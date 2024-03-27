@@ -2861,7 +2861,7 @@ ufo_bomb_creates_hole_0da6:
 	* this is a screen address
 	
 	lea		game_rom+0x304A,a4					| [$0dac: ld   bc,$304A] 12362
-	and.w	#0xFF00,d0                            	| [$0daf: add  a,c]
+	and.w	#0xFF,d0                            	| [$0daf: add  a,c]
 	add.w	d0,a4									| [$0db0: ld   c,a]
 	move.b	(a4),d0                         	| [$0db1: ld   a,(bc)]
 	* magic shit to change pointer lsb... I hate that	| [$0db2: ld   c,a]
@@ -2871,7 +2871,7 @@ ufo_bomb_creates_hole_0da6:
 	move.w	#0x0020,d3                      	| [$0db4: ld   de,$0020] 32
 l_0db7:
 	jbsr	osd_r_videoram                   	| [$0db7: ld   a,(hl)] -  * J0DBC
-	                               	| [$0db8: and  a]
+	tst.b	d0                               	| [$0db8: and  a]
 	jne	l_0dbe                             	| [$0db9: jr   nz,$0DBE]
 	* next row
 	add.w	d3,d7                            	| [$0dbb: add  hl,de]

@@ -12,16 +12,26 @@ Credits:
 - mrv2k: boxart
 - DamienD: floppy menu
 
+Amiga version (OCS):
+
+- runs on 512K chip/512k fast OCS 68000 Amiga, 25 fps (some slowdowns to expect at times)
+- adapted "low detail" graphics, no blue mountain background 
+- low sound quality
+- no whdload (no need, as it is designed to run on a 1MB OCS machine)
+
 Amiga version (ECS):
 
 - runs on 1MB ECS 68000 Amiga, 25 fps (some slowdowns to expect at times)
 - Uses AGA fast DMA mode if found and runs at 50fps on AGA+fastmem
-- adapted "low detail" graphics 
+- adapted "low detail" graphics, but will display extra background layer
+  if run on a 68020+
+- higher sound quality
 
 Amiga version (AGA):
 
 - runs on vanilla A1200 at 50 fps, with smooth scrolling layers
 - original colors & graphics
+- highest sound quality
 
 Controls:
 

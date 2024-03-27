@@ -6,13 +6,13 @@ general:
 - game is 10% slower than it should be. Adding extra call each 10 calls adds
   nothing but more problems (demo not in sync, title not in sync, who knows what?),
   and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
+  but try it and see if title & demo work, if it does, then ok!
 - still floor tile missing after a slope
 - 99 credits after a while continuing
-- shell to start version according to chipset + whdload ocs
+- shell to start version according to chipset + whdload ocs:
+  * OCS: OK
+  * ECS/AGA: detect ECS version but with mountain cookie cut so green leaves a trace!
 
-OCS:
-
-- make OCS version with lq sfx, no blue mountain, no whdload
 
 ECS:
 
@@ -22,7 +22,7 @@ ECS:
 - tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
-- colon not going away after end section screen
+- colon not going away after end section screen: merge changes from AGA code (also to OCS code)
 
 AGA:
 
@@ -35,13 +35,11 @@ AGA:
   maybe use 30FPS too for BOBs in that case
 - shots are blue, should be white, swapping bob colors doesn't work!!!
 - missing dyn color for plant, maybe not needed as we have 1 spare bob color
-- colon not going away after end section screen: 8197 address break in clear_video_area
-
-  
-
 - "game over" should be displayed on front layer (on mountains)
-
-
+- scrolling letters have wrong color (same as static MAME, but different
+  from in-game rendering we'll have to hack the clut)
+- last scrolling letter (E,J...) remains on bottom of screen
+- "you have broken a record" bottom truncated!
 
 converter:
 
