@@ -742,11 +742,9 @@ _vblank:
 
 	subq.w	#1,delay_timer
 		
-
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
 	* also set SR accordingly
 	st.b	interrupt_mode
-0:
 	.ifndef	STATIC_SCROLL_TEST
 	jbsr		mpatrol_irq
 	.endif
@@ -758,6 +756,8 @@ _vblank:
 	* itself in the short time of the computations
 	move.w	#0x2300,SR
 	clr.b	interrupt_mode
+
+	
 	* AGA/AA: fmode=3 allows much faster blitter operation
 	* allowing 50 fps without a hitch :)
 
@@ -2102,6 +2102,11 @@ update_scrollable_layers:
 	move.l	#(color<<16)+LIGHT_BLUE_MOUNTAIN_COLOR,blue_mountain_filler-2	| enabled by default
 	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,lower_green_mountain_filler
 	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,upper_green_mountain_filler
+	
+	* enable blue mountain color change
+	lea		mountain_colors,a2
+	move.w	#color+2,(a2)
+	move.w	#color+6,(4,a2)
 
 	.ifne	BACKGROUND_X_CORRECTION
 	add.w	#BACKGROUND_X_CORRECTION,d0		| adjust vs MAME
@@ -2218,7 +2223,9 @@ update_scrollable_layers:
 	move.w	#color,upper_green_mountain_filler-2
 
 	* also change position of color0 turn to green
-	add.w	#84,d6			| empiric
+	* adding 84 is too much and leads to blue stripes at start
+	* and in slopes, when green mountain Y is changing
+	add.w	#82,d6
 	cmp.b	#0xDC,d6
 	bcs.b	1f
 	
@@ -2229,12 +2236,6 @@ update_scrollable_layers:
 	bra.b	2f
 1:
 	move.b	d6,upper_green_mountain_end_copper_wait
-*	move.w	blue_y_end,d6
-*	cmp.w	green_y_end,d6
-*	jcc		2f
-*	* blue filler lower than green filler
-*	* disable blue mountain filler
-*	move.w	#LIGHT_GREEN_MOUNTAIN_COLOR,blue_mountain_filler
 2:
 	move.w	(a0)+,d5		| number of bytes for the plane (height * 66)
 
@@ -3856,6 +3857,10 @@ reset_colors_and_scrolling:
 	move.w	#0,blue_mountain_filler
 	move.w	#0,upper_green_mountain_filler
 	move.w	#0,lower_green_mountain_filler
+	* disable blue mountain color change (changes letters)
+	move.w	#0x1FE,mountain_colors
+	move.w	#0x1FE,mountain_colors+4
+		
 	* also reset position for ground (no need for mountain)
 	move.l	bg_base_ground_screen_ptr,bg_ground_screen_ptr
 	bsr		set_ground_bitplanes	
@@ -3978,14 +3983,7 @@ background_cleared_flag:
 	.align	2
 system_vbr:
 	.long	0
-	
-orig_color_4:
-	.word	0
-toggle_blitter_draw:
-	.word	0
-	
-high_score_buffer:
-	ds.b	SCORE_FILE_SIZE
+
 
 highscore_needs_saving:
 	.byte	0
@@ -3999,6 +3997,8 @@ nb_displayed_ships:
 	.byte	0
 nb_displayed_rocks:
 	.byte	0
+high_score_buffer:
+	ds.b	SCORE_FILE_SIZE
 	.align	2
 
 host_sprites:
@@ -4275,7 +4275,6 @@ lower_green_mountain_filler:
 	
 	* pal limit
     .word  0xFFDF,0xFFFE       | PAL wait
-	.word	 intreq,0x8010	| no bobs from now on (maybe needs adjustment), get more drawing time
 post_pal_copper_rows:
 	.set    beampos,0x0001
 	.rept	0x15
@@ -4286,6 +4285,7 @@ post_pal_copper_rows:
 	.set    beampos,beampos+0x100
 	.word	beampos,0xFFFE
 	.endr
+	.word	 intreq,0x8010	| no bobs from now on, get more drawing time
 	.word	color,0
 	
     *.word  0x1401,0xFFFE		| wait more lines to set to black (big holes!)
