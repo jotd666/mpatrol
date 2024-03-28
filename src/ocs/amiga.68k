@@ -1867,28 +1867,15 @@ set_mountain_dynamic_colors:
 	* put it a few lines below, as the plant base is lower (lowest
 	* object). This saves just enough colors for a 16 color playfield
 	* display, if we use HW sprites for some objects (shoehorned!!)
+	* now change red to dark green (space plant)
+	* here we could have forgotten the mountain blue color (x2) and don't
+	* do this but this is the same system as in ECS
 	move.w	plant_color_register,(4,a0,d6.w)
 	move.w	plant_color,(6,a0,d6.w)
 	* now change ground color to orange, trying to respect the ground Y
 	move.l	#((color+16)<<16)+0xF95,(8,a0,d6.w)
-	* now change red to dark green (space plant)
 	
-	* now blue
-	tst.B	no_blue_layer_flag
-	jne	10f
-	
-	move.w	blue_y_end,d7
-	lsl.w	#4,d7
-	
-	cmp.w	#DYNAMIC_COPPER_ROWS*16,d7
-	bcc.b	10f
-	cmp.w	#HALF_DYNAMIC_COPPER_ROWS*16,d7
-	bcs.b	9f
-	add.w	#SPRITE_COPPERLIST_CHUNK_SIZE,d7
-9:
-	move.w	#color,(A0,d7.w)
-	move.w	(6,a1),(2,a0,d7.w)
-10:	
+
 	rts
 	
 clear_credits_remaining_bitmap:
@@ -1961,24 +1948,6 @@ blit_scrollable_layers:
 	* and it's ugly. We'll optimize as most of the time blue mountain erases
 	* green mountain top, but at lowest level it can't erase all
 	
-	tst.B	no_green_layer_flag
-	jne	0f		| no need to erase green layer: no layer
-	tst.B	no_blue_layer_flag
-	jne	0f		| no need to erase+cookie cut green layer: no blue layer
-
-	movem.l	d0-d4/A1-A6,-(a7)
-	move.w	d2,d1				| Y blue
-	add.w	#60,d1				| Y height for blue mountains????
-	move.w	#26,d4		| empiric
-	add.w	#PANEL_MAX_Y+8,d1
-
-	move	#NB_PLAYFIELD_PLANES-2,d3
-	move.w	#NB_BYTES_PER_ROW,d2			| width = all screen width
-	moveq	#0,d0			| X=0 (all screen)
-	move.l	bg_drawed_screen_ptr(pc),a1
-	jbsr		clear_planes_any_blitter_internal
-	movem.l	(A7)+,d0-d4/A1-A6
-0:
 	
 	move.w	d3,d2	| same as blue now
 	move.w	d1,d0
@@ -2002,9 +1971,7 @@ blit_scrollable_layers:
 	bclr	#0,d2
 	add.w	d2,a0			| adds X/16 to source (destination X = 0)
 
-    move.l  #0x0fca0000,d3    | B+C-A->D cookie cut   
-	tst.b	no_blue_layer_flag
-	jeq	0f
+	
 	move.l	#0x09f00000,d3		| brutal copy
 0:
 	* blit height
@@ -2023,8 +1990,6 @@ blit_scrollable_layers:
 	or.l	d0,d3
 	swap	d3
 	
-	tst.b	no_blue_layer_flag
-	jeq	0f
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
@@ -2510,15 +2475,7 @@ store_system:
 	move.l	d0,system_vbr
 1:
 	
-	move.w	AttnFlags(a6),d0
-	btst	#AFB_68020,d0
-	bne.b	1f
-	* no whdload, no 68020: assume slow
-	* if running on PiStorm, well, too bad use whdload
-	
-	* to save speed, disable blue mountain layer
-	st.b	no_blue_layer_flag
-1:
+
 	lea	_custom,a6
 	move.w	intenar(a6),old_intena
 	move.w	dmaconr(a6),old_dmacon
@@ -3029,10 +2986,13 @@ update_bg_tile:
 	tst		d0
 	bne.b	112f
 	cmp.b	#1,d1
-	seq		d1
-	jeq		112f
+	bne.b	1112f
+	clr.b	d1
+	bra.b	112f
+1112:
 	cmp.b	#0xC,d1
-	seq		d1
+	bne.b	112f
+	clr.b	d1
 112:
 
 	move.w	d7,d6
@@ -3976,8 +3936,7 @@ background_cleared_flag:
 	.byte	0
 no_green_layer_flag:
 	.byte	0
-no_blue_layer_flag:
-	.byte	0
+
 update_at_50Hz:
 	.byte	0
 	.align	2

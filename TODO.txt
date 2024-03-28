@@ -16,13 +16,11 @@ general:
 
 ECS:
 
-- ECS version borderblank is gone even for AGA (whdload?)
 - highscore erased on section score screen
 - "TIME" not displayed sometimes
 - tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
 - update_bg_tile tweak to only copy last plane for some tiles (ground)
-- colon not going away after end section screen: merge changes from AGA code (also to OCS code)
 
 AGA:
 

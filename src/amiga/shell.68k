@@ -1,16 +1,39 @@
 *
-*	Amiga-specific portions of Moon Patrol
+*  Amiga Moon Patrol startup shell
 *
 * (c) JOTD 2024
 *
 
+
+*For Agnus, check ($dff004.b & $7f): $0x/$1x is Agnus pal/ntsc, $20/$30 and $21/$31 is ECS Fat Agnus pal/ntsc, $22/$32 and $23/$33 is AGA (Alice) pal/ntsc.
+*For Denise, check $dff07d.b: ECS is $fc, AGA (Lisa) is $f8. OCS returns a random value (whatever was previously on the data bus). 
 
 .include "exec_lvos.i"
 .include "dos_lvos.i"
 .include "graphics_lvos.i"
 .include	"whdload_funcs.i"
 
+.macro 	blitz_bypass
+	move.w	d0,-(a7)
+	clr.w	d0
+loop\@:
+	move.w	d0,0xDFF180
+	btst	#6,0xbfe001
+	beq.b	out\@
+	addq.w	#1,d0
+	bra.b	loop\@
+out\@:
+	move.w	(a7)+,d0
+	nop
+.endm
 
+* same thing but if LMB is pressed when entering, macro waits for release)
+.macro blitz
+w\@:
+	btst	#6,0xbfe001
+	beq.b	w\@
+	blitz_bypass
+.endm
 	    
 _user:
 	move.l	a0,a5
@@ -23,26 +46,25 @@ _user:
     move.l  d0,_dosbase
 
 	
-	move.l	4.W,A6
-	lea graphicsname,a1
-    moveq.l #0,d0
-    jsr _LVOOpenLibrary(a6)
-    move.l  d0,_gfxbase
-    move.l	d0,a6
-	
-	* detects AGA
-	
-	move.b	gb_ChipRevBits0(a6),d0
-	and.l	#SETCHIPREV_AA,d0
-	cmp.l	#SETCHIPREV_AA,d0
+	* read twice to make sure!
+	move.w	0xdff07c,d0
+	cmp.b	#0xF8,d0		|  AGA (Lisa) is $f8.
 	bne.b	0f
+	move.w	0xdff07c,d0
+	cmp.b	#0xF8,d0		|  AGA (Lisa) is $f8.
+	bne.b	0f
+
 	* AGA version
 	lea		exe_aga(pc),a0
 	bra.b	run_it
 0:
-	and.l	#SETCHIPREV_ECS,d0
-	cmp.l	#SETCHIPREV_ECS,d0
+	move.w	0xdff07c,d0
+	cmp.b	#0xFC,d0
 	bne.b	0f
+	move.w	0xdff07c,d0
+	cmp.b	#0xFC,d0
+	bne.b	0f
+
 	lea		exe_ecs(pc),a0
 	bra.b	run_it
 0:
@@ -67,8 +89,6 @@ out:
 0:
 	move.l	0x4,a6
 	move.l	_dosbase,a1
-	jsr		(_LVOCloseLibrary,a6)
-	move.l	_gfxbase,a1
 	jsr		(_LVOCloseLibrary,a6)
 	moveq	#0,d0
 	rts
