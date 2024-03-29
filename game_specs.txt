@@ -1,0 +1,37 @@
+ECS version:
+
+It uses a 16-color single playfield version. Some colorblind clowns stated that there are only 8 colors on that game, but actually even 8+8 colors (for ECS dual playfield) can't be done. Actually, even 16 colors is difficult, as tiles, bobs, and backgrounds have independent palettes.
+
+so the top panel has its colormap (which is the tiles palette), which is changed by our beloved copper right afterwards to set BOB colors.
+
+From that point, if you write something, then the colors will be wrong (which is why that BOB colors are reset when completing a section, to revert back to tiles colors), but fortunately not a lot of text is written to the screen below top panel when sprites / mountains are shown.
+
+The blue layer mountain is drawn with blitter to simulate scrolling. It uses just 3 colors (black and 2 blues) so with clever palette layout, only 2 bitplanes need to be blitted.
+And when the color becomes all blue, instead of blitting a big blue rectangle (which would cost too much), the background color is changed to this blue color.
+
+The green layer mountain is drawn the same way, but using a mask not to overwrite the blue mountain below. When the color becomes all green, background color is changed to green. Those dynamic changes don't happen at the same position all the time: the mountains can change their Y start too depending on the scenery. 3 bitplanes are required. This costs a lot of blitter time.
+
+The ground strip is drawn the same way, except that I choose to keep only 1 bitplane. The color is also changed dynamically to orange (which is a color that isn't in the BOBs palette).
+
+Then the BOBs are drawn, sometimes reusing some blue mountain colors for ground objects like rocks as else there wouldn't be enough colors, even with 16 colors.
+
+To save more colors, some objects like the explosions are hardware sprites. Ships are also hardware sprites, except when there are 9 of them (grrrrrr) or when the ship is falling on the player, in which case a BOB is displayed instead.
+
+Sprite multiplexing between top & bottom is active, which allows to display 16 hardware sprites at the same time. 2 explosions + 8 chips for instance. Some sprite grouping is done too to convert 2 vertically aligned sprites into one 16x32 sprite.
+
+There is one color missing for base of the space plant, but since it's very low, it can be changed dynamically by the copper when reaching the ground. Top of the space plant is 2 sprites, which saves one or 2 precious color entries. Since there can't be more than 3 space plants at the same time and the ships aren't there to bomb the scenery at this point, it works, we have enough HW sprites.
+
+Aaand that's it for ECS
+
+AGA version:
+
+Game uses 16+16 color dual playfield. Top panel is done the same way but things get different from there.
+
+Blue mountains are displayed using different bitplanes, on one playfield dynamically Y-adjusted depending on the current mountain Y start.
+Green mountains are blitted on the other playfield. No need for mask this time. More colors & no mask mean that we can reinstate moon city background which was left behind in ECS.
+
+Same background color tricks as ECS.
+
+Now the scrollable ground part reuses the blue mountain playfield, but they are far enough Y wise not to conflict. So a different scroll & shift value can be applied, which makes 2 hardware scrolling strips at different speeds, and allows to scroll all 4 bitplanes without blitting, which reinstates the moon base & more colors for craters & scrolling letters.
+
+BOBs & sprites are the same as ECS. Less color tricks are required because we have more colors available (blue mountains don't get in the way). 

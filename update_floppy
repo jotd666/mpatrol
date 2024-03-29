@@ -9,6 +9,7 @@ set game mpatrol_ecs
 copy $game.RNC DF0:$game
 protect DF0:$game RWED
 copy readme.md df0:
+copy game_specs.txt df0:
 
 ; copy startup exe
 set game mpatrol

@@ -3012,6 +3012,7 @@ write_checkpoint_scrolling_letter_0e55:
 	
 	move.w	d7,screen_address_E1DA                 	| [$0e79: ld   (screen_address_E1DA),hl]
 	add.w	d1,d7                            	| [$0e7c: add  hl,bc]
+	* write vertical blank "underscore" below
 	move.b	#0xF2,d0
 	jbsr	osd_w_videoram                      	| [$0e7d: ld   (hl),$F2]
 	                        	| [$0e7f: ld   bc,$03E0] 992

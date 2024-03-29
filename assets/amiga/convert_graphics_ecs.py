@@ -88,6 +88,8 @@ with open(os.path.join(this_dir,"..","mpatrol_gfx.c")) as f:
 yellow_background_city_color = (255,222,81)
 green_background_mountain_color = (0,151,0)
 almost_black = (0,0,26)
+orange_color = (255,151,81)
+black_color = (0,0,0)
 
 brown_rock_color = (0x84,0x51,0x00)
 blue_dark_mountain_color = (0,0,0xFF)
@@ -361,7 +363,12 @@ if True:
                 for i in range(8):
                     for j in range(8):
                         v = next(d)
-                        img.putpixel((j,i),colors[v])
+                        c = colors[v]
+                        if ord("A") <= k <= ord("Z") and cidx==5:
+                            if c==orange_color:
+                                c=tile_global_palette[15]
+
+                        img.putpixel((j,i),c)
                 if 0x68 <= k <= 0x91:
                     # moon base: make all tiles single plane with color 15 to enable all bitplanes
                     img = replace_nonblack_by(img,tile_global_palette[15])

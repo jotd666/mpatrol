@@ -67,6 +67,7 @@ def get_used_tile_cluts():
     for i in range(4,0x5C):
         used_cluts[i].add(2)
 
+
     # blanks for all cluts
     for i in range(0,22):
         used_cluts[0].add(i)

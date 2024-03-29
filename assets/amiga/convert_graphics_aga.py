@@ -89,13 +89,12 @@ yellow_background_city_color = (255,222,81)
 green_background_mountain_color = (0,151,0)
 
 almost_black = (0,0,26)
-brown_rock_color = (0x84,0x51,0x00)
+orange_color = (255,151,81)
+black_color = (0,0,0)
 blue_dark_mountain_color = (0,0,0xFF)
 blue_light_mountain_color = (0, 151, 174)
 green_dark_mountain_color = (0, 151, 0)
-dark_brown_color = (0x3E,0x37,0)
 yellow_color = (0xC1,0xC8,00)
-dark_green_color = (0,81,0)  # in space plant base
 red_color = (132, 0, 0)
 
 # 88 colors but only 15 unique colors, but organized like linear cluts which probably explains
@@ -150,11 +149,6 @@ def replace_color(img,color,replacement_color):
     return rval
 
 
-def bob_color_change(img_to_raw):
-    # color used in space plant base part, no conflict with green mountain dark color
-    img_to_raw = replace_color(img_to_raw,dark_green_color,red_color)
-
-    return img_to_raw
 
 def get_sprite_clut(clut_index):
     return sprite_cluts[clut_index]
@@ -252,8 +246,6 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                         else:
                             # dark green color is going to be replaced by red:
                             # don't count it (else it would make too many colors)
-                            if color == dark_green_color:
-                                color = red_color
                             bobs_used_colors[color] += 1
             if vattached:
                 d = iter(vattached)
@@ -283,7 +275,7 @@ all_bob_colors = sorted(bobs_used_colors)[1:]
 
 # remove yellow_background_city_color
 bg_copy = [x for x in background_palette if x != yellow_background_city_color]
-print(bg_copy)
+
 
 bob_global_palette = [x for x in bg_copy if x not in (blue_light_mountain_color,blue_dark_mountain_color)] + all_bob_colors
 
@@ -297,7 +289,7 @@ elif len(bob_global_palette) < 16:
     print(f'Free bob colors: {fbc}')
     bob_global_palette += [(1,2,3)] * fbc
 
-# we need color 8 to be white (vertical shots use plane 3 only!)
+# we need color 8 to be white (vertical shots use ntane 3 only!)
 #switch_values(bob_global_palette,8,14)
 
 ftc = 16-len(tile_global_palette)
@@ -331,19 +323,18 @@ with open(os.path.join(src_dir,"tiles_palette.68k"),"w") as f:
 with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
     bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
-    plant_color = bitplanelib.to_rgb4_color(dark_green_color)
-    plant_color_index = bob_global_palette.index(red_color)
     green_mountain_color = bitplanelib.to_rgb4_color(green_dark_mountain_color)
     yellow_city_color = bitplanelib.to_rgb4_color(yellow_background_city_color)
     green_mountain_color_index = bob_global_palette.index(green_dark_mountain_color)
-    f.write("plant_color:\n\t.word\t0x{:x}\n".format(plant_color))
-    f.write("plant_color_register:\n\t.word\t0x180+{}\n".format(plant_color_index*2))
     f.write("green_mountain_color:\n\t.word\t0x{:x}\n".format(green_mountain_color))
     f.write("yellow_city_color:\n\t.word\t0x{:x}\n".format(yellow_city_color))
     f.write("green_mountain_color_index:\n\t.word\t{}\n".format(green_mountain_color_index))
 character_codes_list = []
 
 used_cluts = shared.get_used_tile_cluts()
+# frames for letters in scroll part, only for AGA
+used_cluts[0xA].add(4)
+used_cluts[0xB].add(4)
 
 if True:
     for k,chardat in enumerate(block_dict["tile"]["data"]):
@@ -357,7 +348,23 @@ if True:
                 for i in range(8):
                     for j in range(8):
                         v = next(d)
-                        img.putpixel((j,i),colors[v])
+                        c = colors[v]
+                        if ord("A") <= k <= ord("Z") and cidx==5:
+                            # replace orange color by black to fix weird dissonnance
+                            # special case of scrolling letters. Now clut is strange. If displayed as is
+                            # there's no green outline around the letter, and MAME F4
+                            # tiles display shows the exact (wrong) image. But in-game it's
+                            # perfect... So there must be some hack in the game that only running MAME can handle,
+                            # but not "F4" tile debug screen... sooooo.. I'm going to hack this too
+                            # removing the orange color and put black instead may seem to make the tile completely black
+                            # but it's not. When displayed in the game, the background color is green and letters appear in black
+                            # on a green background like in the original game. Don't ask me why I had to do this though..., specially
+                            # because the game uses code F2 below (vertical green line) and A/B on the right (horizontal green line)
+                            # to frame the letter perfectly
+                            if c==orange_color:
+                                c=black_color  # orange is the new black
+
+                        img.putpixel((j,i),c)
                 character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette,generate_mask=True))
                 if dump_tiles:
                     scaled = ImageOps.scale(img,5,0)
@@ -474,7 +481,7 @@ for k,sprdat in enumerate(block_dict["sprite"]["data"]):
                 # as we forcefully removed it from the palette to make it fit to 16 colors, don't worry, the
                 # copper will put the proper color back again
 
-                img_to_raw = bob_color_change(img)
+                img_to_raw = img
                 if not name.startswith("jeep_part_"):  # no need to generate data for jeep parts
                     bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
                         palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
@@ -508,7 +515,7 @@ for clut in shared.jeep_cluts:
     jeep_img.paste(bitmaps[2][clut],(0,16))
     jeep_img.paste(bitmaps[3][clut],(16,16))
     y_offset,jeep_img = bitplanelib.autocrop_y(jeep_img,transparent)
-    bitplanes = bitplanelib.palette_image2raw(bob_color_change(jeep_img),None,bob_global_palette,
+    bitplanes = bitplanelib.palette_image2raw(jeep_img,None,bob_global_palette,
                     palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
     jeep_dict[clut] = [generate_bitplanes(bitplanes),None]
 
