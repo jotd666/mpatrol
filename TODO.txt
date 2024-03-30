@@ -1,7 +1,6 @@
 general:
 
 - save highscore & best course times
-- custom2 bit jump with button 2 only
 - start lives is wrong
 - game is 10% slower than it should be. Adding extra call each 10 calls adds
   nothing but more problems (demo not in sync, title not in sync, who knows what?),
@@ -22,7 +21,6 @@ ECS:
 AGA:
 
 - slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
-- shots are blue, should be white, swapping bob colors doesn't work!!!
 - "game over" should be displayed on front layer (on mountains)
 - last scrolling letter (E,J...) remains on bottom of screen
 - "you have broken a record" bottom truncated!

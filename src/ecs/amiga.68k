@@ -3629,6 +3629,8 @@ osd_read_in_1:
 	btst	#JPB_BTN_UP,d1
 	beq.b	0f
 	bclr	#3,d0
+	btst	#0,control_flags+3
+	bne.b	0f
 	bclr	#5,d0		| if up for jump set!
 0:
 	btst	#JPB_BTN_DOWN,d1
@@ -4020,6 +4022,9 @@ chiprevbits:
 		.long	0
 		.long	WHDLTAG_CUSTOM1_GET
 cheat_flags:
+		.long	0
+		.long	WHDLTAG_CUSTOM2_GET
+control_flags:
 		.long	0
 
 		.long	WHDLTAG_CUSTOM3_GET

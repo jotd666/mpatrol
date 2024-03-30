@@ -292,6 +292,8 @@ elif len(bob_global_palette) < 16:
 # we need color 8 to be white (vertical shots use ntane 3 only!)
 #switch_values(bob_global_palette,8,14)
 
+switch_values(bob_global_palette,8,15)
+
 ftc = 16-len(tile_global_palette)
 if ftc:
     print(f"Free tile colors: {ftc}")

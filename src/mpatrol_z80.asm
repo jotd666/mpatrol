@@ -49,9 +49,9 @@ mpatrol_reset:
 0009: A7          and  a                          ; ... switch set?
 000A: F2 00 33    jp   p,service_mode_3300        ; 0=Yes ... go do service mode (not in the same ROM chip but should be)
 000D: CD F4 05    call clear_ram_05f4             ; Clear RAM (E000..E6FF)
-0010: CD F2 06    call $06F2                      ; Read the dip-switch settings
+0010: CD F2 06    call read_settings_06f2                      ; Read the dip-switch settings
 0013: CD 29 0D    call $0D29                      ; ?? Clear screen, screen flip, clear ram mirror, clear sound queue
-0016: C3 68 00    jp   $0068                      ; Continue startup
+0016: C3 68 00    jp   startup_cont_0068                      ; Continue startup
 
 ; < HL: jump table
 ; < A: index
@@ -97,6 +97,7 @@ mpatrol_irq_0038:
 0066: FB          ei                              ; Re-enable interrupts (didn't quite line up with 65)
 0067: C9          ret                             ; Ignore
 
+startup_cont_0068:
 0068: FB          ei                              ; Enable interrupts * J0016,J0120,J01D7
 0069: CD 8A 0B    call display_status_bar_0b8a
 006C: 3E 01       ld   a,$01
@@ -104,7 +105,7 @@ mpatrol_irq_0038:
 0071: 32 0F E5    ld   (unknown_E50F),a
 0074: 3C          inc  a
 0075: 32 08 E5    ld   (unknown_E508),a
-0078: C3 B7 0B    jp   $0BB7
+0078: C3 B7 0B    jp   start_new_section_0bb7
 007B: 06 00       ld   b,$00                      ; * J0504
 007D: AF          xor  a                          ; * J0091
 007E: 32 4D E0    ld   (unknown_E04D),a
@@ -113,10 +114,10 @@ mpatrol_irq_0038:
 0085: FB          ei
 0086: CD 45 07    call $0745
 0089: CD 8A 0B    call display_status_bar_0b8a
-008C: C3 B7 0B    jp   $0BB7
+008C: C3 B7 0B    jp   start_new_section_0bb7
 008F: 06 04       ld   b,$04                      ; * J00EF
 0091: 18 EA       jr   $007D
-0093: CD CB 05    call $05CB                      ; Play next waiting sound (if any) * J0050
+0093: CD CB 05    call sound_stuff_05cb                      ; Play next waiting sound (if any) * J0050
 0096: 3A 00 D0    ld   a,($D000)                  ; Coins and start
 0099: 2F          cpl                             ; Active high
 009A: 32 53 E0    ld   (coin_start_e053),a           ; Hold for whoever wants it
@@ -139,7 +140,7 @@ mpatrol_irq_0038:
 00C1: CB 46       bit  0,(hl)                     ; ?? Old code left behind? The flags are never used
 00C3: FD E5       push iy                         ; Preserve these ... * J00BB,J05B7
 00C5: DD E5       push ix                         ; .. since the others are EXX to safety
-00C7: CD 0E 04    call $040E                      ; Handle coins and credits
+00C7: CD 0E 04    call coins_and_credits_040e                      ; Handle coins and credits
 00CA: 3A 41 E0    ld   a,(slot_modeA_e041)           ; Coin mode slot A
 00CD: A7          and  a                          ; Free play?
 00CE: 20 05       jr   nz,$00D5                   ; No ... keep credits
@@ -161,8 +162,8 @@ mpatrol_irq_0038:
 00EF: C2 8F 00    jp   nz,$008F
 00F2: CB 40       bit  0,b                        ; * J00DB
 00F4: 28 06       jr   z,$00FC                    ; Skip game objects
-00F6: CD 7A 04    call $047A                      ; Get inputs (or demo mode ??)
-00F9: CD EC 01    call $01EC                      ; Run the game objects
+00F6: CD 7A 04    call get_inputs_047a                      ; Get inputs (or demo mode ??)
+00F9: CD EC 01    call run_objects_01ec                      ; Run the game objects
 00FC: DD E1       pop  ix                         ; Restore IX and ... * J00DF,J00E9,J00F4
 00FE: FD E1       pop  iy                         ; ... IY
 0100: D9          exx                             ; Restore the other ...
@@ -174,56 +175,56 @@ mpatrol_irq_0038:
 0106: 31 00 E8    ld   sp,unknown_E800
 0109: FB          ei
 010A: CD 29 0D    call $0D29
-010D: CD 33 05    call $0533                      ; * J0110
+010D: CD 33 05    call show_push_button_screen_text_0533                      ; * J0110
 0110: 28 FB       jr   z,$010D
 0112: CD 38 0B    call $0B38
-0115: C3 B7 0B    jp   $0BB7
+0115: C3 B7 0B    jp   start_new_section_0bb7
 0118: 31 00 E8    ld   sp,unknown_E800            ; * J13F8
 011B: 21 46 E0    ld   hl,unknown_E046
 011E: 35          dec  (hl)
 011F: FB          ei
-0120: F2 68 00    jp   p,$0068
+0120: F2 68 00    jp   p,startup_cont_0068
 0123: CD 96 0B    call $0B96
 0126: AF          xor  a
 0127: 32 A6 E1    ld   (unknown_E1A6),a
 012A: 21 15 E5    ld   hl,nb_lives_E515
 012D: 35          dec  (hl)
 012E: 28 1B       jr   z,$014B
-0130: CD D5 06    call $06D5
+0130: CD D5 06    call display_nb_lives_06d5
 0133: 21 46 E0    ld   hl,unknown_E046
 0136: CB 66       bit  4,(hl)
-0138: CA B7 0B    jp   z,$0BB7
-013B: CD 03 06    call $0603
+0138: CA B7 0B    jp   z,start_new_section_0bb7
+013B: CD 03 06    call swap_players_0603
 013E: 3A 15 E5    ld   a,(nb_lives_E515)
 0141: A7          and  a
-0142: C2 B7 0B    jp   nz,$0BB7
-0145: CD 03 06    call $0603
-0148: C3 B7 0B    jp   $0BB7
+0142: C2 B7 0B    jp   nz,start_new_section_0bb7
+0145: CD 03 06    call swap_players_0603
+0148: C3 B7 0B    jp   start_new_section_0bb7
 014B: 3E 1B       ld   a,$1B                      ; Play ... * J012E
-014D: CD 75 0D    call $0D75                      ; ... ending music
+014D: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... ending music
 0150: 21 46 E0    ld   hl,unknown_E046
 0153: CB 66       bit  4,(hl)
 0155: 28 1F       jr   z,$0176
 0157: 21 ED 2A    ld   hl,$2AED                   ; "GAME OVER PLAYER " script
-015A: CD 4E 03    call $034E
+015A: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 015D: 3A 46 E0    ld   a,(unknown_E046)
 0160: 1F          rra
 0161: 1F          rra
 0162: 1F          rra
 0163: E6 01       and  $01
 0165: 3C          inc  a
-0166: CD BD 03    call $03BD
-0169: CD 03 06    call $0603
-016C: CD E4 05    call $05E4
+0166: CD BD 03    call print_digit_03bd
+0169: CD 03 06    call swap_players_0603
+016C: CD E4 05    call delay1_sec_05e4
 016F: 3A 15 E5    ld   a,(nb_lives_E515)
 0172: A7          and  a
-0173: C2 B7 0B    jp   nz,$0BB7
+0173: C2 B7 0B    jp   nz,start_new_section_0bb7
 0176: 21 02 2B    ld   hl,$2B02                   ; "GAME OVER" script * J0155
-0179: CD 4E 03    call $034E
-017C: CD 1C 06    call $061C
+0179: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
+017C: CD 1C 06    call is_player_2_061c
 017F: 28 03       jr   z,$0184
-0181: CD 03 06    call $0603
-0184: CD E8 05    call $05E8                      ; * J017F
+0181: CD 03 06    call swap_players_0603
+0184: CD E8 05    call delay3_sec_05e8                      ; * J017F
 0187: CD 29 0D    call $0D29
 018A: 21 2A 2A    ld   hl,$2A2A                   ; "TO COUNTINUE GAME" script
 018D: CD 00 03    call $0300                      ; Print it
@@ -235,7 +236,7 @@ mpatrol_irq_0038:
 0197: 32 54 E0    ld   (unknown_E054),a
 019A: 11 33 82    ld   de,$8233
 019D: 0E 02       ld   c,$02
-019F: CD AE 03    call $03AE
+019F: CD AE 03    call set_character_at_address_03ae
 01A2: 3E 40       ld   a,$40
 01A4: 32 50 E0    ld   (isr_count3_e050),a
 01A7: 3A 50 E0    ld   a,(isr_count3_e050)           ; * J01BF,J01C4
@@ -246,28 +247,29 @@ mpatrol_irq_0038:
 01B3: A7          and  a
 01B4: 20 0B       jr   nz,$01C1
 01B6: 21 57 2C    ld   hl,$2C57                   ; "INSERT COIN" script
-01B9: CD 74 03    call $0374
-01BC: CD 27 05    call $0527
+01B9: CD 74 03    call flash_script_0374
+01BC: CD 27 05    call print_creds_0527
 01BF: 18 E6       jr   $01A7
-01C1: CD 33 05    call $0533                      ; * J01B4
+01C1: CD 33 05    call show_push_button_screen_text_0533                      ; * J01B4
 01C4: 28 E1       jr   z,$01A7
 01C6: CD DA 01    call $01DA
 01C9: CD DA 01    call $01DA
 01CC: CD BF 0C    call $0CBF
-01CF: C3 B7 0B    jp   $0BB7
+01CF: C3 B7 0B    jp   start_new_section_0bb7
 
 01D2: F3          di                              ; * J0193
 01D3: AF          xor  a
 01D4: 32 46 E0    ld   (unknown_E046),a
-01D7: C3 68 00    jp   $0068
+01D7: C3 68 00    jp   startup_cont_0068
 
 01DA: 3A 40 E0    ld   a,(lives_per_credit_e040)    ; * C01C6,C01C9
 01DD: 32 15 E5    ld   (nb_lives_E515),a
 01E0: 21 00 00    ld   hl,$0000
 01E3: 22 00 E5    ld   (cur_score_e500),hl
 01E6: 22 02 E5    ld   (cur_score2_e502),hl
-01E9: C3 03 06    jp   $0603
+01E9: C3 03 06    jp   swap_players_0603
 
+run_objects_01ec:
 01EC: DD 21 00 E3 ld   ix,buggy_handler_e300            ; Pointer to command buffer (32 slots of 16 bytes) * C00F9
 01F0: 3E 20       ld   a,$20                      ; 32 command slots
 01F2: 32 E8 E0    ld   (unknown_E0E8),a           ; Hold the count
@@ -285,25 +287,26 @@ mpatrol_irq_0038:
 020B: C9          ret                             ; Done
 
 jump_table_020C:
-	.word	$1311,$1331,$1370,$1388,$13BC,$13C2,$13EB,$1421
-	.word	$1809,$15E0,$15FA,$162D,$162D,$1649,$165D,$168F
-	.word	$193D,$1957,$195E,$19D1,$1A2F,$1A44,$1A92,$1AB9
-	.word	$1AF0,$1B01,$1B27,$1433,$18E0,$1EAA,$1F28,$20AC
-	.word	$20C4,$1EAA,$1F28,$2000,$201A,$1EA4,$1F28,$204D
-	.word	$209C,$1D23,$1DF3,$1E51,$1E9B,$1C9B,$1CBC,$1E14
-	.word	$1E29
+	.word	course_start_1311,jeep_moving_on_track_1331,init_jump_1370,jeep_jumping_1388,jeep_landing_13bc,jeep_falling_in_hole_13c2,handle_jeep_explosion_13eb,display_moon_patrol_title_1421
+	.word	update_scrolling_layers_1809,init_forward_shot_15e0,handle_forward_shot_15fa,forward_shot_exploding_162d,forward_shot_exploding_162d,init_vertical_shot_1649,handle_vertical_shot_165d,clear_vertical_shot_168f
+	.word	update_yellow_tank_shot_193d,update_rock_1957,check_if_fall_in_hole_195e,update_volcano_19d1,exploding_volcano_1a2f,update_rolling_rock_1a44,rear_missile_following_1a92,rear_missile_following_1ab9
+	.word	rear_missile_following_1af0,rear_missile_attacking_1b01,rear_missile_sitting_duck_1b27,jeep_bombed_1433,update_yellow_tank_18e0,ufo_appearing_1eaa,animate_ufo_1f28,ufo_shot_20ac
+	.word	show_kill_score_20c4,ufo_appearing_1eaa,animate_ufo_1f28,ufo_appearing_2000,animate_ufo_201a,ufo_appearing_1ea4,animate_ufo_1f28,ufo_init_crash_on_player_204d
+	.word	ufo_crashing_on_player_209c,handle_hole_making_bombs_1d23,hole_making_bomb_explodes_1df3,bomb_creates_hole_1e51,bomb_shot_1e9b,init_standard_ufo_bomb_1c9b,update_standard_ufo_bomb_1cbc,init_ground_explosion_1e14
+	.word	update_ground_explosion_1e29
 
-026E: CD DC 0D    call $0DDC                      ; ?? Change terrain
-0271: CD 0D 21    call $210D                      ; Draw "point letter" in upper center status window
-0274: CD 3A 1B    call $1B3A                      ; ?? Start UFO shot
-0277: CD C7 1B    call $1BC7                      ; ?? Init aliens
-027A: CD A7 12    call $12A7                      ; ?? Alien sounds
+game_mainloop_026e:
+026E: CD DC 0D    call handle_path_advance_0ddc                      ; ?? Change terrain
+0271: CD 0D 21    call handle_time_210d                      ; Draw "point letter" in upper center status window
+0274: CD 3A 1B    call handle_ufo_shots_1b3a                      ; ?? Start UFO shot
+0277: CD C7 1B    call handle_flying_enemies_1bc7                      ; ?? Init aliens
+027A: CD A7 12    call update_alien_sounds_12a7                      ; ?? Alien sounds
 027D: CD E7 12    call $12E7                      ; ??
-0280: CD DC 0D    call $0DDC                      ; ?? Change terrain
+0280: CD DC 0D    call handle_path_advance_0ddc                      ; ?? Change terrain
 0283: 3A CF E1    ld   a,(com_list_head_e1cf)           ; LSB of head of text command list
 0286: 21 D0 E1    ld   hl,com_list_tail_e1d0            ; Next available text command pointer * J02AB
 0289: BE          cp   (hl)                       ; Have we reached the end of the list?
-028A: 28 E2       jr   z,$026E                    ; Yes ... back to the top
+028A: 28 E2       jr   z,game_mainloop_026e                    ; Yes ... back to the top
 028C: 5F          ld   e,a                        ; IX ...
 028D: 16 E6       ld   d,$E6                      ; ... becomes ...
 028F: DD 21 00 00 ld   ix,$0000                   ; ... E6xx ...
@@ -318,7 +321,7 @@ RemoveTxtCmd:
 ; commands to be removed before they go away. All commands eventually go
 ; away, so this works and saves the time spent closing up gaps.
 ;
-029C: 21 CF E1        LD      HL,$E1CF            ; Is this inactive command ...
+029C: 21 CF E1        LD      HL,com_list_head_e1cf            ; Is this inactive command ...
 029F: BE          cp   (hl)                       ; .. the first command in the list?
 02A0: 20 03       jr   nz,$02A5                   ; No ... the "first" pointer is OK
 02A2: C6 04       add  a,$04                      ; Remove this command ...
@@ -349,6 +352,7 @@ NewTxtCmd:
 ;   A = Parameter ... like ISR value for next execution or score adjust
 ;   E = Text script LSB
 ;   D = Text script MSB
+store_special_event_02c2:
 02C2: 21 D0 E1    ld   hl,com_list_tail_e1d0            ; LSB of next-available text command * J0518,C1528,C1778,C1789,C17A3,J17E7,J19CE,C1DE7,C1E7A
 02C5: 6E          ld   l,(hl)                     ; Set HL to ...
 02C6: 26 E6       ld   h,$E6                      ; ... E6xx
@@ -368,14 +372,14 @@ NewTxtCmd:
 jump_table_02D3
 	.word	0		; overlaps ret instruction, probably never used
 	.word	$0622
-	.word	$02FA
+	.word	txt_cmd_02_02fa
 	.word	$02ED
 	.word	$0322
-	.word	$032F
+	.word	txt_cmd_05_032f
 	.word	$0367
-	.word	$0361
+	.word	wait_for_sync_0361
 	.word	$0337
-	.word	$0DA6
+	.word	ufo_bomb_creates_hole_0da6
 	.word	$1201
 	.word	display_title_1218
 
@@ -384,9 +388,10 @@ jump_table_02D3
 02F0: DD 86 01    add  a,(ix+$01)                 ; Add time ...
 02F3: DD 77 01    ld   (ix+$01),a                 ; ... offset to next run
 02F6: DD 36 00 04 ld   (ix+$00),$04               ; Next pass execute the "wait for time" state
+txt_cmd_02_02fa:
 02FA: DD 6E 02    ld   l,(ix+$02)                 ; Get script ... * C036C
 02FD: DD 66 03    ld   h,(ix+$03)                 ; ... pointer (fall into run)
-0300: CD DB 03    call $03DB                      ; Get screen pointer and color from script * C018D,J0379,C052A,C0548,C074B,C0B47,C0C31,C0C89,C0CEA,C0D06,J1258,C1285,C27EA,C27F3
+0300: CD DB 03    call compute_screen_address_and_attribute_03db                      ; Get screen pointer and color from script * C018D,J0379,C052A,C0548,C074B,C0B47,C0C31,C0C89,C0CEA,C0D06,J1258,C1285,C27EA,C27F3
 0303: 7E          ld   a,(hl)                     ; Get command * J031B,J0320
 0304: 06 12       ld   b,$12                      ; 18 ISR delay (0.3 seconds)
 0306: FE 26       cp   $26                        ; 26 ...
@@ -401,46 +406,54 @@ jump_table_02D3
 0318: A7          and  a                          ; ... to 0 ?
 0319: 20 FA       jr   nz,$0315                   ; No ... keep waiting
 031B: 18 E6       jr   $0303                      ; Back to top of loop
-031D: CD C9 03    call $03C9                      ; Process normal character or command sequence * J030E
+031D: CD C9 03    call write_to_screen_03c9                      ; Process normal character or command sequence * J030E
 0320: 18 E1       jr   $0303                      ; Back to top of loop
 0322: 3A 4E E0    ld   a,(isrCNT_1_e04e)           ; Count from ISR
 0325: DD BE 01    cp   (ix+$01)                   ; Target count value
-0328: 28 05       jr   z,$032F                    ; It is time to run script
+0328: 28 05       jr   z,txt_cmd_05_032f                    ; It is time to run script
 032A: DD 36 00 04 ld   (ix+$00),$04               ; Stay in this state (the main run loop clears this)
 032E: C9          ret                             ; Done
+
+txt_cmd_05_032f:
 032F: DD 6E 02    ld   l,(ix+$02)                 ; Get the ... * J0328,C033D
 0332: DD 66 03    ld   h,(ix+$03)                 ; ... script pointer
-0335: 18 44       jr   $037B                      ; Erase the script and done
+0335: 18 44       jr   erase_script_037b                      ; Erase the script and done
 0337: 3A 50 E0    ld   a,(isr_count3_e050)           ; Count-down ...
 033A: A7          and  a                          ; ... reached 0?
 033B: 20 0C       jr   nz,$0349                   ; No ... go to state 7
-033D: CD 2F 03    call $032F                      ; Erase the script
+033D: CD 2F 03    call txt_cmd_05_032f                      ; Erase the script
 0340: DD 35 01    dec  (ix+$01)                   ; Has this been active for requested time?
 0343: C8          ret  z                          ; Yes. Leave the command "inactive" and pulled from duty
 0344: 3E 04       ld   a,$04                      ; No. Reset the count-down ...
 0346: 32 50 E0    ld   (isr_count3_e050),a           ; ... timer to 4 interrupts
 0349: DD 36 00 07 ld   (ix+$00),$07               ; Transition to state 7 * J033B
 034D: C9          ret                             ; Out
-034E: CD DB 03    call $03DB                      ; Get screen cursor and color
-0351: CD C9 03    call $03C9                      ; Process one script command (abort takes us back to caller) * J035F
+
+write_text_to_screen_at_xy_with_delay_034e:
+034E: CD DB 03    call compute_screen_address_and_attribute_03db                      ; Get screen cursor and color
+0351: CD C9 03    call write_to_screen_03c9                      ; Process one script command (abort takes us back to caller) * J035F
 0354: 3E 03       ld   a,$03                      ; Set ...
 0356: 32 50 E0    ld   (isr_count3_e050),a           ; ... ISR delay
 0359: 3A 50 E0    ld   a,(isr_count3_e050)           ; Has ISR counted ... * J035D
 035C: A7          and  a                          ; ... this down to zero?
 035D: 20 FA       jr   nz,$0359                   ; No ... wait for zero
 035F: 18 F0       jr   $0351                      ; Keep processing script
+wait_for_sync_0361:
 0361: 3A 50 E0    ld   a,(isr_count3_e050)           ; Count-down timer ...
 0364: A7          and  a                          ; ... reached zero?
 0365: 20 08       jr   nz,$036F                   ; No ... transition to state 8
 0367: 3E 04       ld   a,$04                      ; Set count-down timer ...
 0369: 32 50 E0    ld   (isr_count3_e050),a           ; ... to 4 interrupts
-036C: CD FA 02    call $02FA                      ; Run object script
+036C: CD FA 02    call txt_cmd_02_02fa                      ; Run object script
 036F: DD 36 00 08 ld   (ix+$00),$08               ; Transition to state 8 * J0365
 0373: C9          ret                             ; Done
+
+flash_script_0374:
 0374: 3A 4E E0    ld   a,(isrCNT_1_e04e)           ; ISR up counter * C01B9,C0536
 0377: CB 67       bit  4,a                        ; Every 16 interrupts
 0379: 20 85       jr   nz,$0300                   ; Bit set ... print text (bit cleared ... fall into erase)
-037B: CD DB 03    call $03DB                      ; Load cursor and color from script * J0335,J0389,C126D,C1327
+erase_script_037b:
+037B: CD DB 03    call compute_screen_address_and_attribute_03db                      ; Load cursor and color from script * J0335,J0389,C126D,C1327
 037E: 7E          ld   a,(hl)                     ; Get next character/command * J038E,J0391
 037F: 23          inc  hl                         ; Next in script
 0380: FE 21       cp   $21                        ; Abort script ...
@@ -448,18 +461,20 @@ jump_table_02D3
 0383: FE 23       cp   $23                        ; Ignore ...
 0385: 28 09       jr   z,$0390                    ; ... set-color command (Should jump to 38D)
 0387: FE 22       cp   $22                        ; Set screen cursor ...
-0389: 28 F0       jr   z,$037B                    ; ... and continue script
+0389: 28 F0       jr   z,erase_script_037b                    ; ... and continue script
 038B: AF          xor  a                          ; Clear ...
 038C: 12          ld   (de),a                     ; ... screen character
 038D: 13          inc  de                         ; Back up one
 038E: 18 EE       jr   $037E                      ; Keep processing
 0390: 23          inc  hl                         ; Next in script * J0385
 0391: 18 EB       jr   $037E                      ; Continue running script
+write_2_digits_to_screen_0393:
 0393: 7E          ld   a,(hl)                     ; Get BCD number (most significant) * C2977
 0394: 13          inc  de                         ; Skip potentially 0 leading digit
 0395: E6 0F       and  $0F                        ; If the lower digit is 0 then ...
 0397: 28 04       jr   z,$039D                    ; ... skip printing it
 0399: 1B          dec  de                         ; We will be printing this digit after all
+write_2_digits_to_screen_039a:
 039A: CD A6 03    call $03A6                      ; Print lower BCD digit * C2924,C293A,J296E
 039D: 2B          dec  hl                         ; Next less-significant BCD value * J0397
 039E: 7E          ld   a,(hl)                     ; Get BCD number
@@ -474,6 +489,8 @@ jump_table_02D3
 03AB: 12          ld   (de),a                     ; Store it on the screen
 03AC: 13          inc  de                         ; Advance screen pointer
 03AD: C9          ret                             ; Done
+
+set_character_at_address_03ae:
 03AE: FD 21 00 04 ld   iy,$0400                   ; Set color memory ... * C019F,J0530,C067E,J2141
 03B2: FD 19       add  iy,de                      ; ... pointer to same slot as tile pointer
 03B4: F5          push af                         ; Hold A
@@ -481,15 +498,19 @@ jump_table_02D3
 03B6: 1F          rra                             ; ... upper ...
 03B7: 1F          rra                             ; ... BCD ...
 03B8: 1F          rra                             ; ... digit
-03B9: CD BD 03    call $03BD                      ; Print digit
+03B9: CD BD 03    call print_digit_03bd                      ; Print digit
 03BC: F1          pop  af                         ; Lower ...
+print_digit_03bd:
 03BD: E6 0F       and  $0F                        ; ... BDC digit * C0166,C03B9,C213B
 03BF: C6 30       add  a,$30                      ; Convert to number (ASCII)
+write_to_screen_and_move_cursor_03c1:
 03C1: 12          ld   (de),a                     ; Store character (tile number) to screen * J03D9,C0408
 03C2: FD 71 00    ld   (iy+$00),c                 ; Store background to color memory
 03C5: 13          inc  de                         ; Next on screen
 03C6: FD 23       inc  iy                         ; Next in color
 03C8: C9          ret                             ; Done
+
+write_to_screen_03c9:
 03C9: 7E          ld   a,(hl)                     ; Get command or character from script * C031D,C0351
 03CA: 23          inc  hl                         ; Next in script
 03CB: FE 21       cp   $21                        ; Abort script?
@@ -497,9 +518,10 @@ jump_table_02D3
 03CF: FE 23       cp   $23                        ; Command 23 ...
 03D1: 28 12       jr   z,$03E5                    ; ... set color value
 03D3: FE 25       cp   $25                        ; Command 25 ...
-03D5: 28 2D       jr   z,$0404                    ; ... write repeated character
+03D5: 28 2D       jr   z,write_text_using_rle_0404                    ; ... write repeated character
 03D7: FE 22       cp   $22                        ; Command 22 ... set cursor and load color
-03D9: 20 E6       jr   nz,$03C1                   ; Normal character (not a command) ... store it to screen
+03D9: 20 E6       jr   nz,write_to_screen_and_move_cursor_03c1                   ; Normal character (not a command) ... store it to screen
+compute_screen_address_and_attribute_03db:
 03DB: 5E          ld   e,(hl)                     ; Load ... * C0300,C034E,C037B
 03DC: 23          inc  hl                         ; ... the ...
 03DD: 56          ld   d,(hl)                     ; ... tile memory ...
@@ -508,6 +530,7 @@ jump_table_02D3
 03E3: FD 19       add  iy,de                      ; ... plus 400
 03E5: 4E          ld   c,(hl)                     ; Load color ... * J03D1
 03E6: 23          inc  hl                         ; ... from script
+trans_color_03e7:
 03E7: 3A F9 E0    ld   a,(champ_colors_e0f9)           ; Get champion-color flag * C0678,C06A9,C0CD7,C2135,C2993
 03EA: A7          and  a                          ; If 0 ...
 03EB: C8          ret  z                          ; ... skip color translation
@@ -528,13 +551,17 @@ jump_table_02D3
 0401: C9          ret                             ; Done
 0402: E1          pop  hl                         ; Don't return to script processor * J03CD
 0403: C9          ret                             ; Return out of script (abort)
+
+write_text_using_rle_0404:
 0404: 46          ld   b,(hl)                     ; Get the count * J03D5
 0405: 23          inc  hl                         ; Skip count byte
 0406: 7E          ld   a,(hl)                     ; Get the character value
 0407: 23          inc  hl                         ; Skip to next
-0408: CD C1 03    call $03C1                      ; Write the character/color * J040B
+0408: CD C1 03    call write_to_screen_and_move_cursor_03c1                      ; Write the character/color * J040B
 040B: 10 FB       djnz $0408                      ; Do all loops
 040D: C9          ret                             ; Done
+
+coins_and_credits_040e:
 040E: 21 3E E0    ld   hl,unknown_E03E            ; Coin and service-credit signal history for slot A * C00C7
 0411: 11 41 E0    ld   de,slot_modeA_e041            ; Slot A coin mode
 0414: 3A 00 D0    ld   a,($D000)                  ; Current switch values
@@ -574,7 +601,7 @@ jump_table_02D3
 0452: B1          or   c                          ; ... bit to trigger ...
 0453: 47          ld   b,a                        ; ... hardware coin counter
 0454: 3E 13       ld   a,$13                      ; Play ...
-0456: CD 7D 0D    call $0D7D                      ; ... coin sound
+0456: CD 7D 0D    call queue_sound_effect_0d7d                      ; ... coin sound
 0459: 1A          ld   a,(de)                     ; Coin mode
 045A: FE 01       cp   $01                        ; One-coin = one-play?
 045C: 28 11       jr   z,$046F                    ; Yes ... register one credit for this coin
@@ -596,9 +623,11 @@ jump_table_02D3
 0476: 3E 99       ld   a,$99                      ; Max 99 coins
 0478: 77          ld   (hl),a                     ; Store the new number of credits * J0474
 0479: C9          ret                             ; Done
+
+get_inputs_047a:
 047A: 3A 46 E0    ld   a,(unknown_E046)           ; ??Demo mode flag * C00F6
 047D: 07          rlca                            ; ??Are we in demo mode?
-047E: 30 5B       jr   nc,$04DB                   ; ??Yes ... go get demo inputs
+047E: 30 5B       jr   nc,get_current_input_04db                   ; ??Yes ... go get demo inputs
 0480: 11 01 D0    ld   de,$D001                   ; Player 1 inputs
 0483: CB 67       bit  4,a
 0485: 28 07       jr   z,$048E
@@ -618,6 +647,8 @@ jump_table_02D3
 0499: E6 03       and  $03                        ; Keep only the start buttons
 049B: 77          ld   (hl),a                     ; Store the start buttons
 049C: C9          ret                             ; Done
+
+get_current_input_049d:
 049D: 3A 0B E5    ld   a,(unknown_E50B)           ; * J04E4
 04A0: 2A F7 E0    ld   hl,(unknown_E0F7)
 04A3: BE          cp   (hl)
@@ -654,14 +685,16 @@ jump_table_02D3
 04D8: 23          inc  hl
 04D9: 77          ld   (hl),a
 04DA: C9          ret
+
+get_current_input_04db:
 04DB: 21 4D E0    ld   hl,unknown_E04D            ; * J047E
 04DE: 3A 4E E0    ld   a,(isrCNT_1_e04e)           ; ISR incrementing counter
 04E1: 47          ld   b,a
 04E2: 7E          ld   a,(hl)
 04E3: A7          and  a
-04E4: 28 B7       jr   z,$049D
+04E4: 28 B7       jr   z,get_current_input_049d
 04E6: FE 50       cp   $50
-04E8: 28 1D       jr   z,$0507
+04E8: 28 1D       jr   z,jeep_jumps_and_title_shows_0507
 04EA: CB 18       rr   b
 04EC: 38 05       jr   c,$04F3
 04EE: CB 18       rr   b
@@ -678,6 +711,8 @@ jump_table_02D3
 0501: FE B0       cp   $B0
 0503: D8          ret  c
 0504: C3 7B 00    jp   $007B
+
+jeep_jumps_and_title_shows_0507:
 0507: 21 00 E3    ld   hl,buggy_handler_e300            ; MoonBuggy object * J04E8
 050A: 7E          ld   a,(hl)                     ; Get the current command
 050B: FE 04       cp   $04                        ; Is the buggy in the air?
@@ -687,7 +722,7 @@ jump_table_02D3
 0513: D8          ret  c                          ; ?? falls through when jump buggy is at apex
 0514: 36 08       ld   (hl),$08                   ; Transition to "hold buggy in air" sequence
 0516: 0E 0A       ld   c,$0A                      ; Init "MOOD PATROL" splash sequence
-0518: C3 C2 02    jp   $02C2                      ; Add the text-command and out
+0518: C3 C2 02    jp   store_special_event_02c2                      ; Add the text-command and out
 051B: FE 08       cp   $08                        ; Buggy-held-in-air sequence? * J050D
 051D: C8          ret  z                          ; Yes ... no inputs
 051E: 21 4A E0    ld   hl,unknown_E04A            ; Current inputs
@@ -695,13 +730,17 @@ jump_table_02D3
 0523: 23          inc  hl                         ; Last input is ...
 0524: 36 00       ld   (hl),$00                   ; ... nothing (register transition)
 0526: C9          ret                             ; Done
+
+print_creds_0527:
 0527: 21 E2 2A    ld   hl,$2AE2                   ; "CREDIT " script * C01BC,C0539,C074E
 052A: CD 00 03    call $0300                      ; Print it
 052D: 3A 48 E0    ld   a,(credits_e048)        ; Number of credits
-0530: C3 AE 03    jp   $03AE                      ; Print it and out
+0530: C3 AE 03    jp   set_character_at_address_03ae                      ; Print it and out
+
+show_push_button_screen_text_0533:
 0533: 21 D1 2A    ld   hl,$2AD1                   ; " PUSH BUTTON " script * C010D,C01C1
-0536: CD 74 03    call $0374                      ; Print the flashing script
-0539: CD 27 05    call $0527                      ; Print number of credits
+0536: CD 74 03    call flash_script_0374                      ; Print the flashing script
+0539: CD 27 05    call print_creds_0527                      ; Print number of credits
 053C: 21 86 2A    ld   hl,$2A86                   ; "ONLY 1 PLAYER" script
 053F: 3A 48 E0    ld   a,(credits_e048)        ; Number of credits
 0542: 3D          dec  a                          ; Only one player?
@@ -731,6 +770,7 @@ jump_table_02D3
 
 reg_mirror_056d:
 ; copy E100 => C800 ($40 bytes)
+reg_mirror_056d:
 056D: 21 00 E1    ld   hl,sprite_shadow_E100      ; Start of mirror memory * C003A
 0570: 11 40 C8    ld   de,$C840                   ; ?? Sprite memory Enemy ships and rocks
 0573: 01 40 00    ld   bc,$0040                   ; 40 bytes, 16 sprites
@@ -789,6 +829,8 @@ reg_mirror_056d:
 05C7: 2F          cpl                             ; Reverse bits to active high * J059A
 05C8: D3 C0       out  ($C0),a                    ; Turn selected backgrounds on
 05CA: C9          ret                             ; Done
+
+sound_stuff_05cb:
 05CB: 2A DD E1    ld   hl,(sndQ_front_e1dd)          ; Get front (L) and back (H) of sound effect queue pointer * C0093
 05CE: 7D          ld   a,l                        ; Head and tail ...
 05CF: BC          cp   h                          ; ... the same?
@@ -803,9 +845,13 @@ reg_mirror_056d:
 05DE: E6 07       and  $07                        ; Only 8 bytes in queue ... then we wrap
 05E0: 32 DD E1    ld   (sndQ_front_e1dd),a           ; Store the updated front
 05E3: C9          ret                             ; Done
+
+delay1_sec_05e4:
 05E4: 3E 40       ld   a,$40                      ; About 1 second * C016C
-05E6: 18 02       jr   $05EA                      ; Wait for it and return
+05E6: 18 02       jr   wait_for_sync_05ea                      ; Wait for it and return
+delay3_sec_05e8:
 05E8: 3E C0       ld   a,$C0                      ; About 3 seconds * C0184,J0794,C27E4,C2889,C288E,C28BA
+wait_for_sync_05ea:
 05EA: 32 50 E0    ld   (isr_count3_e050),a           ; Set countdown timer * J05E6,C2859,C286E
 05ED: 3A 50 E0    ld   a,(isr_count3_e050)           ; Wait for ... * J05F1
 05F0: A7          and  a                          ; ... count to ...
@@ -826,6 +872,7 @@ clear_area_05fa:
 0600: 20 F8       jr   nz,clear_area_05fa         ; No ... keep clearing
 0602: C9          ret                             ; Done
 
+swap_players_0603:
 0603: 21 46 E0    ld   hl,unknown_E046            ; Game mode * C013B,C0145,C0169,C0181,J01E9,C0C95,C0CFA,C0D00
 0606: 7E          ld   a,(hl)                     ; Get game mode
 0607: EE 08       xor  $08                        ; Change ...
@@ -842,6 +889,8 @@ clear_area_05fa:
 0618: 13          inc  de                         ; Next in other
 0619: 10 F7       djnz $0612                      ; Do all 24 bytes
 061B: C9          ret                             ; Done
+
+is_player_2_061c:
 061C: 3A 46 E0    ld   a,(unknown_E046)           ; Get game-mode * C017C,C066B
 061F: CB 5F       bit  3,a                        ; Test value of bit-3
 0621: C9          ret                             ; Return in Z flag
@@ -865,7 +914,7 @@ clear_area_05fa:
 063B: 13          inc  de                         ; Next in value
 063C: 23          inc  hl                         ; Next in offset
 063D: 10 F8       djnz $0637                      ; Do all digits
-063F: CD AF 06    call $06AF                      ; Check and handle extended play
+063F: CD AF 06    call check_ext_play_06af                      ; Check and handle extended play
 0642: 06 03       ld   b,$03                      ; Three bytes (six digits)
 0644: 11 00 E5    ld   de,cur_score_e500            ; Current score
 0647: 21 08 E0    ld   hl,high_score_e008            ; High Score
@@ -875,27 +924,30 @@ clear_area_05fa:
 064D: 23          inc  hl                         ; Next in high
 064E: 13          inc  de                         ; Next in current
 064F: 10 FA       djnz $064B                      ; Compare all digits
-0651: 38 15       jr   c,$0668                    ; Current score is lower ... don't update high score
+0651: 38 15       jr   c,display_score_0668                    ; Current score is lower ... don't update high score
 0653: 2A 00 E5    ld   hl,(cur_score_e500)          ; Copy ...
 0656: 22 08 E0    ld   (high_score_e008),hl          ; ... current score ...
 0659: 3A 02 E5    ld   a,(cur_score2_e502)           ; ... to ...
 065C: 32 0A E0    ld   (high_score2_e00a),a           ; ... high score
 065F: 3A 0E E5    ld   a,(cur_point_e50e)           ; Current passed-point
 0662: 32 0B E0    ld   (high_point_e00b),a           ; Copy to high passed-point
-0665: CD 85 06    call $0685                      ; Print high-score and high-passed-point
+0665: CD 85 06    call print_high_0685                      ; Print high-score and high-passed-point
+display_score_0668:
 0668: 11 84 80    ld   de,$8084                   ; Player 1's score on screen * J0651,C0CED,C0CFD
-066B: CD 1C 06    call $061C                      ; Player 1 or 2?
+066B: CD 1C 06    call is_player_2_061c                      ; Player 1 or 2?
 066E: 28 03       jr   z,$0673                    ; This is player 1 ... we have the right screen location
 0670: 11 A4 80    ld   de,$80A4                   ; Player 2's score on screen (+32 ... one row)
 0673: 21 02 E5    ld   hl,cur_score2_e502            ; * J066E
 0676: 0E 01       ld   c,$01                      ; Color set
-0678: CD E7 03    call $03E7                      ; Translate colors
+0678: CD E7 03    call trans_color_03e7                      ; Translate colors
 067B: 06 03       ld   b,$03                      ; Three bytes to print * J06AD
 067D: 7E          ld   a,(hl)                     ; Get BCD double digit * J0682
-067E: CD AE 03    call $03AE                      ; Print two digits to screen at DE
+067E: CD AE 03    call set_character_at_address_03ae                      ; Print two digits to screen at DE
 0681: 2B          dec  hl                         ; Back up a byte (these are stored in memory LSB first)
 0682: 10 F9       djnz $067D                      ; Do all digits
 0684: C9          ret                             ; Out
+
+print_high_0685:
 0685: 21 0B E0    ld   hl,high_point_e00b            ; Location of high passed-point * C0665,C0CF0
 0688: 7E          ld   a,(hl)                     ; Get high passed-point
 0689: 0E 09       ld   c,$09                      ; Color for 1st pass through letters
@@ -913,9 +965,10 @@ clear_area_05fa:
 06A1: 32 4A 84    ld   ($844A),a                  ; Set the color of the high passed-point character * J069D
 06A4: 11 43 80    ld   de,$8043                   ; Location of high-score on screen
 06A7: 0E 09       ld   c,$09                      ; Color set
-06A9: CD E7 03    call $03E7                      ; Do color translation
+06A9: CD E7 03    call trans_color_03e7                      ; Do color translation
 06AC: 2B          dec  hl                         ; Back up to MSB of high score (E00A)
 06AD: 18 CC       jr   $067B                      ; Print high score digits to screen and out
+check_ext_play_06af:
 06AF: 2A 01 E5    ld   hl,(cur_score1_e501)          ; * C063F
 06B2: 3A 45 E0    ld   a,(ext_points_e045)           ; Extra points setting
 06B5: 3D          dec  a
@@ -940,17 +993,19 @@ clear_area_05fa:
 06D0: 34          inc  (hl)
 06D1: 21 15 E5    ld   hl,nb_lives_E515
 06D4: 34          inc  (hl)
+display_nb_lives_06d5:
 06D5: 3A 15 E5    ld   a,(nb_lives_E515)          ; * C0130,C0D09
 06D8: 3D          dec  a
 06D9: 28 03       jr   z,$06DE
 06DB: 4F          ld   c,a
 06DC: 3E 01       ld   a,$01
 06DE: 21 7C 80    ld   hl,$807C                   ; * J06D9
-06E1: CD EC 06    call $06EC
-06E4: CD EC 06    call $06EC
-06E7: 28 03       jr   z,$06EC
+06E1: CD EC 06    call write_to_screen_and_inc_x_and_char_06ec
+06E4: CD EC 06    call write_to_screen_and_inc_x_and_char_06ec
+06E7: 28 03       jr   z,write_to_screen_and_inc_x_and_char_06ec
 06E9: 79          ld   a,c
 06EA: C6 30       add  a,$30
+write_to_screen_and_inc_x_and_char_06ec:
 06EC: 77          ld   (hl),a                     ; * C06E1,C06E4,J06E7
 06ED: 23          inc  hl
 06EE: A7          and  a
@@ -958,6 +1013,7 @@ clear_area_05fa:
 06F0: 3C          inc  a
 06F1: C9          ret
 
+read_settings_06f2:
 06F2: 21 40 E0    ld   hl,lives_per_credit_e040     ; Holds lives-per-credit * C0010
 06F5: 3A 03 D0    ld   a,($D003)                  ; Read the number of lives-per-credit
 06F8: 47          ld   b,a                        ; Hold original in B
@@ -1018,9 +1074,9 @@ clear_area_05fa:
 0745: CD 29 0D    call $0D29                      ; * C0086
 0748: 21 97 2C    ld   hl,$2C97                   ; "1982 IREM CORP" script
 074B: CD 00 03    call $0300
-074E: CD 27 05    call $0527
+074E: CD 27 05    call print_creds_0527
 0751: 21 57 2C    ld   hl,$2C57                   ; "INSERT COIN" script
-0754: CD 4E 03    call $034E
+0754: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 0757: 11 54 E0    ld   de,unknown_E054
 075A: 01 20 00    ld   bc,$0020
 075D: 3A 44 E0    ld   a,(slot_mode_e044)
@@ -1046,11 +1102,11 @@ clear_area_05fa:
 0785: 3E 31       ld   a,$31
 0787: 77          ld   (hl),a                     ; * J077F
 0788: 21 54 E0    ld   hl,unknown_E054            ; * J079D
-078B: CD 4E 03    call $034E
+078B: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 078E: 3A 47 E0    ld   a,(cnt_till_cred_e047)           ; * J076C,J0792
 0791: A7          and  a
 0792: 20 FA       jr   nz,$078E
-0794: C3 E8 05    jp   $05E8
+0794: C3 E8 05    jp   delay3_sec_05e8
 0797: CD D3 07    call $07D3                      ; * J0761
 079A: CD DD 07    call $07DD
 079D: 18 E9       jr   $0788
@@ -1092,7 +1148,7 @@ clear_area_05fa:
 07E3: 3A 42 E0    ld   a,(slot_modeB_e042)
 07E6: 18 C2       jr   $07AA
 07E8: 21 54 E0    ld   hl,unknown_E054            ; * C0766,C07DD
-07EB: CD 4E 03    call $034E
+07EB: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 07EE: 2A 54 E0    ld   hl,(unknown_E054)
 07F1: 11 40 00    ld   de,$0040
 07F4: 19          add  hl,de
@@ -1119,6 +1175,8 @@ clear_area_05fa:
 0816: 87          add  a,a
 0817: DD 77 01    ld   (ix+$01),a
 081A: C9          ret
+
+compute_screen_address_081b:
 081B: DD 7E 07    ld   a,(ix+$07)                 ; Get the Y coordinate * C1670,C168F
 081E: E6 F8       and  $F8                        ; Drop the divide-by-eight remainder (1111_1000)
 0820: 6F          ld   l,a                        ; To HL
@@ -1134,9 +1192,12 @@ clear_area_05fa:
 082E: 85          add  a,l                        ; Add in the offset on the tile row
 082F: 6F          ld   l,a                        ; Back to L
 0830: C9          ret                             ; Return pointer in HL
+
+update_surface_object_0831:
 0831: 3A 00 E3    ld   a,(buggy_handler_e300)           ; * C162D,C18E0,C1957,C195E,C1A2F,C1E25
 0834: FE 06       cp   $06
 0836: 30 7A       jr   nc,$08B2
+update_surface_object_0838:
 0838: 3A E2 E1    ld   a,(unknown_E1E2)           ; * C1950,C1A22,C1A73
 083B: DD 96 0F    sub  (ix+$0f)
 083E: ED 44       neg
@@ -1145,9 +1206,9 @@ clear_area_05fa:
 0845: 38 6D       jr   c,$08B4
 0847: DD 4E 0B    ld   c,(ix+$0b)
 084A: 0D          dec  c
-084B: 20 6B       jr   nz,$08B8
+084B: 20 6B       jr   nz,draw_object_08b8
 084D: FE E8       cp   $E8
-084F: 30 67       jr   nc,$08B8
+084F: 30 67       jr   nc,draw_object_08b8
 0851: E1          pop  hl
 0852: DD 36 00 00 ld   (ix+$00),$00               ; * J143E,J1639,J163E,C1711,J177C,J1B13,J1CE0,C1D98,J1E11,J1E30,J1E38,J1E45,J1E55,J1E9E,J2028,J2039,J20BB,J20CF
 0856: DD 7E 0D    ld   a,(ix+$0d)                 ; A = object.layoutIndex * C1794,J17C1,J1D20,C1E8B
@@ -1207,6 +1268,7 @@ clear_area_05fa:
 08B2: E1          pop  hl                         ; * J0836
 08B3: C9          ret
 08B4: DD 36 0B 01 ld   (ix+$0b),$01               ; * J0845
+draw_object_08b8:
 08B8: DD 7E 0D    ld   a,(ix+$0d)                 ; Object number * J084B,J084F,J1360,J13B9,C13D8,C13FF,J1419,C1484,J1615,J1AED,J1D3F,J1D7F,J1D8D,J1D95,J1EA1,J20AF,J20C1,J20C7
 08BB: 07          rlca                            ; Was upper bit set (Thus A*4>=512)?
 08BC: D8          ret  c                          ; Yes ... skip
@@ -1235,11 +1297,12 @@ clear_area_05fa:
 08E1: 69          ld   l,c                        ; Now in HL
 08E2: DD 4E 03    ld   c,(ix+$03)                 ; X coordinate to C
 08E5: DD 7E 07    ld   a,(ix+$07)                 ; Y coordinate to A
-08E8: CD ED 08    call $08ED                      ; ?? adjusted Y coordinate to B
+08E8: CD ED 08    call compute_jeep_horizon_object_y_08ed                      ; ?? adjusted Y coordinate to B
 08EB: AF          xor  a                          ; Clear A ... many handlers need a zero
 08EC: E9          jp   (hl)                       ; Jump to the draw routine
 
 
+compute_jeep_horizon_object_y_08ed:
 08ED: 2F          cpl                             ; * C08E8,C159D,C15CA
 08EE: 47          ld   b,a
 08EF: 3A 3C E0    ld   a,(jeep_base_y_e03c)
@@ -1248,35 +1311,39 @@ clear_area_05fa:
 08F4: C9          ret
 
 jump_table_08F5:
-	.word	$0969,$095A,$09CF,$09CD,$0AF5,$0943,$0AE2,$0A90
-	.word	$0A56,$0AB7,$0A52,$0A9F,$09C9,$0B25,$0976,$0997
-	.word	$09BA,$0A1E,$0A44,$0934,$0925,$0B1D,$09B0,$0983
+	.word	draw_rock_0969,draw_rear_missile_095a,draw_volcano_flat_09cf,draw_volcano_low_09cd,draw_exploding_jeep_0af5,update_jeep_explosion_0943,update_jeep_explosion_0ae2,update_jeep_movement_0a90
+	.word	draw_hole_making_explosion_0a56,draw_hole_making_explosion_end_0ab7,draw_bomb_smoke_0a52,draw_explosion_smoke_0a9f,draw_volcano_medium_09c9,draw_ufo_0b25,write_sprite_data_0976,draw_bomb_explosion_0997
+	.word	draw_volcano_high_09ba,draw_volcano_kill_score_0a1e,draw_jeep_falling_in_hole_0a44,draw_rear_missile_attacking_0934,draw_mine_0925,draw_hole_making_bomb_0b1d,update_exploding_wheels_09b0,draw_enemy_kill_score_0983
 
 
+draw_mine_0925:
 0925: DD 34 0A    inc  (ix+$0a)
 0928: DD 7E 0A    ld   a,(ix+$0a)
 092B: E6 1F       and  $1F
 092D: FE 0B       cp   $0B
-092F: 38 38       jr   c,$0969
+092F: 38 38       jr   c,draw_rock_0969
 0931: 1C          inc  e                          ; Next color set
-0932: 18 35       jr   $0969
+0932: 18 35       jr   draw_rock_0969
+draw_rear_missile_attacking_0934:
 0934: 3A 4E E0    ld   a,(isrCNT_1_e04e)
 0937: E6 03       and  $03
 0939: 28 01       jr   z,$093C
 093B: 14          inc  d
-093C: CD 69 09    call $0969                      ; * J0939
+093C: CD 69 09    call draw_rock_0969                      ; * J0939
 093F: 16 3B       ld   d,$3B
 0941: 18 1B       jr   $095E
+update_jeep_explosion_0943:
 0943: FD 21 A4 E1 ld   iy,unknown_E1A4
 0947: FD 77 0A    ld   (iy+$0a),a
 094A: FD 77 0E    ld   (iy+$0e),a
 094D: FD 77 12    ld   (iy+$12),a
 0950: FD 77 16    ld   (iy+$16),a
-0953: CD 95 0A    call $0A95
+0953: CD 95 0A    call trns_spr_color_0a95
 0956: 3E F8       ld   a,$F8
 0958: 80          add  a,b
 0959: 47          ld   b,a
-095A: CD 69 09    call $0969
+draw_rear_missile_095a:
+095A: CD 69 09    call draw_rock_0969
 095D: 14          inc  d
 095E: 3E 10       ld   a,$10                      ; * J0941
 0960: 81          add  a,c
@@ -1285,6 +1352,7 @@ jump_table_08F5:
 0965: EB          ex   de,hl
 0966: FD 19       add  iy,de
 0968: EB          ex   de,hl
+draw_rock_0969:
 0969: DD 7E 0B    ld   a,(ix+$0b)                 ; * J092F,J0932,C093C,C095A,C09E4
 096C: A7          and  a
 096D: 79          ld   a,c
@@ -1292,11 +1360,14 @@ jump_table_08F5:
 0970: C6 08       add  a,$08
 0972: FE 20       cp   $20
 0974: 38 35       jr   c,$09AB                    ; Blank the tile number
+write_sprite_data_0976:
 0976: FD 70 00    ld   (iy+$00),b                 ; Set Y coordinate * J0995,J09A3,J09A9,J09B5,J09B8,J0AF2,C0B25,J0B35,J15A9,J15DD
 0979: FD 73 01    ld   (iy+$01),e                 ; Set tile flips/color
 097C: FD 72 02    ld   (iy+$02),d                 ; Set tile number
 097F: FD 71 03    ld   (iy+$03),c                 ; Set X coordinate
 0982: C9          ret                             ; Done
+
+draw_enemy_kill_score_0983:
 0983: DD 7E 08    ld   a,(ix+$08)                 ; 3->300 5->500 8->800, 10->1000 * C0A2D
 0986: 1E 07       ld   e,$07                      ; Color set (will be 14)
 0988: CB 3F       srl  a                          ; Lower bit to C
@@ -1305,8 +1376,9 @@ jump_table_08F5:
 098E: 57          ld   d,a                        ; Tile number
 098F: 78          ld   a,b                        ; Y coordinate
 0990: FE 80       cp   $80                        ; ?? Duplicate if on lower half of screen ??
-0992: D2 25 0B    jp   nc,$0B25
-0995: 18 DF       jr   $0976                      ; Store the image
+0992: D2 25 0B    jp   nc,draw_ufo_0b25
+0995: 18 DF       jr   write_sprite_data_0976                      ; Store the image
+draw_bomb_explosion_0997:
 0997: 3E 08       ld   a,$08
 0999: 80          add  a,b
 099A: 47          ld   b,a
@@ -1314,18 +1386,21 @@ jump_table_08F5:
 099F: 79          ld   a,c
 09A0: FE F8       cp   $F8
 09A2: D0          ret  nc
-09A3: 18 D1       jr   $0976
+09A3: 18 D1       jr   write_sprite_data_0976
 09A5: C6 08       add  a,$08                      ; * J096E
 09A7: FE F0       cp   $F0
-09A9: 38 CB       jr   c,$0976
+09A9: 38 CB       jr   c,write_sprite_data_0976
 09AB: FD 36 02 00 ld   (iy+$02),$00               ; Blank the tile number * J0974
 09AF: C9          ret
+
+update_exploding_wheels_09b0:
 09B0: 3A 4E E0    ld   a,(isrCNT_1_e04e)           ; ISR1 up counter
 09B3: CB 57       bit  2,a                        ; Chance ...
-09B5: 28 BF       jr   z,$0976                    ; ... to use ...
+09B5: 28 BF       jr   z,write_sprite_data_0976                    ; ... to use ...
 09B7: 14          inc  d                          ; ... next image
-09B8: 18 BC       jr   $0976                      ; Store sprite details
+09B8: 18 BC       jr   write_sprite_data_0976                      ; Store sprite details
 
+draw_volcano_high_09ba:
 09BA: 3E 0E       ld   a,$0E
 09BC: 80          add  a,b
 09BD: 60          ld   h,b
@@ -1334,9 +1409,12 @@ jump_table_08F5:
 09C1: CD E4 09    call $09E4
 09C4: 11 08 76    ld   de,$7608
 09C7: 18 11       jr   $09DA
+draw_volcano_medium_09c9:
 09C9: 3E 0A       ld   a,$0A
-09CB: 18 02       jr   $09CF
+09CB: 18 02       jr   draw_volcano_flat_09cf
+draw_volcano_low_09cd:
 09CD: 3E 05       ld   a,$05
+draw_volcano_flat_09cf:
 09CF: 80          add  a,b                        ; * J09CB
 09D0: 60          ld   h,b
 09D1: 47          ld   b,a
@@ -1349,7 +1427,7 @@ jump_table_08F5:
 09DF: FD 19       add  iy,de
 09E1: EB          ex   de,hl
 09E2: 2E 00       ld   l,$00
-09E4: CD 69 09    call $0969                      ; * C09C1,C09D4,J0A3C
+09E4: CD 69 09    call draw_rock_0969                      ; * C09C1,C09D4,J0A3C
 09E7: FD 70 04    ld   (iy+$04),b
 09EA: 2D          dec  l
 09EB: 20 29       jr   nz,$0A16
@@ -1378,6 +1456,7 @@ jump_table_08F5:
 0A17: FD 73 05    ld   (iy+$05),e
 0A1A: 3E 10       ld   a,$10
 0A1C: 18 D7       jr   $09F5
+draw_volcano_kill_score_0a1e:
 0A1E: C5          push bc
 0A1F: D5          push de
 0A20: 21 02 08    ld   hl,$0802
@@ -1388,7 +1467,7 @@ jump_table_08F5:
 0A27: C6 08       add  a,$08
 0A29: FE D0       cp   $D0
 0A2B: 30 11       jr   nc,$0A3E
-0A2D: CD 83 09    call $0983
+0A2D: CD 83 09    call draw_enemy_kill_score_0983
 0A30: 11 04 00    ld   de,$0004                   ; * J0A42
 0A33: FD 19       add  iy,de
 0A35: D1          pop  de
@@ -1398,13 +1477,16 @@ jump_table_08F5:
 0A3C: 18 A6       jr   $09E4
 0A3E: FD 36 02 00 ld   (iy+$02),$00               ; * J0A2B
 0A42: 18 EC       jr   $0A30
+draw_jeep_falling_in_hole_0a44:
 0A44: 32 A6 E1    ld   (unknown_E1A6),a
 0A47: 32 AA E1    ld   (unknown_E1AA),a
 0A4A: 32 AE E1    ld   (unknown_E1AE),a
-0A4D: CD 95 0A    call $0A95
+0A4D: CD 95 0A    call trns_spr_color_0a95
 0A50: 18 10       jr   $0A62
+draw_bomb_smoke_0a52:
 0A52: 3E 18       ld   a,$18                      ; Offset by -$18 when drawing
 0A54: 18 02       jr   $0A58                      ; Draw the 2x2
+draw_hole_making_explosion_0a56:
 0A56: 3E 0D       ld   a,$0D                      ; Offset by -$0D when drawing
 0A58: FD 21 74 E1 ld   iy,unknown_E174            ; * J0A54
 0A5C: 80          add  a,b                        ; Offset ...
@@ -1413,12 +1495,13 @@ jump_table_08F5:
 0A60: 81          add  a,c                        ; ... back 8 ...
 0A61: 4F          ld   c,a                        ; ... to center on X
 0A62: AF          xor  a                          ; X coordinate offset is 0 * J0A50,J0A93
-0A63: CD 6F 0A    call $0A6F                      ; Do top and bottom tiles
+0A63: CD 6F 0A    call update_jeep_sprite_row_0a6f                      ; Do top and bottom tiles
 0A66: EB          ex   de,hl                      ; Skip over ...
 0A67: 11 08 00    ld   de,$0008                   ; ... the two ...
 0A6A: FD 19       add  iy,de                      ; ... sprite ...
 0A6C: EB          ex   de,hl                      ; ... slots
 0A6D: 3E 10       ld   a,$10                      ; X coordinate offset is 16
+update_jeep_sprite_row_0a6f:
 0A6F: 81          add  a,c                        ; Add the X coordinate offset * C0A63,C0AB0,C0ACD,C0B13
 0A70: 6F          ld   l,a                        ; Hold in L
 0A71: FD 77 03    ld   (iy+$03),a                 ; Set the X coordinate for top sprite
@@ -1435,8 +1518,11 @@ jump_table_08F5:
 0A8B: FD 72 06    ld   (iy+$06),d                 ; Set next tile
 0A8E: 15          dec  d                          ; Now back to just tile+1
 0A8F: C9          ret                             ; Done
-0A90: CD 95 0A    call $0A95
+
+update_jeep_movement_0a90:
+0A90: CD 95 0A    call trns_spr_color_0a95
 0A93: 18 CD       jr   $0A62
+trns_spr_color_0a95:
 0A95: 3A F9 E0    ld   a,(champ_colors_e0f9)           ; Are we on ... * C0953,C0A4D,C0A90,C0AE9,C0AFD
 0A98: 1F          rra                             ; ... the champion course?
 0A99: D0          ret  nc                         ; No ... leave color set 0
@@ -1444,6 +1530,8 @@ jump_table_08F5:
 0A9B: F6 0C       or   $0C                        ; Transform to C
 0A9D: 5F          ld   e,a                        ; Back to color set value
 0A9E: C9          ret                             ; Done
+
+draw_explosion_smoke_0a9f:
 0A9F: FD 21 74 E1 ld   iy,unknown_E174
 0AA3: FD 36 0A 00 ld   (iy+$0a),$00
 0AA7: FD 36 0E 00 ld   (iy+$0e),$00
@@ -1451,9 +1539,11 @@ jump_table_08F5:
 0AAD: 80          add  a,b
 0AAE: 47          ld   b,a
 0AAF: AF          xor  a
-0AB0: CD 6F 0A    call $0A6F
+0AB0: CD 6F 0A    call update_jeep_sprite_row_0a6f
 0AB3: FD 72 06    ld   (iy+$06),d
 0AB6: C9          ret
+
+draw_hole_making_explosion_end_0ab7:
 0AB7: 3E 18       ld   a,$18
 0AB9: 80          add  a,b
 0ABA: 47          ld   b,a
@@ -1465,7 +1555,7 @@ jump_table_08F5:
 0AC8: FD 19       add  iy,de
 0ACA: EB          ex   de,hl
 0ACB: 3E 08       ld   a,$08
-0ACD: CD 6F 0A    call $0A6F                      ; * C0AC1
+0ACD: CD 6F 0A    call update_jeep_sprite_row_0a6f                      ; * C0AC1
 0AD0: FD 75 0B    ld   (iy+$0b),l
 0AD3: D6 10       sub  $10
 0AD5: FD 77 08    ld   (iy+$08),a
@@ -1474,17 +1564,21 @@ jump_table_08F5:
 0ADC: C6 03       add  a,$03
 0ADE: FD 77 0A    ld   (iy+$0a),a
 0AE1: C9          ret
+
+update_jeep_explosion_0ae2:
 0AE2: FD 21 A4 E1 ld   iy,unknown_E1A4
 0AE6: FD 77 06    ld   (iy+$06),a
-0AE9: CD 95 0A    call $0A95
+0AE9: CD 95 0A    call trns_spr_color_0a95
 0AEC: 21 08 F8    ld   hl,-$7f8
 0AEF: 09          add  hl,bc
 0AF0: 44          ld   b,h
 0AF1: 4D          ld   c,l
-0AF2: C3 76 09    jp   $0976
+0AF2: C3 76 09    jp   write_sprite_data_0976
+
+draw_exploding_jeep_0af5:
 0AF5: FD 21 A4 E1 ld   iy,unknown_E1A4
 0AF9: FD 36 1A 00 ld   (iy+$1a),$00
-0AFD: CD 95 0A    call $0A95
+0AFD: CD 95 0A    call trns_spr_color_0a95
 0B00: 3E F8       ld   a,$F8
 0B02: CD 13 0B    call $0B13
 0B05: 3E 08       ld   a,$08
@@ -1494,16 +1588,19 @@ jump_table_08F5:
 0B0D: 11 08 00    ld   de,$0008
 0B10: FD 19       add  iy,de
 0B12: EB          ex   de,hl
-0B13: CD 6F 0A    call $0A6F                      ; * C0B02
+0B13: CD 6F 0A    call update_jeep_sprite_row_0a6f                      ; * C0B02
 0B16: 7A          ld   a,d
 0B17: C6 02       add  a,$02
 0B19: FD 77 06    ld   (iy+$06),a
 0B1C: C9          ret
+
+draw_hole_making_bomb_0b1d:
 0B1D: 3A 4E E0    ld   a,(isrCNT_1_e04e)
 0B20: CB 4F       bit  1,a
-0B22: 28 01       jr   z,$0B25
+0B22: 28 01       jr   z,draw_ufo_0b25
 0B24: 1C          inc  e
-0B25: CD 76 09    call $0976                      ; * J0992,J0B22
+draw_ufo_0b25:
+0B25: CD 76 09    call write_sprite_data_0976                      ; * J0992,J0B22
 0B28: DD 7E 01    ld   a,(ix+$01)                 ; LSB of object pointer
 0B2B: FE 60       cp   $60                        ; Less than 96?
 0B2D: D8          ret  c                          ; Yes ... done
@@ -1511,7 +1608,7 @@ jump_table_08F5:
 0B2F: 11 A0 FF    ld   de,-$60                    ; Value -96
 0B32: FD 19       add  iy,de                      ; IY = IY - 96
 0B34: EB          ex   de,hl                      ; Restore DE
-0B35: C3 76 09    jp   $0976                      ; ?? Initialize "other" object to same
+0B35: C3 76 09    jp   write_sprite_data_0976                      ; ?? Initialize "other" object to same
 0B38: CD 8E 0C    call $0C8E                      ; * C0112
 0B3B: CD BF 0C    call $0CBF
 0B3E: 3A 04 D0    ld   a,($D004)
@@ -1580,6 +1677,8 @@ display_status_bar_0b8a:
 0BB2: 23          inc  hl
 0BB3: 22 16 E5    ld   (unknown_E516),hl
 0BB6: C9          ret
+
+start_new_section_0bb7:
 0BB7: 21 00 E1    ld   hl,sprite_shadow_E100      ; Clear sprite mirror ... * J0078,J008C,J0115,J0138,J0142,J0148,J0173,J01CF,J28A7,J28B7
 0BBA: 01 00 04    ld   bc,$0400                   ; ... and game objects ...
 0BBD: CD FA 05    call clear_area_05fa            ; ... up to high-score
@@ -1620,12 +1719,12 @@ display_status_bar_0b8a:
 0C15: 04          inc  b
 0C16: 78          ld   a,b                        ; * J0C13
 0C17: 32 C5 E1    ld   (background_layer_control_E1C5),a
-0C1A: CD 81 29    call $2981
+0C1A: CD 81 29    call current_point_modulus_26_2981
 0C1D: A7          and  a
-0C1E: 20 5F       jr   nz,$0C7F
+0C1E: 20 5F       jr   nz,skip_moonbase_display_0c7f
 0C20: 21 0F E5    ld   hl,unknown_E50F
 0C23: CB 46       bit  0,(hl)
-0C25: 20 58       jr   nz,$0C7F
+0C25: 20 58       jr   nz,skip_moonbase_display_0c7f
 0C27: 34          inc  (hl)
 0C28: 3A 10 E5    ld   a,(course_num_e510)          ; Get the course number
 0C2B: A7          and  a                          ; Is this the first time?
@@ -1638,8 +1737,9 @@ display_status_bar_0b8a:
 0C3B: 3E 03       ld   a,$03                      ; No ... cap the number at 3
 0C3D: C6 30       add  a,$30                      ; Convert to number * J0C39
 0C3F: 32 56 81    ld   ($8156),a                  ; Change the "1" in the message just printed to the right number
+display_moon_base_0c42:
 0C42: 3E 1C       ld   a,$1C                      ; Play intro ... * J0C8C
-0C44: CD 6F 0D    call $0D6F                      ; ... song
+0C44: CD 6F 0D    call queue_sound_effect_0d6f                      ; ... song
 0C47: 3E 40       ld   a,$40                      ; Set timer for ...
 0C49: 32 0A E3    ld   (unknown_E30A),a           ; ... intro song to end
 0C4C: 0E 68       ld   c,$68
@@ -1668,23 +1768,24 @@ display_status_bar_0b8a:
 0C6F: 11 10 E2    ld   de,unknown_E210
 0C72: 46          ld   b,(hl)                     ; * J0C7D
 0C73: CB 78       bit  7,b
-0C75: 20 08       jr   nz,$0C7F
+0C75: 20 08       jr   nz,skip_moonbase_display_0c7f
 0C77: 12          ld   (de),a                     ; * J0C79
 0C78: 13          inc  de
 0C79: 10 FC       djnz $0C77
 0C7B: 3C          inc  a
 0C7C: 23          inc  hl
 0C7D: 18 F3       jr   $0C72
+skip_moonbase_display_0c7f:
 0C7F: 21 46 E0    ld   hl,unknown_E046            ; * J0C1E,J0C25,J0C75
 0C82: 34          inc  (hl)
-0C83: C3 6E 02    jp   $026E                      ; ?? Main text loop for game
+0C83: C3 6E 02    jp   game_mainloop_026e                      ; ?? Main text loop for game
 0C86: 21 47 2A    ld   hl,$2A47                   ; "BEGINNER COURSE GO" script * J0C2C
 0C89: CD 00 03    call $0300                      ; Print the banner
-0C8C: 18 B4       jr   $0C42                      ; Back to start-course sequence
+0C8C: 18 B4       jr   display_moon_base_0c42                      ; Back to start-course sequence
 0C8E: AF          xor  a                          ; * C0B38
 0C8F: 32 4D E0    ld   (unknown_E04D),a
 0C92: CD 95 0C    call $0C95
-0C95: CD 03 06    call $0603                      ; * C0C92
+0C95: CD 03 06    call swap_players_0603                      ; * C0C92
 0C98: 21 00 E5    ld   hl,cur_score_e500
 0C9B: 01 16 00    ld   bc,$0016
 0C9E: CD FA 05    call clear_area_05fa            ; * J0CBD
@@ -1710,7 +1811,7 @@ display_status_bar_0b8a:
 0CD1: 32 F9 E0    ld   (champ_colors_e0f9),a           ; Store champion colors flag * J0CCE
 0CD4: C5          push bc
 0CD5: 0E 01       ld   c,$01
-0CD7: CD E7 03    call $03E7
+0CD7: CD E7 03    call trans_color_03e7
 0CDA: 79          ld   a,c
 0CDB: C1          pop  bc
 0CDC: 06 1E       ld   b,$1E                      ; * J0CE5
@@ -1723,19 +1824,19 @@ display_status_bar_0b8a:
 0CE5: 20 F5       jr   nz,$0CDC
 0CE7: 21 0F 2B    ld   hl,$2B0F                   ; Status box script
 0CEA: CD 00 03    call $0300
-0CED: CD 68 06    call $0668
-0CF0: CD 85 06    call $0685
+0CED: CD 68 06    call display_score_0668
+0CF0: CD 85 06    call print_high_0685
 0CF3: 3A 46 E0    ld   a,(unknown_E046)
 0CF6: CB 67       bit  4,a
 0CF8: 28 0F       jr   z,$0D09
-0CFA: CD 03 06    call $0603
-0CFD: CD 68 06    call $0668
-0D00: CD 03 06    call $0603
+0CFA: CD 03 06    call swap_players_0603
+0CFD: CD 68 06    call display_score_0668
+0D00: CD 03 06    call swap_players_0603
 0D03: 21 72 2B    ld   hl,$2B72                   ; "P2 " status box script
 0D06: CD 00 03    call $0300
-0D09: CD D5 06    call $06D5                      ; * J0CF8
-0D0C: CD 2C 21    call $212C
-0D0F: CD 8A 29    call $298A
+0D09: CD D5 06    call display_nb_lives_06d5                      ; * J0CF8
+0D0C: CD 2C 21    call display_time_212c
+0D0F: CD 8A 29    call display_position_in_map_298a
 0D12: 3A 0E E5    ld   a,(cur_point_e50e)           ; * C0B85,J152B,C2866
 0D15: 0E 02       ld   c,$02
 0D17: FE 1A       cp   $1A
@@ -1780,23 +1881,27 @@ display_status_bar_0b8a:
 0D66: 0C          inc  c                          ; ... to ports ...
 0D67: 10 FB       djnz $0D64                      ; ... 00 through 3F
 0D69: F3          di
-0D6A: CD 7D 0D    call $0D7D                      ; Queue up a stop-sound command
+0D6A: CD 7D 0D    call queue_sound_effect_0d7d                      ; Queue up a stop-sound command
 0D6D: FB          ei
 0D6E: C9          ret
 
+queue_sound_effect_0d6f:
 0D6F: F3          di                              ; * C0C44,J12D1
-0D70: CD 75 0D    call $0D75
+0D70: CD 75 0D    call queue_sound_effect_if_game_playing_0d75
 0D73: FB          ei
 0D74: C9          ret
 
+queue_sound_effect_if_game_playing_0d75:
 0D75: E5          push hl                         ; Save HL * C014D,C0D70,C132C,C1375,J13E8,C1522,C1571,J174B,C1768,C1D1D,C1DCC,C27D7,C2854,C2860
 0D76: 21 46 E0    ld   hl,unknown_E046
 0D79: CB 7E       bit  7,(hl)
 0D7B: E1          pop  hl
 0D7C: F0          ret  p
+
+queue_sound_effect_0d7d:
 0D7D: E5          push hl                         ; * C0456,C0D6A
 0D7E: 2A DE E1    ld   hl,(sndQ_back_e1de)          ; Get the back (next to store) of the sound queue
-0D81: 26 E0       ld   h,$E0                      ; Sound queue is at $E000..$E007
+0D81: 26 E0       ld   h,$E0                      ; Sound queue is at revolving_buffer_8_E000..$E007
 0D83: 77          ld   (hl),a                     ; Store next sound effect to play
 0D84: 7D          ld   a,l                        ; Bump the ...
 0D85: 3C          inc  a                          ; ... back
@@ -1806,11 +1911,11 @@ display_status_bar_0b8a:
 0D8C: C9          ret                             ; Done
 
 draw_ground_0d8d:
-0D8D: CD 48 29    call $2948                      ; * C0C05
+0D8D: CD 48 29    call clear_sprites_and_playfield_chars_2948                      ; * C0C05
 0D90: CD C2 0C    call $0CC2
 0D93: 06 20       ld   b,$20
 0D95: C5          push bc                         ; * J0DA1
-0D96: CD 06 11    call $1106
+0D96: CD 06 11    call draw_ground_block_1106
 0D99: 21 E2 E1    ld   hl,unknown_E1E2
 0D9C: 7E          ld   a,(hl)
 0D9D: C6 08       add  a,$08
@@ -1818,6 +1923,8 @@ draw_ground_0d8d:
 0DA0: C1          pop  bc
 0DA1: 10 F2       djnz $0D95
 0DA3: C3 3B 0D    jp   $0D3B
+
+ufo_bomb_creates_hole_0da6:
 0DA6: DD 5E 02    ld   e,(ix+$02)                 ; Get ...
 0DA9: DD 56 03    ld   d,(ix+$03)                 ; ... text script
 0DAC: 01 4A 30    ld   bc,$304A
@@ -1851,6 +1958,7 @@ draw_ground_0d8d:
 0DD7: D6 20       sub  $20
 0DD9: 6F          ld   l,a
 0DDA: 18 E2       jr   $0DBE
+handle_path_advance_0ddc:
 0DDC: CD 5B 12    call $125B                      ; * C026E,C0280
 0DDF: 3A E2 E1    ld   a,(unknown_E1E2)
 0DE2: 21 09 E5    ld   hl,unknown_E509
@@ -1861,7 +1969,7 @@ draw_ground_0d8d:
 0DEA: 78          ld   a,b
 0DEB: E6 F8       and  $F8
 0DED: 77          ld   (hl),a
-0DEE: CD 06 11    call $1106
+0DEE: CD 06 11    call draw_ground_block_1106
 0DF1: 3A 4D E0    ld   a,(unknown_E04D)
 0DF4: A7          and  a
 0DF5: C0          ret  nz
@@ -1890,13 +1998,13 @@ draw_ground_0d8d:
 0E1D: F8          ret  m
 0E1E: 36 00       ld   (hl),$00
 0E20: FE 18       cp   $18
-0E22: D2 45 0F    jp   nc,$0F45
+0E22: D2 45 0F    jp   nc,ufos_on_approach_0f45
 0E25: FE 17       cp   $17
-0E27: 28 26       jr   z,$0E4F
+0E27: 28 26       jr   z,enter_rear_missile_0e4f
 0E29: D6 06       sub  $06
-0E2B: FA 8A 0E    jp   m,$0E8A
+0E2B: FA 8A 0E    jp   m,change_slope_type_0e8a
 0E2E: D6 07       sub  $07
-0E30: FA F0 0E    jp   m,$0EF0
+0E30: FA F0 0E    jp   m,draw_hole_on_right_0ef0
 0E33: 87          add  a,a
 0E34: 87          add  a,a
 0E35: 87          add  a,a
@@ -1912,10 +2020,12 @@ draw_ground_0d8d:
 0E4B: DD 71 00    ld   (ix+$00),c                 ; * J0E46
 0E4E: C9          ret
 
+enter_rear_missile_0e4f:
 0E4F: 3E 19       ld   a,$19                      ; * J0E27
 0E51: 32 70 E3    ld   (object7_e370),a
 0E54: C9          ret
 
+write_checkpoint_scrolling_letter_0e55:
 0E55: 3E 01       ld   a,$01                      ; * J0E8B
 0E57: 32 DC E1    ld   (unknown_E1DC),a
 0E5A: 2A E4 E0    ld   hl,(unknown_E0E4)
@@ -1933,7 +2043,7 @@ draw_ground_0d8d:
 0E6E: E6 1F       and  $1F
 0E70: F6 C0       or   $C0
 0E72: 6F          ld   l,a
-0E73: CD 81 29    call $2981
+0E73: CD 81 29    call current_point_modulus_26_2981
 0E76: C6 41       add  a,$41
 0E78: 77          ld   (hl),a
 0E79: 22 DA E1    ld   (unknown_E1DA),hl
@@ -1946,8 +2056,9 @@ draw_ground_0d8d:
 0E88: 77          ld   (hl),a
 0E89: C9          ret
 
+change_slope_type_0e8a:
 0E8A: 3C          inc  a                          ; * J0E2B
-0E8B: 28 C8       jr   z,$0E55
+0E8B: 28 C8       jr   z,write_checkpoint_scrolling_letter_0e55
 0E8D: C6 05       add  a,$05
 0E8F: 32 08 E5    ld   (unknown_E508),a
 0E92: C9          ret
@@ -1989,6 +2100,7 @@ draw_ground_0d8d:
 0EEC: FD 4E 02    ld   c,(iy+$02)
 0EEF: C9          ret
 
+draw_hole_on_right_0ef0:
 0EF0: 3C          inc  a                          ; * J0E30
 0EF1: CA 40 0F    jp   z,$0F40
 0EF4: F5          push af
@@ -2028,8 +2140,9 @@ draw_ground_0d8d:
 
 0F40: 2A E6 E0    ld   hl,(unknown_E0E6)          ; * J0EF1
 0F43: 18 C8       jr   $0F0D
+ufos_on_approach_0f45:
 0F45: D6 1F       sub  $1F                        ; * J0E22
-0F47: FA B7 0F    jp   m,$0FB7
+0F47: FA B7 0F    jp   m,shoot_hole_making_bomb_0fb7
 0F4A: 21 C5 E1    ld   hl,background_layer_control_E1C5
 0F4D: 0E FF       ld   c,$FF
 0F4F: 23          inc  hl                         ; * J0F53
@@ -2088,6 +2201,8 @@ draw_ground_0d8d:
 0FB2: FD 19       add  iy,de                      ; * J0FAC
 0FB4: 10 EF       djnz $0FA5
 0FB6: C9          ret
+
+shoot_hole_making_bomb_0fb7:
 0FB7: C6 08       add  a,$08                      ; * J0F47
 0FB9: FE 04       cp   $04
 0FBB: 30 08       jr   nc,$0FC5
@@ -2128,6 +2243,7 @@ draw_ground_0d8d:
 105D: EB          ex   de,hl                      ; * J0FDD
 105E: DD 21 00 00 ld   ix,$0000
 1062: DD 19       add  ix,de
+initialize_ufo_shot_1064:
 1064: DD 71 0D    ld   (ix+$0d),c                 ; * J1BBD
 1067: DD 36 09 00 ld   (ix+$09),$00
 106B: DD 36 08 00 ld   (ix+$08),$00
@@ -2165,7 +2281,7 @@ draw_ground_0d8d:
 10AC: 17          rla
 10AD: DD 77 0C    ld   (ix+$0c),a
 10B0: 79          ld   a,c
-10B1: CD 38 15    call $1538
+10B1: CD 38 15    call compute_ground_object_y_from_x_1538
 10B4: 92          sub  d
 10B5: 1F          rra
 10B6: 1F          rra
@@ -2212,13 +2328,15 @@ draw_ground_0d8d:
 10FF: DD 77 04    ld   (ix+$04),a
 1102: DD 71 00    ld   (ix+$00),c
 1105: C9          ret
+
+draw_ground_block_1106:
 1106: 21 D9 E1    ld   hl,unknown_E1D9            ; * C0D96,C0DEE
 1109: 7E          ld   a,(hl)
 110A: A7          and  a
 110B: C2 9A 11    jp   nz,$119A
 110E: 3A 08 E5    ld   a,(unknown_E508)
 1111: FE 03       cp   $03
-1113: 30 79       jr   nc,$118E
+1113: 30 79       jr   nc,is_slope_118e
 1115: 47          ld   b,a
 1116: 05          dec  b
 1117: 21 B4 2C    ld   hl,$2CB4
@@ -2232,6 +2350,7 @@ draw_ground_0d8d:
 1125: C6 20       add  a,$20
 1127: 6F          ld   l,a                        ; * J1123
 1128: 4E          ld   c,(hl)
+write_ground_tile_1129:
 1129: 3A E2 E1    ld   a,(unknown_E1E2)           ; * J11CE,J11D5,J11E7
 112C: 1F          rra
 112D: 1F          rra
@@ -2288,6 +2407,8 @@ draw_ground_0d8d:
 118B: 23          inc  hl
 118C: 77          ld   (hl),a
 118D: C9          ret
+
+is_slope_118e:
 118E: 87          add  a,a                        ; * J1113
 118F: C6 7A       add  a,$7A
 1191: 77          ld   (hl),a
@@ -2322,11 +2443,11 @@ draw_ground_0d8d:
 11C8: 4F          ld   c,a                        ; * J11C4
 11C9: C6 03       add  a,$03                      ; * J11CB
 11CB: FA C9 11    jp   m,$11C9
-11CE: C2 29 11    jp   nz,$1129
+11CE: C2 29 11    jp   nz,write_ground_tile_1129
 11D1: 79          ld   a,c
 11D2: D6 10       sub  $10
 11D4: 4F          ld   c,a
-11D5: C3 29 11    jp   $1129
+11D5: C3 29 11    jp   write_ground_tile_1129
 11D8: FE 09       cp   $09                        ; * J11BA
 11DA: 20 01       jr   nz,$11DD
 11DC: 34          inc  (hl)
@@ -2336,7 +2457,7 @@ draw_ground_0d8d:
 11E2: 30 02       jr   nc,$11E6
 11E4: C6 0C       add  a,$0C
 11E6: 4F          ld   c,a                        ; * J11E2
-11E7: C3 29 11    jp   $1129
+11E7: C3 29 11    jp   write_ground_tile_1129
 11EA: FE 04       cp   $04                        ; * J11AC
 11EC: 3E 0B       ld   a,$0B
 11EE: 20 D0       jr   nz,$11C0
@@ -2401,10 +2522,10 @@ display_title_1218:
 1260: 21 AB 2C    ld   hl,$2CAB                   ; "CAUTION" script
 1263: 3A 4E E0    ld   a,(isrCNT_1_e04e)
 1266: E6 3F       and  $3F
-1268: 28 1B       jr   z,$1285                    ; Print "CAUTION", show indicators, out
+1268: 28 1B       jr   z,print_caution_1285                    ; Print "CAUTION", show indicators, out
 126A: E6 1F       and  $1F
 126C: C0          ret  nz
-126D: CD 7B 03    call $037B                      ; Erase "CAUTION"
+126D: CD 7B 03    call erase_script_037b                      ; Erase "CAUTION"
 1270: CD 88 12    call $1288                      ; Show caution indicators
 1273: 36 02       ld   (hl),$02
 1275: EB          ex   de,hl
@@ -2424,6 +2545,7 @@ PrintCaution:
 ; E50D ==2 : Second row, character 18, color 3
 ; E50D ==* : Third row, character 19, color 3
 ;
+print_caution_1285:
 1285: CD 00 03        CALL    RunTextScript       ; Print "CAUTION" * J1268
 1288: 3A 0D E5        LD      A,(mE50D)           ; * C1270
 128B: 21 55 80    ld   hl,$8055                   ; Screen location for caution indicator
@@ -2444,6 +2566,8 @@ PrintCaution:
 12A4: 19          add  hl,de                      ; ... desired ...
 12A5: 71          ld   (hl),c                     ; ... color
 12A6: C9          ret                             ; Done
+
+update_alien_sounds_12a7:
 12A7: 21 70 E3    ld   hl,object7_e370            ; * C027A
 12AA: 11 10 00    ld   de,$0010
 12AD: 01 02 19    ld   bc,$1902
@@ -2465,7 +2589,7 @@ PrintCaution:
 12CB: 79          ld   a,c                        ; * J12E4
 12CC: 32 DF E1    ld   (unknown_E1DF),a           ; * J12DD
 12CF: C6 15       add  a,$15
-12D1: C3 6F 0D    jp   $0D6F                      ; Make flying ship sound and out
+12D1: C3 6F 0D    jp   queue_sound_effect_0d6f                      ; Make flying ship sound and out
 12D4: 19          add  hl,de                      ; * J12B7,J12BF,J12C3
 12D5: 10 D9       djnz $12B0
 12D7: 3A DF E1    ld   a,(unknown_E1DF)
@@ -2503,6 +2627,8 @@ PrintCaution:
 130E: 19          add  hl,de
 130F: 71          ld   (hl),c
 1310: C9          ret
+
+course_start_1311:
 1311: 21 00 40    ld   hl,$4000                   ; ?? and initial X (40)
 1314: 22 02 E3    ld   (unknown_E302),hl          ; Store ?? and initial X
 1317: 3A 4E E0    ld   a,(isrCNT_1_e04e)           ; Decrement counter ...
@@ -2511,11 +2637,12 @@ PrintCaution:
 131E: DD 35 0A    dec  (ix+$0a)                   ; Decrement the counter for waiting to start
 1321: F2 66 13    jp   p,$1366                    ; Not time to start
 1324: 21 5F 2A    ld   hl,$2A5F                   ; "CHAMPION COURSE 1 GO" script
-1327: CD 7B 03    call $037B                      ; Erase the text
+1327: CD 7B 03    call erase_script_037b                      ; Erase the text
 132A: 3E 18       ld   a,$18                      ; Start ...
-132C: CD 75 0D    call $0D75                      ; ... background music
-132F: 18 29       jr   $135A
-1331: CD 48 15    call $1548                      ; Check starting player shot
+132C: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... background music
+132F: 18 29       jr   next_jeep_state_135a
+jeep_moving_on_track_1331:
+1331: CD 48 15    call player_shot_1548                      ; Check starting player shot
 1334: 07          rlca
 1335: 07          rlca
 1336: 30 2B       jr   nc,$1363
@@ -2540,24 +2667,27 @@ PrintCaution:
 1355: 2B          dec  hl
 1356: 67          ld   h,a
 1357: 22 08 E3    ld   (unknown_E308),hl
+next_jeep_state_135a:
 135A: DD 34 00    inc  (ix+$00)                   ; Transition buggy to "next" state (running or jumping) * J132F
-135D: CD 76 15    call $1576                      ; * J136E
-1360: C3 B8 08    jp   $08B8                      ; Draw the buggy
+135D: CD 76 15    call compute_wheels_positions_1576                      ; * J136E
+1360: C3 B8 08    jp   draw_object_08b8                      ; Draw the buggy
 1363: CD 8A 14    call $148A                      ; * J1336
-1366: CD 33 15    call $1533                      ; * J131C,J1321
+1366: CD 33 15    call compute_jeep_y_1533                      ; * J131C,J1321
 1369: D6 1C       sub  $1C
 136B: 32 07 E3    ld   (buggy_y_e307),a           ; * J1386
 136E: 18 ED       jr   $135D
+init_jump_1370:
 1370: DD 34 00    inc  (ix+$00)                   ; Player is now in state "jumping"
 1373: 3E 14       ld   a,$14                      ; Play ...
-1375: CD 75 0D    call $0D75                      ; ... car jump
-1378: CD 48 15    call $1548                      ; Check starting player shot * J13C0
+1375: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... car jump
+1378: CD 48 15    call player_shot_1548                      ; Check starting player shot * J13C0
 137B: 2A 0E E3    ld   hl,(unknown_E30E)
 137E: CD A4 14    call $14A4
-1381: CD 33 15    call $1533
+1381: CD 33 15    call compute_jeep_y_1533
 1384: D6 1E       sub  $1E                        ; Initial Y offset to start jump
 1386: 18 E3       jr   $136B                      ; Set Y and draw buggy
-1388: CD 48 15    call $1548                      ; Check starting player shot
+jeep_jumping_1388:
+1388: CD 48 15    call player_shot_1548                      ; Check starting player shot
 138B: 2A 0E E3    ld   hl,(unknown_E30E)
 138E: CD A4 14    call $14A4
 1391: 2A 06 E3    ld   hl,(unknown_E306)
@@ -2569,7 +2699,7 @@ PrintCaution:
 13A0: 22 08 E3    ld   (unknown_E308),hl
 13A3: CB 14       rl   h
 13A5: 38 0F       jr   c,$13B6
-13A7: CD 33 15    call $1533
+13A7: CD 33 15    call compute_jeep_y_1533
 13AA: D6 1D       sub  $1D
 13AC: 47          ld   b,a
 13AD: 3A 07 E3    ld   a,(buggy_y_e307)
@@ -2577,9 +2707,12 @@ PrintCaution:
 13B1: 38 03       jr   c,$13B6
 13B3: DD 34 00    inc  (ix+$00)                   ; Player is now in state "landing"
 13B6: CD AC 15    call $15AC                      ; * J13A5,J13B1
-13B9: C3 B8 08    jp   $08B8
+13B9: C3 B8 08    jp   draw_object_08b8
+
+jeep_landing_13bc:
 13BC: DD 36 00 02 ld   (ix+$00),$02
 13C0: 18 B6       jr   $1378
+jeep_falling_in_hole_13c2:
 13C2: 2A 02 E3    ld   hl,(unknown_E302)
 13C5: ED 5B 04 E3 ld   de,(unknown_E304)
 13C9: 19          add  hl,de
@@ -2588,14 +2721,15 @@ PrintCaution:
 13D0: ED 5B 08 E3 ld   de,(unknown_E308)
 13D4: 19          add  hl,de
 13D5: 22 06 E3    ld   (unknown_E306),hl
-13D8: CD B8 08    call $08B8
+13D8: CD B8 08    call draw_object_08b8
 13DB: DD 35 0A    dec  (ix+$0a)
 13DE: C0          ret  nz
 13DF: DD 34 00    inc  (ix+$00)
 13E2: DD 36 0D 03 ld   (ix+$0d),$03
 13E6: 3E 1F       ld   a,$1F                      ; Play ...
-13E8: C3 75 0D    jp   $0D75                      ; ... car explosion then return
+13E8: C3 75 0D    jp   queue_sound_effect_if_game_playing_0d75                      ; ... car explosion then return
 ISROBJRun_07: ; ?? Handle player crash ?? wheels?
+handle_jeep_explosion_13eb:
 13EB: AF          xor  a
 13EC: 32 A2 E1    ld   (unknown_E1A2),a
 13EF: DD 35 0A    dec  (ix+$0a)
@@ -2605,7 +2739,7 @@ ISROBJRun_07: ; ?? Handle player crash ?? wheels?
 13F8: D2 18 01    jp   nc,$0118
 13FB: FE 05       cp   $05
 13FD: 38 0B       jr   c,$140A
-13FF: CD B8 08    call $08B8
+13FF: CD B8 08    call draw_object_08b8
 1402: DD 34 0D    inc  (ix+$0d)
 1405: DD 36 0A 0E ld   (ix+$0a),$0E
 1409: C9          ret
@@ -2615,7 +2749,7 @@ ISROBJRun_07: ; ?? Handle player crash ?? wheels?
 1411: DD 77 0D    ld   (ix+$0d),a
 1414: DD 7E 0A    ld   a,(ix+$0a)
 1417: FE C0       cp   $C0
-1419: D2 B8 08    jp   nc,$08B8
+1419: D2 B8 08    jp   nc,draw_object_08b8
 141C: DD 36 0D 05 ld   (ix+$0d),$05
 1420: C9          ret
 
@@ -2623,6 +2757,7 @@ ISROBJRun_08:
 ; Hold buggy in air during splash sequence.
 ; Then return to the bugging-jumping handler
 ;
+display_moon_patrol_title_1421:
 1421: DD 35 0A    dec  (ix+$0a)                   ; Decrement the count-down timer
 1424: DD 7E 0A    ld   a,(ix+$0a)                 ; Has the counter ...
 1427: FE 50       cp   $50                        ; ... dropped low enough?
@@ -2633,7 +2768,8 @@ ISROBJRun_08:
 1432: C9          ret                             ; Done
 ISROBJRun_1C:
 ;
-1433: CD DB 20    call $20DB
+jeep_bombed_1433:
+1433: CD DB 20    call copy_object_to_temp_object_add_x_speed_20db
 1436: 22 D6 E0    ld   (unknown_E0D6),hl
 1439: 7C          ld   a,h
 143A: D6 08       sub  $08
@@ -2657,7 +2793,7 @@ ISROBJRun_1C:
 1461: CB 14       rl   h
 1463: 38 1F       jr   c,$1484
 1465: C6 0B       add  a,$0B
-1467: CD 38 15    call $1538
+1467: CD 38 15    call compute_ground_object_y_from_x_1538
 146A: D6 08       sub  $08
 146C: B9          cp   c
 146D: 30 15       jr   nc,$1484
@@ -2670,8 +2806,8 @@ ISROBJRun_1C:
 147E: CB 1B       rr   e
 1480: 19          add  hl,de
 1481: 22 DC E0    ld   (unknown_E0DC),hl
-1484: CD B8 08    call $08B8                      ; * J1463,J146D
-1487: C3 EF 20    jp   $20EF
+1484: CD B8 08    call draw_object_08b8                      ; * J1463,J146D
+1487: C3 EF 20    jp   copy_temp_object_structure_to_object_20ef
 148A: 3A 49 E0    ld   a,(unknown_E049)           ; * C1363
 148D: 87          add  a,a
 148E: 21 28 30    ld   hl,$3028
@@ -2753,20 +2889,22 @@ ISROBJRun_1C:
 1511: 38 01       jr   c,$1514
 1513: 3D          dec  a
 1514: D6 05       sub  $05                        ; * J1511,J1519
-1516: CA C0 27    jp   z,$27C0
+1516: CA C0 27    jp   z,section_completed_27c0
 1519: 10 F9       djnz $1514
 151B: FE 06       cp   $06
-151D: CA C0 27    jp   z,$27C0
+151D: CA C0 27    jp   z,section_completed_27c0
 1520: 3E 10       ld   a,$10                      ; Play ... * J150F
-1522: CD 75 0D    call $0D75                      ; ... passing point
+1522: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... passing point
 1525: AF          xor  a
 1526: 0E 01       ld   c,$01
-1528: CD C2 02    call $02C2
+1528: CD C2 02    call store_special_event_02c2
 152B: C3 12 0D    jp   $0D12
 152E: 11 FD FF    ld   de,-3                      ; * J14D5,J14DA
 1531: 18 AC       jr   $14DF
+compute_jeep_y_1533:
 1533: 3A 03 E3    ld   a,(buggy_x_e303)           ; * C1366,C1381,C13A7,C18C3
 1536: C6 20       add  a,$20
+compute_ground_object_y_from_x_1538:
 1538: 47          ld   b,a                        ; * C10B1,C1467,C157C,C1A83,C1AE5,C1CFA
 1539: 3A E2 E1    ld   a,(unknown_E1E2)
 153C: 80          add  a,b
@@ -2777,6 +2915,8 @@ ISROBJRun_1C:
 1544: 26 E2       ld   h,$E2
 1546: 7E          ld   a,(hl)
 1547: C9          ret
+
+player_shot_1548:
 1548: 2A 4A E0    ld   hl,(unknown_E04A)          ; Current inputs to L, last inputs to H * C1331,C1378,C1388
 154B: 7C          ld   a,h                        ; Last inputs to accumulator
 154C: AD          xor  l                          ; Bits are only "1" now if inputs have changed
@@ -2801,24 +2941,27 @@ ISROBJRun_1C:
 156C: C9          ret                             ; Done ... no air shot
 156D: 36 0E       ld   (hl),$0E                   ; Init player air shot routine * J1566
 156F: 3E 12       ld   a,$12                      ; Play ...
-1571: CD 75 0D    call $0D75                      ; ... missile from car
+1571: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... missile from car
 1574: 79          ld   a,c                        ; Restore A
 1575: C9          ret                             ; Done
+
+compute_wheels_positions_1576:
 1576: 3A 03 E3    ld   a,(buggy_x_e303)           ; * C135D
 1579: 4F          ld   c,a
 157A: C6 04       add  a,$04
-157C: CD 38 15    call $1538
+157C: CD 38 15    call compute_ground_object_y_from_x_1538
 157F: D6 09       sub  $09
-1581: CD C9 15    call $15C9
+1581: CD C9 15    call update_leftmost_jeep_wheel_15c9
 1584: 7A          ld   a,d
 1585: EE 03       xor  $03
 1587: 57          ld   d,a
 1588: 3E 09       ld   a,$09
-158A: CD 92 15    call $1592
+158A: CD 92 15    call update_other_jeep_wheel_1592
 158D: 2C          inc  l
 158E: 14          inc  d
 158F: 14          inc  d
 1590: 3E 0D       ld   a,$0D
+update_other_jeep_wheel_1592:
 1592: 81          add  a,c                        ; * C158A
 1593: 4F          ld   c,a
 1594: 2C          inc  l
@@ -2828,18 +2971,18 @@ ISROBJRun_1C:
 1599: 6F          ld   l,a
 159A: 7E          ld   a,(hl)
 159B: D6 09       sub  $09
-159D: CD ED 08    call $08ED
+159D: CD ED 08    call compute_jeep_horizon_object_y_08ed
 15A0: 47          ld   b,a
 15A1: FD 23       inc  iy                         ; * J15C7
 15A3: FD 23       inc  iy
 15A5: FD 23       inc  iy
 15A7: FD 23       inc  iy
-15A9: C3 76 09    jp   $0976
+15A9: C3 76 09    jp   write_sprite_data_0976
 15AC: 3A 03 E3    ld   a,(buggy_x_e303)           ; * C13B6
 15AF: 4F          ld   c,a
 15B0: 3A 07 E3    ld   a,(buggy_y_e307)
 15B3: C6 11       add  a,$11
-15B5: CD C9 15    call $15C9
+15B5: CD C9 15    call update_leftmost_jeep_wheel_15c9
 15B8: 7A          ld   a,d
 15B9: EE 03       xor  $03
 15BB: 57          ld   d,a
@@ -2851,8 +2994,9 @@ ISROBJRun_1C:
 15C5: 81          add  a,c                        ; * C15BE
 15C6: 4F          ld   c,a
 15C7: 18 D8       jr   $15A1
+update_leftmost_jeep_wheel_15c9:
 15C9: 0C          inc  c                          ; * C1581,C15B5
-15CA: CD ED 08    call $08ED
+15CA: CD ED 08    call compute_jeep_horizon_object_y_08ed
 15CD: 47          ld   b,a
 15CE: 11 00 05    ld   de,$0500
 15D1: 3A E2 E1    ld   a,(unknown_E1E2)
@@ -2860,7 +3004,9 @@ ISROBJRun_1C:
 15D6: 20 01       jr   nz,$15D9
 15D8: 14          inc  d
 15D9: FD 21 A4 E1 ld   iy,unknown_E1A4            ; * J15D6
-15DD: C3 76 09    jp   $0976
+15DD: C3 76 09    jp   write_sprite_data_0976
+
+init_forward_shot_15e0:
 15E0: DD 36 0A 0C ld   (ix+$0a),$0C               ; 12 movements before ending
 15E4: 3A 07 E3    ld   a,(buggy_y_e307)           ; Moon buggy Y coordinate
 15E7: C6 0A       add  a,$0A                      ; Start shot in front of gun
@@ -2871,6 +3017,8 @@ ISROBJRun_1C:
 15F3: 22 22 E3    ld   (unknown_E322),hl          ; Store Y coordinate for forward shot (set ?? to 0)
 15F6: DD 34 00    inc  (ix+$00)                   ; Handler is now "0B Run player forward shot"
 15F9: C9          ret                             ; Done
+
+handle_forward_shot_15fa:
 15FA: DD 35 0A    dec  (ix+$0a)                   ; Has the shot moved all of its allocated time?
 15FD: 28 19       jr   z,$1618                    ; Yes ... begin its death
 15FF: 2A 22 E3    ld   hl,(unknown_E322)          ; Forward shot X coordinate (and ???)
@@ -2883,7 +3031,7 @@ ISROBJRun_1C:
 160F: 38 01       jr   c,$1612                    ; It is odd ... use first shot image
 1611: 3C          inc  a                          ; It is even ... use Object_0A second shot image
 1612: DD 77 0D    ld   (ix+$0d),a                 ; Set new shot image * J160F
-1615: C3 B8 08    jp   $08B8
+1615: C3 B8 08    jp   draw_object_08b8
 1618: DD 34 00    inc  (ix+$00)                   ; Transition to 0C to show the shot exploding * J15FD
 161B: DD 36 0A 03 ld   (ix+$0a),$03               ; Three runs before changing sprite image
 161F: DD 36 0D 0B ld   (ix+$0d),$0B               ; Start with first explosion Object_0B
@@ -2891,7 +3039,9 @@ ISROBJRun_1C:
 1626: DD 86 03    add  a,(ix+$03)
 1629: DD 77 0F    ld   (ix+$0f),a                 ; ?? X offset accounting for speed ??
 162C: C9          ret
-162D: CD 31 08    call $0831                      ; ?? changing X based on speed
+
+forward_shot_exploding_162d:
+162D: CD 31 08    call update_surface_object_0831                      ; ?? changing X based on speed
 1630: DD 35 0A    dec  (ix+$0a)                   ; Count down delay between image changes
 1633: F0          ret  p                          ; Return ... not time to change image
 1634: DD 7E 0D    ld   a,(ix+$0d)                 ; Get image number
@@ -2902,6 +3052,8 @@ ISROBJRun_1C:
 1641: DD 34 0D    inc  (ix+$0d)                   ; Next image
 1644: DD 36 0A 03 ld   (ix+$0a),$03               ; Set new image delay
 1648: C9          ret                             ; Done
+
+init_vertical_shot_1649:
 1649: 3A 03 E3    ld   a,(buggy_x_e303)           ; Get the player-object X coordinate
 164C: C6 0A       add  a,$0A                      ; Offset to where the up-gun is in the image
 164E: DD 77 03    ld   (ix+$03),a                 ; Set the air-shot's X coordinate
@@ -2910,15 +3062,17 @@ ISROBJRun_1C:
 1656: DD 77 07    ld   (ix+$07),a                 ; Set shot Y coordinate
 1659: DD 34 00    inc  (ix+$00)                   ; Next command ... 0F (run the air shot)
 165C: C9          ret                             ; Done
+
+handle_vertical_shot_165d:
 165D: 3A 00 E3    ld   a,(buggy_handler_e300)           ; Moon buggy command
 1660: FE 06       cp   $06                        ; Is buggy crashing?
-1662: 30 2B       jr   nc,$168F                   ; Yes ... command 6 or greater ... remove shot from active duty
+1662: 30 2B       jr   nc,clear_vertical_shot_168f                   ; Yes ... command 6 or greater ... remove shot from active duty
 1664: DD 7E 07    ld   a,(ix+$07)                 ; Get shot Y coordinate
 1667: D6 03       sub  $03                        ; Move it up
 1669: FE 3A       cp   $3A                        ; Less than 58 (status area) ?
-166B: 38 22       jr   c,$168F                    ; Shot has left the screen ... remove it
+166B: 38 22       jr   c,clear_vertical_shot_168f                    ; Shot has left the screen ... remove it
 166D: DD 77 07    ld   (ix+$07),a                 ; New shot Y coordinate
-1670: CD 1B 08    call $081B                      ; Get text screen pointer for X,Y coordinates
+1670: CD 1B 08    call compute_screen_address_081b                      ; Get text screen pointer for X,Y coordinates
 1673: DD 7E 07    ld   a,(ix+$07)                 ; Get Y coordinate
 1676: 1F          rra                             ; Rotate ...
 1677: 1F          rra                             ; ... bit 2 (fours-place) ...
@@ -2937,10 +3091,14 @@ ISROBJRun_1C:
 168B: 19          add  hl,de                      ; Point to last shot position on the screen
 168C: 36 00       ld   (hl),$00                   ; Erase the last shot position on the screen
 168E: C9          ret                             ; Done
-168F: CD 1B 08    call $081B                      ; Get text screen pointer for X,Y coordinates * J1662,J166B
+
+clear_vertical_shot_168f:
+168F: CD 1B 08    call compute_screen_address_081b                      ; Get text screen pointer for X,Y coordinates * J1662,J166B
 1692: 36 00       ld   (hl),$00                   ; Clear the shot from the screen
 1694: DD 36 00 00 ld   (ix+$00),$00               ; Remove the shot object from active duty
 1698: C9          ret                             ; Done
+
+ground_objects_collision_checks_1699:
 1699: DD 4E 03    ld   c,(ix+$03)                 ; * C18E3,C1953,C195A,C1A2B,C1A8A,C1B16,C1B27
 169C: DD 7E 0C    ld   a,(ix+$0c)
 169F: 87          add  a,a
@@ -3001,6 +3159,7 @@ ISROBJRun_1C:
 16F9: CB 77       bit  6,a                        ; Is invulnerable set?
 16FB: C8          ret  z                          ; Yes ... no crash
 16FC: E1          pop  hl                         ; We won't be returning
+jeep_killed_16fd:
 16FD: 3E 07       ld   a,$07                      ; Set first command to ... * J1A1F,J1D9B
 16FF: 32 00 E3    ld   (buggy_handler_e300),a           ; ... handle player crash
 1702: 3E 03       ld   a,$03
@@ -3039,7 +3198,7 @@ ISROBJRun_1C:
 1744: 10 E4       djnz $172A
 1746: CD A1 08    call $08A1
 1749: 3E 1F       ld   a,$1F                      ; Play ...
-174B: C3 75 0D    jp   $0D75                      ; ... car explosion
+174B: C3 75 0D    jp   queue_sound_effect_if_game_playing_0d75                      ; ... car explosion
 174E: 3A E2 E1    ld   a,(unknown_E1E2)           ; * J16C8
 1751: DD 86 03    add  a,(ix+$03)
 1754: 32 2F E3    ld   (unknown_E32F),a
@@ -3050,7 +3209,7 @@ ISROBJRun_1C:
 1761: 3E 03       ld   a,$03
 1763: 32 2A E3    ld   (unknown_E32A),a
 1766: 3E 01       ld   a,$01                      ; Play ...
-1768: CD 75 0D    call $0D75                      ; ... shot a rock
+1768: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... shot a rock
 176B: 11 07 00    ld   de,$0007
 176E: 19          add  hl,de
 176F: 7E          ld   a,(hl)
@@ -3058,24 +3217,24 @@ ISROBJRun_1C:
 1772: 0E 01       ld   c,$01
 1774: FE 0E       cp   $0E
 1776: 30 07       jr   nc,$177F
-1778: CD C2 02    call $02C2
+1778: CD C2 02    call store_special_event_02c2
 177B: E1          pop  hl
 177C: C3 52 08    jp   $0852
 177F: 20 13       jr   nz,$1794                   ; * J1776
-1781: CD F0 17    call $17F0
+1781: CD F0 17    call get_random_between_1_and_3_17f0
 1784: C6 05       add  a,$05
 1786: DD 77 08    ld   (ix+$08),a
-1789: CD C2 02    call $02C2
+1789: CD C2 02    call store_special_event_02c2
 178C: DD 34 00    inc  (ix+$00)
 178F: DD 36 0A 00 ld   (ix+$0a),$00
 1793: C9          ret
 1794: CD 56 08    call $0856                      ; * J177F
-1797: CD F0 17    call $17F0
+1797: CD F0 17    call get_random_between_1_and_3_17f0
 179A: 21 10 FB    ld   hl,-$4f0
 179D: C6 06       add  a,$06                      ; * J1DF0
 179F: DD 77 08    ld   (ix+$08),a
 17A2: E5          push hl
-17A3: CD C2 02    call $02C2
+17A3: CD C2 02    call store_special_event_02c2
 17A6: E1          pop  hl
 17A7: DD 7E 07    ld   a,(ix+$07)
 17AA: 84          add  a,h
@@ -3110,11 +3269,13 @@ ISROBJRun_1C:
 17E2: 1F          rra
 17E3: E6 0F       and  $0F
 17E5: 0E 01       ld   c,$01
-17E7: C3 C2 02    jp   $02C2
+17E7: C3 C2 02    jp   store_special_event_02c2
 17EA: 78          ld   a,b                        ; * J17CD,J17D1
 17EB: FE FC       cp   $FC
 17ED: 30 E9       jr   nc,$17D8
 17EF: C9          ret
+
+get_random_between_1_and_3_17f0:
 17F0: ED 5F       ld   a,r                        ; * C1781,C1797
 17F2: E6 03       and  $03
 17F4: C0          ret  nz
@@ -3131,6 +3292,8 @@ ISROBJRun_1C:
 1804: FD 23       inc  iy
 1806: FD 23       inc  iy
 1808: C9          ret
+
+update_scrolling_layers_1809:
 1809: 3A 00 E3    ld   a,(buggy_handler_e300)           ; Buggy command
 180C: FE 06       cp   $06                        ; Buggy running normally?
 180E: D0          ret  nc                         ; No ... skip
@@ -3222,7 +3385,7 @@ ISROBJRun_1C:
 18BE: 7C          ld   a,h
 18BF: 2F          cpl
 18C0: 32 C2 E1    ld   (scroll_x_value_blue_layer_E1C2),a
-18C3: CD 33 15    call $1533
+18C3: CD 33 15    call compute_jeep_y_1533
 18C6: FE C4       cp   $C4
 18C8: 30 02       jr   nc,$18CC
 18CA: 3E C4       ld   a,$C4
@@ -3237,8 +3400,10 @@ ISROBJRun_1C:
 18DA: C6 72       add  a,$72
 18DC: 32 C4 E1    ld   (unknown_E1C4),a
 18DF: C9          ret
-18E0: CD 31 08    call $0831
-18E3: CD 99 16    call $1699
+
+update_yellow_tank_18e0:
+18E0: CD 31 08    call update_surface_object_0831
+18E3: CD 99 16    call ground_objects_collision_checks_1699
 18E6: DD 35 0A    dec  (ix+$0a)
 18E9: F0          ret  p
 18EA: DD 34 0A    inc  (ix+$0a)
@@ -3275,6 +3440,8 @@ ISROBJRun_1C:
 1934: FD 36 0C 0C ld   (iy+$0c),$0C
 1938: DD 36 0A 43 ld   (ix+$0a),$43
 193C: C9          ret
+
+update_yellow_tank_shot_193d:
 193D: 3A 00 E3    ld   a,(buggy_handler_e300)
 1940: FE 06       cp   $06
 1942: D0          ret  nc
@@ -3283,13 +3450,17 @@ ISROBJRun_1C:
 1948: DD 77 04    ld   (ix+$04),a
 194B: 30 03       jr   nc,$1950
 194D: DD 35 0F    dec  (ix+$0f)
-1950: CD 38 08    call $0838                      ; * J194B
-1953: CD 99 16    call $1699
+1950: CD 38 08    call update_surface_object_0838                      ; * J194B
+1953: CD 99 16    call ground_objects_collision_checks_1699
 1956: C9          ret
-1957: CD 31 08    call $0831
-195A: CD 99 16    call $1699
+
+update_rock_1957:
+1957: CD 31 08    call update_surface_object_0831
+195A: CD 99 16    call ground_objects_collision_checks_1699
 195D: C9          ret
-195E: CD 31 08    call $0831
+
+check_if_fall_in_hole_195e:
+195E: CD 31 08    call update_surface_object_0831
 1961: DD 7E 0C    ld   a,(ix+$0c)
 1964: A7          and  a
 1965: C0          ret  nz
@@ -3352,7 +3523,9 @@ ISROBJRun_1C:
 19CA: 23          inc  hl
 19CB: 7E          ld   a,(hl)
 19CC: 0E 01       ld   c,$01
-19CE: C3 C2 02    jp   $02C2
+19CE: C3 C2 02    jp   store_special_event_02c2
+
+update_volcano_19d1:
 19D1: DD 35 0A    dec  (ix+$0a)
 19D4: F2 0D 1A    jp   p,$1A0D
 19D7: DD 7E 0E    ld   a,(ix+$0e)
@@ -3390,14 +3563,16 @@ ISROBJRun_1C:
 1A18: DD 96 03    sub  (ix+$03)
 1A1B: C6 10       add  a,$10
 1A1D: FE 30       cp   $30
-1A1F: DA FD 16    jp   c,$16FD
-1A22: CD 38 08    call $0838                      ; * J1A12
+1A1F: DA FD 16    jp   c,jeep_killed_16fd
+1A22: CD 38 08    call update_surface_object_0838                      ; * J1A12
 1A25: DD 7E 0C    ld   a,(ix+$0c)
 1A28: FE 06       cp   $06
 1A2A: C8          ret  z
-1A2B: CD 99 16    call $1699
+1A2B: CD 99 16    call ground_objects_collision_checks_1699
 1A2E: C9          ret
-1A2F: CD 31 08    call $0831
+
+exploding_volcano_1a2f:
+1A2F: CD 31 08    call update_surface_object_0831
 1A32: DD 35 0A    dec  (ix+$0a)
 1A35: F0          ret  p
 1A36: DD 7E 0D    ld   a,(ix+$0d)
@@ -3406,6 +3581,8 @@ ISROBJRun_1C:
 1A3C: DD 35 0D    dec  (ix+$0d)
 1A3F: DD 36 0A 07 ld   (ix+$0a),$07
 1A43: C9          ret
+
+update_rolling_rock_1a44:
 1A44: 3A 00 E3    ld   a,(buggy_handler_e300)
 1A47: FE 06       cp   $06
 1A49: D0          ret  nc
@@ -3425,20 +3602,22 @@ ISROBJRun_1C:
 1A6B: DD 77 04    ld   (ix+$04),a
 1A6E: 30 03       jr   nc,$1A73
 1A70: DD 35 0F    dec  (ix+$0f)                   ; * J1A91
-1A73: CD 38 08    call $0838                      ; * J1A6E
+1A73: CD 38 08    call update_surface_object_0838                      ; * J1A6E
 1A76: DD 7E 0C    ld   a,(ix+$0c)
 1A79: D6 04       sub  $04
 1A7B: CB 27       sla  a
 1A7D: C6 0C       add  a,$0C
 1A7F: 4F          ld   c,a
 1A80: DD 7E 03    ld   a,(ix+$03)
-1A83: CD 38 15    call $1538
+1A83: CD 38 15    call compute_ground_object_y_from_x_1538
 1A86: 91          sub  c
 1A87: DD 77 07    ld   (ix+$07),a
-1A8A: CD 99 16    call $1699
+1A8A: CD 99 16    call ground_objects_collision_checks_1699
 1A8D: C9          ret
+
+rear_missile_following_1a92:
 1A92: DD 36 0B 01 ld   (ix+$0b),$01                                   
-1A96: 3A 00 E3    ld   a,($E300)                                      
+1A96: 3A 00 E3    ld   a,(jeep_params_E300)                                      
 1A99: FE 06       cp   $06
 1A9B: D0          ret  nc
 1A9C: 2A 72 E3    ld   hl,(unknown_E372)
@@ -3453,6 +3632,8 @@ ISROBJRun_1C:
 1AB1: DD 34 00    inc  (ix+$00)
 1AB4: DD 36 0E 80 ld   (ix+$0e),$80
 1AB8: C9          ret
+
+rear_missile_following_1ab9:
 1AB9: 3A 4E E0    ld   a,(isrCNT_1_e04e)
 1ABC: 1F          rra
 1ABD: D8          ret  c
@@ -3473,16 +3654,20 @@ ISROBJRun_1C:
 1ADE: 20 0D       jr   nz,$1AED
 1AE0: DD 7E 03    ld   a,(ix+$03)
 1AE3: C6 18       add  a,$18
-1AE5: CD 38 15    call $1538
+1AE5: CD 38 15    call compute_ground_object_y_from_x_1538
 1AE8: D6 10       sub  $10
 1AEA: DD 77 07    ld   (ix+$07),a
-1AED: C3 B8 08    jp   $08B8                      ; * J1ADE
+1AED: C3 B8 08    jp   draw_object_08b8                      ; * J1ADE
+
+rear_missile_following_1af0:
 1AF0: DD 35 0E    dec  (ix+$0e)
 1AF3: 20 CF       jr   nz,$1AC4
 1AF5: DD 36 0A 58 ld   (ix+$0a),$58
 1AF9: DD 34 00    inc  (ix+$00)
 1AFC: DD 36 0D 52 ld   (ix+$0d),$52
 1B00: C9          ret
+
+rear_missile_attacking_1b01:
 1B01: DD 35 0A    dec  (ix+$0a)
 1B04: 28 15       jr   z,$1B1B
 1B06: 2A 72 E3    ld   hl,(unknown_E372)
@@ -3492,19 +3677,23 @@ ISROBJRun_1C:
 1B10: 7C          ld   a,h
 1B11: FE F0       cp   $F0
 1B13: D2 52 08    jp   nc,$0852
-1B16: CD 99 16    call $1699
+1B16: CD 99 16    call ground_objects_collision_checks_1699
 1B19: 18 BE       jr   $1AD9
 1B1B: DD 34 00    inc  (ix+$00)                   ; * J1B04
 1B1E: DD 36 0A 6E ld   (ix+$0a),$6E
 1B22: DD 36 0D 23 ld   (ix+$0d),$23
 1B26: C9          ret
-1B27: CD 99 16    call $1699
+
+rear_missile_sitting_duck_1b27:
+1B27: CD 99 16    call ground_objects_collision_checks_1699
 1B2A: DD 35 0A    dec  (ix+$0a)
 1B2D: 20 95       jr   nz,$1AC4
 1B2F: DD 35 00    dec  (ix+$00)
 1B32: DD 35 0B    dec  (ix+$0b)
 1B35: DD 36 0D 52 ld   (ix+$0d),$52
 1B39: C9          ret
+
+handle_ufo_shots_1b3a:
 1B3A: 21 EE E0    ld   hl,unknown_E0EE            ; * C0274
 1B3D: 3A 4E E0    ld   a,(isrCNT_1_e04e)
 1B40: 96          sub  (hl)
@@ -3548,7 +3737,7 @@ ISROBJRun_1C:
 1B84: 11 00 00    ld   de,$0000
 1B87: 7E          ld   a,(hl)                     ; * J1B94
 1B88: A7          and  a
-1B89: 28 39       jr   z,$1BC4
+1B89: 28 39       jr   z,store_e370_offset_1bc4
 1B8B: D6 2F       sub  $2F
 1B8D: 20 01       jr   nz,$1B90
 1B8F: 14          inc  d
@@ -3576,12 +3765,14 @@ ISROBJRun_1C:
 1BB5: FD 21 00 E4 ld   iy,unknown_E400
 1BB9: FD 19       add  iy,de
 1BBB: 0E 3B       ld   c,$3B
-1BBD: C3 64 10    jp   $1064
+1BBD: C3 64 10    jp   initialize_ufo_shot_1064
 1BC0: 55          ld   d,l                        ; * J1B5B
 1BC1: 14          inc  d
 1BC2: 18 9B       jr   $1B5F
+store_e370_offset_1bc4:
 1BC4: 5D          ld   e,l                        ; * J1B89
 1BC5: 18 C9       jr   $1B90
+handle_flying_enemies_1bc7:
 1BC7: 3A 4E E0    ld   a,(isrCNT_1_e04e)           ; * C0277
 1BCA: 21 52 E0    ld   hl,unknown_E052
 1BCD: AE          xor  (hl)
@@ -3659,6 +3850,7 @@ ISROBJRun_1C:
 1C54: CD 0A 08    call $080A                      ; * J1C0F
 1C57: 18 C5       jr   $1C1E
 
+animate_ufo_frame_1c63:
 1C63: DD 7E 0D    ld   a,(ix+$0d)                                     
 1C66: FE 2B       cp   $2B
 1C68: D8          ret  c
@@ -3683,6 +3875,8 @@ ISROBJRun_1C:
 1C94: 28 EC       jr   z,$1C82
 1C96: DD 36 0E F8 ld   (ix+$0e),$F8               ; * J1C78
 1C9A: C9          ret
+
+init_standard_ufo_bomb_1c9b:
 1C9B: DD 6E 04    ld   l,(ix+$04)
 1C9E: DD 66 05    ld   h,(ix+$05)
 1CA1: CB 3C       srl  h
@@ -3697,6 +3891,8 @@ ISROBJRun_1C:
 1CB5: DD 74 05    ld   (ix+$05),h
 1CB8: DD 34 00    inc  (ix+$00)
 1CBB: C9          ret
+
+update_standard_ufo_bomb_1cbc:
 1CBC: 0E 3D       ld   c,$3D
 1CBE: DD 7E 09    ld   a,(ix+$09)
 1CC1: A7          and  a
@@ -3711,7 +3907,7 @@ ISROBJRun_1C:
 1CD4: 38 01       jr   c,$1CD7
 1CD6: 0C          inc  c
 1CD7: DD 71 0D    ld   (ix+$0d),c                 ; * J1CC2,J1CD4
-1CDA: CD FB 20    call $20FB
+1CDA: CD FB 20    call copy_object_to_temp_object_20fb
 1CDD: 7C          ld   a,h
 1CDE: FE 06       cp   $06
 1CE0: DA 52 08    jp   c,$0852
@@ -3725,11 +3921,11 @@ ISROBJRun_1C:
 1CF5: 19          add  hl,de
 1CF6: 22 DA E0    ld   (unknown_E0DA),hl
 1CF9: 54          ld   d,h
-1CFA: CD 38 15    call $1538
+1CFA: CD 38 15    call compute_ground_object_y_from_x_1538
 1CFD: D6 08       sub  $08
 1CFF: BA          cp   d
-1D00: CD EF 20    call $20EF
-1D03: 30 35       jr   nc,$1D3A
+1D00: CD EF 20    call copy_temp_object_structure_to_object_20ef
+1D03: 30 35       jr   nc,check_if_jeep_vertical_shot_kills_object_1d3a
 1D05: DD 77 07    ld   (ix+$07),a
 1D08: DD 34 00    inc  (ix+$00)
 1D0B: DD 36 0B 00 ld   (ix+$0b),$00
@@ -3739,9 +3935,11 @@ ISROBJRun_1C:
 1D16: 20 05       jr   nz,$1D1D
 1D18: DD 36 00 30 ld   (ix+$00),$30
 1D1C: 3D          dec  a                          ; Sound effect 2 ... missile hitting ground
-1D1D: CD 75 0D    call $0D75                      ; Play missile hitting ground or effect played after that * J1D16
+1D1D: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; Play missile hitting ground or effect played after that * J1D16
 1D20: C3 56 08    jp   $0856
-1D23: CD DB 20    call $20DB
+
+handle_hole_making_bombs_1d23:
+1D23: CD DB 20    call copy_object_to_temp_object_add_x_speed_20db
 1D26: ED 5B 14 E3 ld   de,(unknown_E314)
 1D2A: CB 2A       sra  d
 1D2C: CB 1B       rr   e
@@ -3750,9 +3948,10 @@ ISROBJRun_1C:
 1D33: ED 52       sbc  hl,de
 1D35: 01 10 00    ld   bc,$0010
 1D38: 18 AC       jr   $1CE6
+check_if_jeep_vertical_shot_kills_object_1d3a:
 1D3A: 3A 00 E3    ld   a,(buggy_handler_e300)           ; * J1D03
 1D3D: FE 06       cp   $06
-1D3F: D2 B8 08    jp   nc,$08B8
+1D3F: D2 B8 08    jp   nc,draw_object_08b8
 1D42: 21 05 06    ld   hl,$0605
 1D45: DD 7E 00    ld   a,(ix+$00)
 1D48: FE 2A       cp   $2A
@@ -3772,24 +3971,26 @@ ISROBJRun_1C:
 1D6C: DD 96 03    sub  (ix+$03)
 1D6F: 94          sub  h
 1D70: BD          cp   l
-1D71: 38 2B       jr   c,$1D9E
+1D71: 38 2B       jr   c,ufo_shot_1d9e
 1D73: FD 19       add  iy,de                      ; Bump to next structure * J1D5D,J1D67
 1D75: 10 E1       djnz $1D58                      ; Do all structures
 1D77: 3A 07 E3    ld   a,(buggy_y_e307)
 1D7A: DD 96 07    sub  (ix+$07)
 1D7D: FE F0       cp   $F0
-1D7F: DA B8 08    jp   c,$08B8
+1D7F: DA B8 08    jp   c,draw_object_08b8
 1D82: 57          ld   d,a
 1D83: 3A 03 E3    ld   a,(buggy_x_e303)
 1D86: DD 96 03    sub  (ix+$03)
 1D89: D6 04       sub  $04
 1D8B: FE EA       cp   $EA
-1D8D: DA B8 08    jp   c,$08B8
+1D8D: DA B8 08    jp   c,draw_object_08b8
 1D90: 3A 04 D0    ld   a,($D004)
 1D93: CB 77       bit  6,a
-1D95: CA B8 08    jp   z,$08B8
+1D95: CA B8 08    jp   z,draw_object_08b8
 1D98: CD 52 08    call $0852
-1D9B: C3 FD 16    jp   $16FD
+1D9B: C3 FD 16    jp   jeep_killed_16fd
+
+ufo_shot_1d9e:
 1D9E: FD 34 00    inc  (iy+$00)                   ; ?? From E (initial) to F (moved above) * J1D71
 1DA1: DD 7E 0D    ld   a,(ix+$0d)
 1DA4: FE 37       cp   $37
@@ -3809,7 +4010,7 @@ ISROBJRun_1C:
 1DC7: 28 01       jr   z,$1DCA
 1DC9: 23          inc  hl
 1DCA: 3E 11       ld   a,$11                      ; Play ... * J1DC1,J1DC7
-1DCC: CD 75 0D    call $0D75                      ; ... UFO explosion
+1DCC: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... UFO explosion
 1DCF: 35          dec  (hl)
 1DD0: 20 08       jr   nz,$1DDA
 1DD2: 23          inc  hl
@@ -3822,11 +4023,13 @@ ISROBJRun_1C:
 1DDE: DD 36 0A 06 ld   (ix+$0a),$06
 1DE2: DD 36 0D 37 ld   (ix+$0d),$37
 1DE6: 78          ld   a,b
-1DE7: CD C2 02    call $02C2
+1DE7: CD C2 02    call store_special_event_02c2
 1DEA: C9          ret
 1DEB: 21 00 FC    ld   hl,-$400                   ; * J1DD8
 1DEE: D6 02       sub  $02
 1DF0: C3 9D 17    jp   $179D
+
+hole_making_bomb_explodes_1df3:
 1DF3: DD 36 0D 3E ld   (ix+$0d),$3E
 1DF7: CD 23 16    call $1623
 1DFA: D6 03       sub  $03
@@ -3844,14 +4047,18 @@ ISROBJRun_1C:
 1E0F: A7          and  a
 1E10: C8          ret  z
 1E11: C3 52 08    jp   $0852
+
+init_ground_explosion_1e14:
 1E14: DD 36 0D 43 ld   (ix+$0d),$43
 1E18: CD 23 16    call $1623
 1E1B: 18 E6       jr   $1E03
 1E1D: 34          inc  (hl)                       ; * J1E08
 1E1E: DD 34 00    inc  (ix+$00)
 1E21: DD 36 0A 04 ld   (ix+$0a),$04
-1E25: CD 31 08    call $0831                      ; * J1E3E,J1E4F,J1E5B,J1E81
+1E25: CD 31 08    call update_surface_object_0831                      ; * J1E3E,J1E4F,J1E5B,J1E81
 1E28: C9          ret
+
+update_ground_explosion_1e29:
 1E29: 21 D2 E1    ld   hl,unknown_E1D2
 1E2C: 7E          ld   a,(hl)
 1E2D: 23          inc  hl
@@ -3869,6 +4076,7 @@ ISROBJRun_1C:
 1E48: DD 34 0D    inc  (ix+$0d)
 1E4B: DD 36 0A 05 ld   (ix+$0a),$05
 1E4F: 18 D4       jr   $1E25
+bomb_creates_hole_1e51:
 1E51: 3A D3 E1    ld   a,(unknown_E1D3)
 1E54: A7          and  a
 1E55: C2 52 08    jp   nz,$0852
@@ -3889,7 +4097,7 @@ ISROBJRun_1C:
 1E74: 16 83       ld   d,$83
 1E76: 0E 09       ld   c,$09
 1E78: 3E 01       ld   a,$01
-1E7A: CD C2 02    call $02C2
+1E7A: CD C2 02    call store_special_event_02c2
 1E7D: DD 36 0A 02 ld   (ix+$0a),$02               ; * J1E69
 1E81: 18 A2       jr   $1E25
 1E83: DD 7E 07    ld   a,(ix+$07)                 ; * J1E62
@@ -3900,11 +4108,17 @@ ISROBJRun_1C:
 1E92: DD 36 0D 81 ld   (ix+$0d),$81
 1E96: DD 36 00 13 ld   (ix+$00),$13
 1E9A: C9          ret
+
+bomb_shot_1e9b:
 1E9B: DD 35 0A    dec  (ix+$0a)
 1E9E: CA 52 08    jp   z,$0852
-1EA1: C3 B8 08    jp   $08B8
+1EA1: C3 B8 08    jp   draw_object_08b8
+
+ufo_appearing_1ea4:
 1EA4: DD 35 0F    dec  (ix+$0f)
-1EA7: CA 4D 20    jp   z,$204D
+1EA7: CA 4D 20    jp   z,ufo_init_crash_on_player_204d
+
+ufo_appearing_1eaa:
 1EAA: DD 34 00    inc  (ix+$00)                   ; * J2016
 1EAD: DD 7E 0C    ld   a,(ix+$0c)
 1EB0: CB 27       sla  a
@@ -3964,8 +4178,10 @@ ISROBJRun_1C:
 1F1F: DD 36 08 00 ld   (ix+$08),$00
 1F23: DD 36 09 00 ld   (ix+$09),$00
 1F27: C9          ret
-1F28: CD 63 1C    call $1C63                      ; * C2009
-1F2B: CD DB 20    call $20DB
+
+animate_ufo_1f28:
+1F28: CD 63 1C    call animate_ufo_frame_1c63                      ; * C2009
+1F2B: CD DB 20    call copy_object_to_temp_object_add_x_speed_20db
 1F2E: DD 7E 0C    ld   a,(ix+$0c)
 1F31: CB 27       sla  a
 1F33: 20 52       jr   nz,$1F87
@@ -4000,7 +4216,7 @@ ISROBJRun_1C:
 1F72: 38 0F       jr   c,$1F83
 1F74: FE 70       cp   $70
 1F76: 30 0B       jr   nc,$1F83
-1F78: CD EF 20    call $20EF                      ; * J1FE8,J203E,J204A
+1F78: CD EF 20    call copy_temp_object_structure_to_object_20ef                      ; * J1FE8,J203E,J204A
 1F7B: C3 4C 1D    jp   $1D4C
 1F7E: 7C          ld   a,h                        ; * J1F4D
 1F7F: FE 16       cp   $16
@@ -4059,19 +4275,22 @@ ISROBJRun_1C:
 1FEB: 19          add  hl,de                      ; * J1FCF
 1FEC: 18 E8       jr   $1FD6
 
+ufo_appearing_2000:
 2000: DD 34 00    inc  (ix+$00)
 2003: DD 7E 0C    ld   a,(ix+$0c)
 2006: E6 7F       and  $7F
 2008: C8          ret  z
-2009: CD 28 1F    call $1F28
+2009: CD 28 1F    call animate_ufo_1f28
 200C: DD 7E 00    ld   a,(ix+$00)
 200F: FE 25       cp   $25
 2011: CA 83 1F    jp   z,$1F83
 2014: FE 24       cp   $24
-2016: CA AA 1E    jp   z,$1EAA
+2016: CA AA 1E    jp   z,ufo_appearing_1eaa
 2019: C9          ret
-201A: CD 63 1C    call $1C63
-201D: CD DB 20    call $20DB
+
+animate_ufo_201a:
+201A: CD 63 1C    call animate_ufo_frame_1c63
+201D: CD DB 20    call copy_object_to_temp_object_add_x_speed_20db
 2020: 22 D6 E0    ld   (unknown_E0D6),hl
 2023: 7C          ld   a,h
 2024: D6 08       sub  $08
@@ -4092,6 +4311,8 @@ ISROBJRun_1C:
 2045: ED 52       sbc  hl,de
 2047: 22 DC E0    ld   (unknown_E0DC),hl
 204A: C3 78 1F    jp   $1F78
+
+ufo_init_crash_on_player_204d:
 204D: 3A 03 E3    ld   a,(buggy_x_e303)           ; * J1EA7
 2050: 16 00       ld   d,$00
 2052: C6 10       add  a,$10
@@ -4135,28 +4356,36 @@ ISROBJRun_1C:
 2095: DD 75 0B    ld   (ix+$0b),l
 2098: DD 74 0F    ld   (ix+$0f),h
 209B: C9          ret
-209C: CD 63 1C    call $1C63
-209F: CD FB 20    call $20FB
+
+ufo_crashing_on_player_209c:
+209C: CD 63 1C    call animate_ufo_frame_1c63
+209F: CD FB 20    call copy_object_to_temp_object_20fb
 20A2: 22 D6 E0    ld   (unknown_E0D6),hl
 20A5: 7C          ld   a,h
 20A6: 2A DC E0    ld   hl,(unknown_E0DC)
 20A9: C3 F1 1C    jp   $1CF1
+
+ufo_shot_20ac:
 20AC: DD 35 0A    dec  (ix+$0a)
-20AF: C2 B8 08    jp   nz,$08B8
+20AF: C2 B8 08    jp   nz,draw_object_08b8
 20B2: DD 36 0A 06 ld   (ix+$0a),$06
 20B6: DD 7E 0D    ld   a,(ix+$0d)
 20B9: FE 39       cp   $39
 20BB: D2 52 08    jp   nc,$0852
 20BE: DD 34 0D    inc  (ix+$0d)
-20C1: C3 B8 08    jp   $08B8
+20C1: C3 B8 08    jp   draw_object_08b8
+
+show_kill_score_20c4:
 20C4: DD 35 0A    dec  (ix+$0a)
-20C7: C2 B8 08    jp   nz,$08B8
+20C7: C2 B8 08    jp   nz,draw_object_08b8
 20CA: DD 7E 07    ld   a,(ix+$07)
 20CD: FE 80       cp   $80
 20CF: D2 52 08    jp   nc,$0852
 20D2: 06 80       ld   b,$80
 20D4: DD 36 00 00 ld   (ix+$00),$00
 20D8: C3 69 08    jp   $0869
+
+copy_object_to_temp_object_add_x_speed_20db:
 20DB: DD E5       push ix                         ; * C1433,C1D23,C1F2B,C201D,C20FB
 20DD: E1          pop  hl
 20DE: 11 D4 E0    ld   de,unknown_E0D4
@@ -4166,13 +4395,17 @@ ISROBJRun_1C:
 20EA: 2A D8 E0    ld   hl,(unknown_E0D8)
 20ED: 19          add  hl,de
 20EE: C9          ret
+
+copy_temp_object_structure_to_object_20ef:
 20EF: DD E5       push ix                         ; * J1487,C1D00,C1F78
 20F1: D1          pop  de
 20F2: 21 D4 E0    ld   hl,unknown_E0D4
 20F5: 01 0A 00    ld   bc,$000A
 20F8: ED B0       ldir
 20FA: C9          ret
-20FB: CD DB 20    call $20DB                      ; * C1CDA,C209F
+
+copy_object_to_temp_object_20fb:
+20FB: CD DB 20    call copy_object_to_temp_object_add_x_speed_20db                      ; * C1CDA,C209F
 20FE: EB          ex   de,hl
 20FF: DD 6E 0B    ld   l,(ix+$0b)
 2102: DD 66 0F    ld   h,(ix+$0f)
@@ -4180,6 +4413,8 @@ ISROBJRun_1C:
 2109: ED 42       sbc  hl,bc
 210B: 19          add  hl,de
 210C: C9          ret
+
+handle_time_210d:
 210D: 21 51 E0    ld   hl,isr_count4_e051
 2110: 3A 00 E3    ld   a,(buggy_handler_e300)
 2113: 3D          dec  a
@@ -4199,15 +4434,17 @@ ISROBJRun_1C:
 2126: 77          ld   (hl),a
 2127: 3E 37       ld   a,$37                      ; * J2114
 2129: 32 51 E0    ld   (isr_count4_e051),a
+display_time_212c:
 212C: 11 90 80    ld   de,$8090                   ; * C0D0C
 212F: FD 21 90 84 ld   iy,$8490
 2133: 0E 02       ld   c,$02
-2135: CD E7 03    call $03E7
+2135: CD E7 03    call trans_color_03e7
 2138: 3A 12 E5    ld   a,(unknown_E512)
-213B: CD BD 03    call $03BD
+213B: CD BD 03    call print_digit_03bd
 213E: 3A 11 E5    ld   a,(time_bcd_e511)
-2141: C3 AE 03    jp   $03AE
+2141: C3 AE 03    jp   set_character_at_address_03ae
 
+section_completed_27c0:
 27C0: 21 46 E0    ld   hl,unknown_E046            ; * J1516,J151D
 27C3: 35          dec  (hl)
 27C4: FB          ei
@@ -4217,18 +4454,18 @@ ISROBJRun_1C:
 27CB: CA D2 27    jp   z,$27D2
 27CE: A7          and  a
 27CF: C2 5E 28    jp   nz,$285E
-27D2: CD FA 29    call $29FA                      ; * J27CB
+27D2: CD FA 29    call fill_done_section_in_map_29fa                      ; * J27CB
 27D5: 3E 1E       ld   a,$1E                      ; Play ...
-27D7: CD 75 0D    call $0D75                      ; ... congratulations music
+27D7: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... congratulations music
 27DA: 21 0F E5    ld   hl,unknown_E50F
 27DD: 36 00       ld   (hl),$00
 27DF: 23          inc  hl                         ; Now E510
 27E0: 34          inc  (hl)                       ; Increment the course number
-27E1: CD 48 29    call $2948
-27E4: CD E8 05    call $05E8
+27E1: CD 48 29    call clear_sprites_and_playfield_chars_2948
+27E4: CD E8 05    call delay3_sec_05e8
 27E7: 21 24 2C    ld   hl,$2C24                   ; "CONGRATULATIONS" script
 27EA: CD 00 03    call $0300
-27ED: CD BA 28    call $28BA
+27ED: CD BA 28    call display_section_results_28ba
 27F0: 21 0C 2C    ld   hl,$2C0C                   ; "SPECIAL BOUNS POINTS" script
 27F3: CD 00 03    call $0300
 27F6: 3A 13 E5    ld   a,(nb_sections_to_clear_E513)
@@ -4242,7 +4479,7 @@ ISROBJRun_1C:
 2802: 20 01       jr   nz,$2805
 2804: 24          inc  h
 2805: 22 98 E0    ld   (unknown_E098),hl          ; * J2802
-2808: CD 71 29    call $2971
+2808: CD 71 29    call display_good_bonus_points_2971
 280B: 2A 96 E0    ld   hl,(unknown_E096)
 280E: 56          ld   d,(hl)
 280F: 2B          dec  hl
@@ -4258,7 +4495,7 @@ ISROBJRun_1C:
 281F: 2B          dec  hl
 2820: 73          ld   (hl),e
 2821: 21 39 2C    ld   hl,$2C39                   ; "YOU HAVE BROKEN A RECORD" script
-2824: CD 4E 03    call $034E
+2824: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 2827: 2A 94 E0    ld   hl,(unknown_E094)          ; * J2817,J285C
 282A: ED 5B 11 E5 ld   de,(time_bcd_e511)
 282E: 7D          ld   a,l
@@ -4271,7 +4508,7 @@ ISROBJRun_1C:
 2839: A7          and  a
 283A: ED 52       sbc  hl,de
 283C: 38 50       jr   c,$288E
-283E: CD 68 29    call $2968
+283E: CD 68 29    call write_course_section_record_2968
 2841: 2A 98 E0    ld   hl,(unknown_E098)
 2844: 7D          ld   a,l
 2845: C6 01       add  a,$01
@@ -4280,31 +4517,31 @@ ISROBJRun_1C:
 2849: 30 01       jr   nc,$284C
 284B: 24          inc  h
 284C: 22 98 E0    ld   (unknown_E098),hl          ; * J2849
-284F: CD 71 29    call $2971
+284F: CD 71 29    call display_good_bonus_points_2971
 2852: 3E 10       ld   a,$10                      ; Play ...
-2854: CD 75 0D    call $0D75                      ; ... passing point
+2854: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... passing point
 2857: 3E 0C       ld   a,$0C
-2859: CD EA 05    call $05EA
+2859: CD EA 05    call wait_for_sync_05ea
 285C: 18 C9       jr   $2827
 285E: 3E 1D       ld   a,$1D                      ; Play ... * J27CF
-2860: CD 75 0D    call $0D75                      ; ... reached goal
+2860: CD 75 0D    call queue_sound_effect_if_game_playing_0d75                      ; ... reached goal
 2863: CD D6 29    call $29D6
 2866: CD 12 0D    call $0D12
-2869: CD 48 29    call $2948
+2869: CD 48 29    call clear_sprites_and_playfield_chars_2948
 286C: 3E 30       ld   a,$30
-286E: CD EA 05    call $05EA
-2871: CD BA 28    call $28BA
+286E: CD EA 05    call wait_for_sync_05ea
+2871: CD BA 28    call display_section_results_28ba
 2874: 38 0D       jr   c,$2883
 2876: 21 E4 2B    ld   hl,$2BE4                   ; "GOOD BONUS POINTS" script
-2879: CD 4E 03    call $034E
+2879: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 287C: 3A F9 E0    ld   a,(champ_colors_e0f9)
 287F: 3C          inc  a
 2880: C3 F9 27    jp   $27F9
 2883: 21 F9 2B    ld   hl,$2BF9                   ; "SORRY NO BONUS" script * J2874
-2886: CD 4E 03    call $034E
-2889: CD E8 05    call $05E8
+2886: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
+2889: CD E8 05    call delay3_sec_05e8
 288C: 18 0E       jr   $289C
-288E: CD E8 05    call $05E8                      ; * J283C
+288E: CD E8 05    call delay3_sec_05e8                      ; * J283C
 2891: 11 01 E5    ld   de,cur_score1_e501
 2894: 21 98 E0    ld   hl,unknown_E098
 2897: 06 02       ld   b,$02
@@ -4314,14 +4551,16 @@ ISROBJRun_1C:
 28A2: 21 13 E5    ld   hl,nb_sections_to_clear_E513
 28A5: 7E          ld   a,(hl)
 28A6: A7          and  a
-28A7: C2 B7 0B    jp   nz,$0BB7
+28A7: C2 B7 0B    jp   nz,start_new_section_0bb7
 28AA: 36 05       ld   (hl),$05
 28AC: 21 A2 23    ld   hl,$23A2
 28AF: 22 16 E5    ld   (unknown_E516),hl
 28B2: 3E 1A       ld   a,$1A
 28B4: 32 0E E5    ld   (cur_point_e50e),a
-28B7: C3 B7 0B    jp   $0BB7
-28BA: CD E8 05    call $05E8                      ; * C27ED,C2871
+28B7: C3 B7 0B    jp   start_new_section_0bb7
+
+display_section_results_28ba:
+28BA: CD E8 05    call delay3_sec_05e8                      ; * C27ED,C2871
 28BD: CD 5A 29    call $295A
 28C0: 3A 10 E5    ld   a,(course_num_e510)          ; Course number
 28C3: D6 02       sub  $02
@@ -4360,8 +4599,8 @@ ISROBJRun_1C:
 2905: 2B          dec  hl
 2906: 71          ld   (hl),c
 2907: 21 79 2B    ld   hl,$2B79                   ; "TIME TO REACH POINT " script * J2902
-290A: CD 4E 03    call $034E
-290D: CD 81 29    call $2981
+290A: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
+290D: CD 81 29    call current_point_modulus_26_2981
 2910: A7          and  a
 2911: 20 02       jr   nz,$2915
 2913: 3E 1A       ld   a,$1A
@@ -4370,23 +4609,25 @@ ISROBJRun_1C:
 2918: 1B          dec  de
 2919: 12          ld   (de),a
 291A: 21 94 2B    ld   hl,$2B94
-291D: CD 4E 03    call $034E
+291D: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 2920: 21 12 E5    ld   hl,unknown_E512
 2923: 13          inc  de
-2924: CD 9A 03    call $039A
+2924: CD 9A 03    call write_2_digits_to_screen_039a
 2927: 21 B0 2B    ld   hl,$2BB0                   ; "THE AVERAGE TIME " script
-292A: CD 4E 03    call $034E
-292D: CD 68 29    call $2968
+292A: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
+292D: CD 68 29    call write_course_section_record_2968
 2930: 21 CC 2B    ld   hl,$2BCC                   ; "TOP RECORD " script
-2933: CD 4E 03    call $034E
+2933: CD 4E 03    call write_text_to_screen_at_xy_with_delay_034e
 2936: 2A 96 E0    ld   hl,(unknown_E096)
 2939: 13          inc  de
-293A: CD 9A 03    call $039A
+293A: CD 9A 03    call write_2_digits_to_screen_039a
 293D: 2A 94 E0    ld   hl,(unknown_E094)
 2940: ED 5B 11 E5 ld   de,(time_bcd_e511)
 2944: A7          and  a
 2945: ED 52       sbc  hl,de
 2947: C9          ret
+
+clear_sprites_and_playfield_chars_2948:
 2948: 21 00 E1    ld   hl,sprite_shadow_E100      ; * C0D8D,C27E1,C2869
 294B: 01 A4 00    ld   bc,$00A4
 294E: CD FA 05    call clear_area_05fa
@@ -4398,26 +4639,33 @@ ISROBJRun_1C:
 2960: CD FA 05    call clear_area_05fa
 2963: 01 20 03    ld   bc,$0320
 2966: 18 EC       jr   $2954
+write_course_section_record_2968:
 2968: 11 D9 81    ld   de,$81D9                   ; * C283E,C292D
 296B: 21 95 E0    ld   hl,unknown_E095
-296E: C3 9A 03    jp   $039A
+296E: C3 9A 03    jp   write_2_digits_to_screen_039a
+
+display_good_bonus_points_2971:
 2971: 21 99 E0    ld   hl,unknown_E099            ; * C2808,C284F
 2974: 11 97 82    ld   de,$8297
-2977: CD 93 03    call $0393
+2977: CD 93 03    call write_2_digits_to_screen_0393
 297A: EB          ex   de,hl
 297B: 36 30       ld   (hl),$30
 297D: 23          inc  hl
 297E: 36 30       ld   (hl),$30
 2980: C9          ret
+
+current_point_modulus_26_2981:
 2981: 3A 0E E5    ld   a,(cur_point_e50e)           ; * C0C1A,C0E73,C290D,C29AB
 2984: FE 1A       cp   $1A
 2986: D8          ret  c
 2987: D6 1A       sub  $1A
 2989: C9          ret
+
+display_position_in_map_298a:
 298A: 21 CC 80    ld   hl,$80CC                   ; * C0D0F
 298D: 11 CC 84    ld   de,$84CC
 2990: 01 02 10    ld   bc,$1002
-2993: CD E7 03    call $03E7
+2993: CD E7 03    call trans_color_03e7
 2996: 79          ld   a,c
 2997: 36 21       ld   (hl),$21                   ; * J299C
 2999: 12          ld   (de),a
@@ -4432,7 +4680,7 @@ ISROBJRun_1C:
 29A6: 23          inc  hl
 29A7: 10 FA       djnz $29A3
 29A9: 36 1B       ld   (hl),$1B
-29AB: CD 81 29    call $2981
+29AB: CD 81 29    call current_point_modulus_26_2981
 29AE: 21 CC 80    ld   hl,$80CC
 29B1: 06 05       ld   b,$05
 29B3: FE 05       cp   $05                        ; * J29C1
@@ -4477,6 +4725,8 @@ ISROBJRun_1C:
 29F3: 32 F6 E0    ld   (unknown_E0F6),a           ; * J29EF
 29F6: 22 F4 E0    ld   (unknown_E0F4),hl
 29F9: C9          ret
+
+fill_done_section_in_map_29fa:
 29FA: 21 CC 80    ld   hl,$80CC                   ; * C27D2
 29FD: 06 0F       ld   b,$0F
 29FF: 36 29       ld   (hl),$29                   ; * J2A02
