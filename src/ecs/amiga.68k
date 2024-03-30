@@ -3827,6 +3827,7 @@ handle_keyboard:
 	cmp.b	#0x50,d0	| F1 key
 	bne.b	0f
 	move.w	#0x0FF,_custom+color
+	move.b	#0x80,time_bcd_E511
 	st.b	cheat_used
 	st.b	section_completed_flag
 0:
@@ -3835,13 +3836,14 @@ handle_keyboard:
 	st.b	cheat_used
 	move.w	#0x0FF,_custom+color
 	st.b	course_completed_flag
+	move.b	#0x80,time_bcd_E511
 	
 0:
-	cmp.b	#0x52,d0	| F3 key
-	bne.b	0f
-	st.b	cheat_used
-	* add 10000 points
-0:
+*	cmp.b	#0x52,d0	| F3 key
+*	bne.b	0f
+*	st.b	cheat_used
+*	* add 10000 points
+*0:
 	cmp.b	#0x53,d0	| F4 key
 	bne.b	0f
 	st.b	cheat_used

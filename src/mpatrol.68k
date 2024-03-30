@@ -474,7 +474,10 @@ l_0118:
 	clr.b	d0                               	| [$0126: xor  a]
 	move.b	d0,unknown_E1A6                 	| [$0127: ld   (unknown_E1A6),a]
 	               	| [$012a: ld   hl,nb_lives_E515]
+	tst.b	infinite_lives_flag
+	bne.b	0f
 	subq.b	#1,nb_lives_E515                         	| [$012d: dec  (hl)]
+0:
 	jeq	l_014b                             	| [$012e: jr   z,$014B]
 	jbsr	display_nb_lives_06d5                            	| [$0130: call $06D5]
 	lea	game_status_bits_E046,a0                	| [$0133: ld   hl,game_status_bits_E046]

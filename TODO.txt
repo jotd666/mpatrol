@@ -1,7 +1,7 @@
 general:
 
 - save highscore & best course times
-- start lives is wrong
+- start lives is wrong, anything not default makes 4 lives + 1 coin => 6 credits
 - game is 10% slower than it should be. Adding extra call each 10 calls adds
   nothing but more problems (demo not in sync, title not in sync, who knows what?),
   and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
@@ -9,21 +9,17 @@ general:
 - still floor tile missing after a slope
 - 99 credits after a while continuing
 
-
 ECS:
 
 - highscore temporarily erased on section score screen
 - "TIME" not displayed sometimes
 - tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
-- update_bg_tile tweak to only copy last plane for some tiles (ground)
 
 AGA:
 
 - slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
 - "game over" should be displayed on front layer (on mountains)
-- last scrolling letter (E,J...) remains on bottom of screen
-- "you have broken a record" bottom truncated!
 
 converter:
 

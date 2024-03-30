@@ -293,7 +293,7 @@ no_floppy:
 	or.l	#2,cheat_flags
 	st.b	cheat_used
 2:
-	move.l	(A0)+,D0	| INFTIME/S
+	move.l	(A0)+,D0	| INFTIME/S   | will be removed
 	beq.b	2f
 	or.l	#4,cheat_flags
 	st.b	cheat_used
@@ -956,7 +956,7 @@ really_clear_background:
 	moveq	#0,d1
 	tst.b	previous_blue_layer_y
 	beq.b	0f		| no previous Y means no clear!
-	move.w	#Y_MAX,d4
+	move.w	#Y_MAX+8,d4
 	*sub.w	d1,d4
 	* now D4 is the full height to clear
 	move	#NB_PLAYFIELD_PLANES,d3
@@ -1078,7 +1078,19 @@ update_background:
 	tst.b	previous_blue_layer_y
 	bne.b	2f
 	* was previously at 0: screen switch to mountains display
+	* active again!
+	
 	movem.w	d0-d5,-(a7)
+	lea		ground_bitplanes,a0
+	move.w	#bplpt,d0
+	.rept	4
+	move.w	d0,(a0)
+	addq	#4,a0
+	addq	#2,d0
+	move.w	d0,(a0)
+	addq	#4,a0
+	addq	#6,d0
+	.endr
 	bsr		really_clear_background
 	movem.w	(a7)+,d0-d5	
 	
@@ -3770,6 +3782,7 @@ handle_keyboard:
 	cmp.b	#0x50,d0	| F1 key
 	bne.b	0f
 	move.w	#0x0FF,_custom+color
+	move.b	#0x80,time_bcd_E511
 	st.b	cheat_used
 	st.b	section_completed_flag
 0:
@@ -3778,7 +3791,7 @@ handle_keyboard:
 	st.b	cheat_used
 	move.w	#0x0FF,_custom+color
 	st.b	course_completed_flag
-	
+	move.b	#0x80,time_bcd_E511
 0:
 	cmp.b	#0x52,d0	| F3 key
 	bne.b	0f
@@ -3797,13 +3810,13 @@ handle_keyboard:
 *	move.w	#0x0FF,_custom+color
 *0:
 *
-*	cmp.b	#0x55,d0	| F6 key
-*	bne.b	0f
-*	* game over, no lives
-*	nop
-*0:
 10:
 	.ifndef	RELEASE
+	cmp.b	#0x57,d0	| F8 key: lose all lives
+	bne.b	0f
+	* game over, no lives
+	clr.b	nb_lives_E515
+0:
 	cmp.b	#0x58,d0	| F9 key crashes game (restarts whdload)
 	bne.b	0f
 	illegal
@@ -3838,9 +3851,15 @@ reset_colors_and_scrolling:
 	move.w	#0x1FE,mountain_colors
 	move.w	#0x1FE,mountain_colors+4
 		
-	* also reset position for ground (no need for mountain)
-	move.l	bg_base_ground_screen_ptr,bg_ground_screen_ptr
-	bsr		set_ground_bitplanes	
+	* also remove plane positionning for ground, seems to mess
+	* with displayed bitplanes (you have broken a record! is truncated)
+	lea		ground_bitplanes,a0
+	move.w	#0x1FE,d0
+	movew	#7,d1
+0:
+	move.w	d0,(a0)
+	addq	#4,a0
+	dbf		d1,0b
 	rts
 
 toggle_pause:
