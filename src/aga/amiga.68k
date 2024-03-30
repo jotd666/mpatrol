@@ -721,11 +721,38 @@ _vblank:
 	jra	3f
 1:
 	* has to be copper
-	* we're going to ack copper interrupt now
+	* is level 1 interrupt set? that would mean that mid-screen interrupt
+	* is the source of the interrupt
+	btst	#2,d0
+	sne		mid_screen_interrupt
+
+	* we're going to ack copper & software interrupt now
 	* do it twice (040/pistorm bug)
-	move.w	#0x10,(intreq,a5)
-	move.w	#0x10,(intreq,a5)
-	
+	move.w	#0x14,(intreq,a5)
+	move.w	#0x14,(intreq,a5)
+
+	tst.b	mid_screen_interrupt
+	beq.b	2f
+	* mid-screen copper interrupt, must occur once every 10 times
+	* to simulate ~56 Hz on 50 Hz display
+	move.b	mid_screen_interrupt_count,d0
+	addq.b	#1,d0
+	cmp.b	#10,d0
+	bne.b	1f
+	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
+	* also set SR accordingly
+	st.b	interrupt_mode
+	.ifndef	STATIC_SCROLL_TEST
+	jbsr		mpatrol_irq
+	.endif
+	move.w	#0x2300,SR
+	clr.b	interrupt_mode	
+	clr.b	d0
+1:
+	move.b	d0,mid_screen_interrupt_count
+	jra		3f
+2:
+
 	* set now the green & blue background lines. We used to set them
 	* in the mountain blit routine but it conflicts with double buffering
 	* we have to store previous values and set them now
@@ -767,22 +794,9 @@ _vblank:
 	* don't blit, but update hw sprites as it doesn't cost a lot
 	bsr		really_update_hardware_sprites
 
-	* now we check copper interrupt again
-	move.w	_custom+intreqr,d0
-	btst	#4,d0
-	beq.b	3f		| clear: ok
-	* copper interrupt has been called, which means that
-	* rendering was so slow that we couldn't cope within a frame
-	* skip a tick and ack again, we lose one update frame
-	addq.b	#ONE_TICK,vb_ticks_count
-	move.w	#0x10,_custom+intreq
+
 3:
     movem.l (a7)+,d0-d7/a0-a6
-	tst.l	return_address
-	beq.b	4f
-	move.l	return_address,(2,a7)		| change return address
-	clr.l	return_address				| just for this time
-4:
     rte
 	
 	
@@ -1154,23 +1168,6 @@ osd_update_sprites:
 	move.b	(a2,d0.w),d3
 	beq.b	2f			| not a hardware sprite, skip
 	
-* jeep wheels are no longer hw sprites
-*	cmp.b	#5,d0
-*	bcs.b	1f
-*	cmp.b	#9,d0
-*	bcc.b	1f
-*	* jeep wheel: count how many we have
-*	* briefly when the jeep explodes there are 6 wheels
-*	* which is too much for the sprite engine to handle
-*	* (and it's not visible anyway)
-*	move.b	nb_displayed_wheels,d0
-*	addq.b	#1,d0
-*	move.b	d0,nb_displayed_wheels
-*	
-*	cmp.b	#4,d0
-*	bcc.b	ignore_sprite
-*	bra.b	2f
-*1:
 	* now sprites with bob backups
 	cmp.b	#BB_SHIP,d3
 	bcs.b	2f				| not a hardware sprite
@@ -1188,15 +1185,6 @@ osd_update_sprites:
 	move.b	d0,nb_displayed_ships
 	cmp.b	#NB_HOST_SPRITES+1,d0
 	bcc.b	convert_to_bob	| if already 8 sprites, switch to bob copy
-*	bra.b	2f
-*20:
-*	* other case is rolling rocks: no explosions from ufos can happen, no tanks
-*	* when they're there so we can use the slots for 4 rocks
-*	move.b	nb_displayed_rocks,d0
-*	addq.b	#1,d0
-*	move.b	d0,nb_displayed_rocks
-*	cmp.b	#4+1,d0			| 3 wheels use 4 sprite slots
-*	bcc.b	convert_to_bob	| if already 4 rock sprites, switch to bob copy
 2:
 	move.l	(a0)+,(a1)+		| brutal copy
 	dbf		d7,0b
@@ -2758,8 +2746,8 @@ platform_init:
 	jbsr	blit_blue_mountain_strip
 
 	* install keyboard and vblank/copper handler
-	pea		level2_interrupt(pc)
 	move.l	system_vbr(pc),a1
+	pea		level2_interrupt(pc)
 	move.l	(a7)+,(0x68,a1)
 	pea		_vblank(pc)
 	move.l	(a7)+,(0x6C,a1)
@@ -3315,7 +3303,7 @@ store_sprite_pos:
 	.else
     move.l	(a0,d0.w*4),d0
     or.l	(a1,d1.w*4),d0	
-	.endc
+	.endif
     move.l  (a7)+,a0
     rts
 	
@@ -3814,8 +3802,9 @@ handle_keyboard:
 	.ifndef	RELEASE
 	cmp.b	#0x57,d0	| F8 key: lose all lives
 	bne.b	0f
-	* game over, no lives
-	clr.b	nb_lives_E515
+	move.w	#0x0FF,_custom+color
+	* last life, if killed, direct game over
+	move.b	#1,nb_lives_E515
 0:
 	cmp.b	#0x58,d0	| F9 key crashes game (restarts whdload)
 	bne.b	0f
@@ -3978,7 +3967,10 @@ do_upper_part:
 	.byte	0
 background_cleared_flag:
 	.byte	0
-
+mid_screen_interrupt:
+	.byte	0
+mid_screen_interrupt_count:
+	.byte	0
 	.align	2
 system_vbr:
 	.long	0
@@ -4242,6 +4234,9 @@ sprites_lower_cols:
 
 	* now wait some lines until we're sure bitmap only contains
 	* non-black: we can set color 0 to light blue now
+	.word	 intreq,0x8004	| flag so copper interrupt knows that we're going to call copper int
+	.word	 intreq,0x8010  | call copper interrupt in the middle of a frame
+
 blue_mountains_end_copper_wait:
 	.word	0x0001
 	.word	0xFFFE

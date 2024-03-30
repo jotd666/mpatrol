@@ -2,12 +2,7 @@ general:
 
 - save highscore & best course times
 - start lives is wrong, anything not default makes 4 lives + 1 coin => 6 credits
-- game is 10% slower than it should be. Adding extra call each 10 calls adds
-  nothing but more problems (demo not in sync, title not in sync, who knows what?),
-  and copper mid-screen interrupt system not working ATM. CIA hooks don't work either
-- try CIA clock again, but with graphics update (copper) blocking all interrupts
 - still floor tile missing after a slope
-- 99 credits after a while continuing
 
 ECS:
 

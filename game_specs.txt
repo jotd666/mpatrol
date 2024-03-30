@@ -23,7 +23,7 @@ There is one color missing for base of the space plant, but since it's very low,
 
 Aaand that's it for ECS
 
-AGA version:
+Now for AGA:
 
 Game uses 16+16 color dual playfield. Top panel is done the same way but things get different from there.
 
@@ -33,5 +33,11 @@ Green mountains are blitted on the other playfield. No need for mask this time. 
 Same background color tricks as ECS.
 
 Now the scrollable ground part reuses the blue mountain playfield, but they are far enough Y wise not to conflict. So a different scroll & shift value can be applied, which makes 2 hardware scrolling strips at different speeds, and allows to scroll all 4 bitplanes without blitting, which reinstates the moon base & more colors for craters & scrolling letters.
+
+Another trick is used for vertical shot: this isn't a sprite or a BOB but a TILE... (yes). I could have used a sprite but there are 4 of them at the same time so it would have eaten all the slots, plus multiplexing splits sprites top/bottom so it wouldn't work. Instead, since only 1 color is used, and the background mountains only use 3 planes, I've carefully selected a bright color for color 8, and only draw on 4th plane. A trick that worked well with the shots in Galaxian. Here you can see color changing when passing on the mountains, but very simple to handle otherwise, and does the job.
+
+Simulating 55/56Hz was another thing which wasn't so trivial. I usually check a counter and if it reaches a given count, update the logic twice instead of once. It works for most games, but here it causes a lot of problems. Using another source of interrupt (software, CIA) also crashes for an unknown reason, BUT something works: I call the copper interrupt in the middle of the screen too, just after a software interrupt request (software interrupt is masked so no software interrupt occurs). When the copper interrupt is handled, it checks that software interrupt is set, and if it's the case, it's because it's mid-screen, so after 10 times, calls IRQ, else does nothing. And bottom of screen copper interrupt happens, like before, giving the extra speed without brutal increase of the game counters, so game behaves properly, and gets the expected 10% speed increase.
+
+A final word about sound: no9 did a great job as always shoehorning the whole tune into ONE bloody channel. Which leaves 3 slots for SFX. OCS/ECS/AGA versions have different sampling frequencies for SFX so OCS version fits in 512k chip/512k fast. Sorry for purists who wanted AY-8910 emulation to fit in 512k with 8 colors.
 
 BOBs & sprites are the same as ECS. Less color tricks are required because we have more colors available (blue mountains don't get in the way). 

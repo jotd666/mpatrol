@@ -310,7 +310,7 @@ mpatrol_reset:
 	tst.b	break_at_startup_flag
 	beq.b	0f
 	* put anything here that you need to track addresses
-	move.l	#bg_videoram,d7
+	move.l	#credits_e048,d7
 	jbsr	osd_break
 0:
 	.endif
@@ -1278,6 +1278,7 @@ l_0548:
 	jcs	l_055f                             	| [$0557: jr   c,$055F]
 	move.b	credits_e048,d0              	| [$0552: ld   a,(credits_e048)]
 	* 1-player game
+	CLEAR_XC_FLAGS
 	moveq	#1,d7
 	sbcd	d7,d0                        	| [$0559: sub  $01 + daa]
 	bne.b	0f                               	| [...]
@@ -1285,8 +1286,11 @@ l_0548:
 0:
 	* 2-player game
 	move.b	#0x90,d1                        	| [$055d: ld   b,$90]
+	bra.b	0f
 l_055f:
 	move.b	credits_e048,d0              	| [$0552: ld   a,(credits_e048)]
+0:
+	CLEAR_XC_FLAGS
 	moveq	#1,d7
 	sbcd	d7,d0                        	| [$055f: sub  $01 + daa] -  * J0557
     jbsr  osd_disable_interrupts  | [di]
