@@ -8,7 +8,7 @@ ECS:
 
 - highscore temporarily erased on section score screen
 - "TIME" not displayed sometimes
-- tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
+- minor: tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
 
 AGA:

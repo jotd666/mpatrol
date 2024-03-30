@@ -309,7 +309,7 @@ no_floppy:
 	or.l	#0x10,cheat_flags
 2:
 
-	move.l	(A0)+,D0	| SKILL/S
+	move.l	(A0)+,D0	| STARTCOURSE/K/N
 	beq.b	2f
 	bsr		bcpl_string_to_int
 	move.l	d0,dip_switch_start_course
@@ -2979,22 +2979,6 @@ update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 	and.w	#0xFF,d1	| mask up to 255
 
-
-	.ifne	OPT_ENABLE_LOGGING
-	* when logging is enabled, play a while
-	* and break. Get the address in 0x100 then do
-	* S used_cluts <address at $100> $10000
-	* then run the compute_used_cluts.py program again
-	
-	lea		tile_log_table,a0
-	move.l	a0,0x100
-	movem.w	d0-d1,-(a7)
-	and.l	#0xFFFF,d0
-	lsl.l	#8,d0
-	add.w	d1,d0
-	st.b	(a0,d0.l)
-	movem.w	(a7)+,d0-d1
-	.endif
 	
 	* is it upper part of bank ?
 	btst	#7,D1
@@ -3083,7 +3067,13 @@ update_bg_tile:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
-	* TODO: we have to copy the shot on the FRONT layer, not back
+*	jbsr	is_game_over_displayed
+*	bne.b	0f
+*	
+*	rts
+
+0:
+	* we have to copy the shot on the FRONT layer, not back
 	* (as it would be hidden by the green mountains / lost in the blue
 	* mountains)
 	*
@@ -3165,16 +3155,14 @@ erase_third_plane:
 
 	rts
 
-load_3rd_fg_bitplane:
+
+load_fg_bitplane:
 	lea		mulFG_NB_BYTES_PER_ROW_table(pc),a3
 	
 	
 	move.l	fg_drawed_screen_ptr(pc),a1
-	move.l	#FG_SCREEN_PLANE_SIZE*3,d5
-	add.w	d5,a1		| add D5 3 times
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	move.l	fg_displayed_screen_ptr(pc),a2
-	add.w	d5,a2
 	.endif
 	
 	* D3 = Y
@@ -3185,6 +3173,17 @@ load_3rd_fg_bitplane:
 	add.w	d7,a1
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	add.w	d7,a2
+	.endif
+	rts
+
+
+load_3rd_fg_bitplane:
+	jbsr	load_fg_bitplane
+	
+	move.w	#FG_SCREEN_PLANE_SIZE*3,d5
+	add.w	d5,a1		| add D5 3 times
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a2
 	.endif
 	rts
 	
