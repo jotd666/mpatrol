@@ -406,14 +406,16 @@ no_floppy:
 	move.l	dip_switch_start_course(pc),d0
 	move.b	d0,start_level_flag
 	
+	moveq	#0,d1
 	move.b	dip_switch_start_lives+3(pc),d1
 	bne.b	1f
-	moveq	#1,d1	| 3 lives is default
+	moveq	#3,d1	| 3 lives is default
 1:
-	addq	#1,d1
 	* DSW 0 = 2 lives
-	lea		lives_table(pc),a0
-	move.b	(a0,d1.w),dip_switches_1
+	lea		lives_table,a0
+	move.b	(a0,d1.w),d0
+	not.b	d0
+	move.b	d0,dip_switches_1
 	
 	
 	move.l	misc_options,d1
@@ -459,9 +461,7 @@ no_floppy:
 
 	jra		demo_game
 
-lives_table:
-	.byte	3,2,1,1,0
-	.align	2
+
 
 * so memory is longword-aligned (not trusting .align directives)
 align_for_fmode:
@@ -2636,6 +2636,14 @@ platform_init:
 	* set blitter parameters once and for all
     move.l  #-1,bltafwm(a5)
 	
+	move.l	monitor,d0
+	cmp.l	#NTSC_MONITOR_ID,D0
+	bne		0f
+	* disable extra mid-screen interrupt, as it would be too fast (NTSC)
+	move.w	#0x1FE,intreq_block
+	move.w	#0x1FE,intreq_block+4
+0:
+
 	* restrict borders: we don't see bobs on the borders!
     move.w #0x1CB0,diwstrt(a5)
 	*         VVHH
@@ -2962,7 +2970,6 @@ update_bg_tile:
 112:
 
 	move.w	d7,d6
-	
 	and.w	#0x1F,d7	| this is X (tile)
 	addq.w	#2,d7
 
@@ -3845,6 +3852,9 @@ return_address:
 	
 	
 _tag:
+		.long	WHDLTAG_MONITOR_GET
+monitor:
+		.long	0
 		.long	WHDLTAG_CHIPREVBITS_GET
 chiprevbits:
 		.long	0
@@ -4130,6 +4140,7 @@ sprites_lower_cols:
 	DECL_COLORS	0,16
 	DECL_COLOR_BANK	0		| back to bank	0
 
+intreq_block:
 	* now wait some lines until we're sure bitmap only contains
 	* non-black: we can set color 0 to light blue now
 	.word	 intreq,0x8004	| flag so copper interrupt knows that we're going to call copper int

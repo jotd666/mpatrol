@@ -5,7 +5,7 @@
 		.global osd_write_high_scores
 		.global	load_highscores
 		.global	save_highscores
-		
+		.global	lives_table
 * sound engine and also highscore management, common to all versions
 	
 .include "dos_lvos.i"
@@ -16,7 +16,6 @@ SCORE_FILE_SIZE = 44
 	
 osd_read_high_scores:
 	movem.l	d0-d7/a0-a6,-(a7)
-	move.l	a0,a4
 	move.l	_resload,d0
 	beq.b	0f
 	move.l	d0,a2
@@ -242,3 +241,7 @@ highscore_loaded:
 	.byte	0
 normal_hiscorename:
 	.asciz	"mpatrol.high"
+
+lives_table:
+	.byte	0,0xFC,0xFD,0xFE,0xFF,0xFF
+	.align	2

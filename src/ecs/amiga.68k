@@ -303,7 +303,7 @@ no_floppy:
 	or.l	#0x10,cheat_flags
 2:
 
-	move.l	(A0)+,D0	| SKILL/S
+	move.l	(A0)+,D0	| STARTCOURSE/K/N
 	beq.b	2f
 	bsr		bcpl_string_to_int
 	move.l	d0,dip_switch_start_course
@@ -318,6 +318,7 @@ no_floppy:
 2:
 	move.l	#2,dip_switch_start_lives		| 3 lives default
 3:
+
 	lea		_custom,a5
 	lea		debug_copperlist,a0
 	move.l	a0,cop1lc(a5)
@@ -326,7 +327,7 @@ no_floppy:
 
 
 
-.startup:
+
 
 * no multitask
     tst.l   _resload
@@ -391,15 +392,16 @@ no_floppy:
 	move.l	dip_switch_start_course(pc),d0
 	move.b	d0,start_level_flag
 	
+	moveq	#0,d1
 	move.b	dip_switch_start_lives+3(pc),d1
 	bne.b	1f
-	moveq	#1,d1	| 3 lives is default
+	moveq	#3,d1	| 3 lives is default
 1:
-	addq	#1,d1
 	* DSW 0 = 2 lives
-	lea		lives_table(pc),a0
-	move.b	(a0,d1.w),dip_switches_1
-	
+	lea		lives_table,a0
+	move.b	(a0,d1.w),d0
+	not.b	d0
+	move.b	d0,dip_switches_1
 	
 	move.l	misc_options,d1
 
@@ -444,9 +446,6 @@ no_floppy:
 
 	jra		demo_game
 
-lives_table:
-	.byte	3,2,1,1,0
-	.align	2
 
 * so memory is 8-aligned (not trusting .align directives)
 align_8:
@@ -872,7 +871,6 @@ refresh_tiles:
 	movem.l	(a7)+,a0/a1/d7/d2
 	addq.w	#1,d7
 	dbf		d2,0b
-	
 	rts
 	
 clear_background:
@@ -2251,39 +2249,7 @@ blit_scrollable_layers:
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 
-	
-	.ifdef	FUCK_IT
-	* check if a checkpoint letter needs to be drawn in the strip
-	move.b		bg_videoram+0x3DF,d0
-	cmp.b	#0x41,d0
-	bcs.b	0f
-	cmp.b	#0x5a+1,d0
-	bcc.b	0f
-	* A->Z is in videoram: blit the scroll_letter_buffer buffer at the proper location
-	* using ground scroll value. This is a really small blit
-	move.w	#8*64+2,d4		| height=8, width=2 words
-	move.l	bg_drawed_screen_ptr,a1
-	add.w	#30*8*NB_BYTES_PER_ROW+14,a1		| TEMP 14
-	move.l	#0x09f00000,d3					| brutal copy, no cookie cut
-	lea		scroll_letter_buffer,a0
-	WAIT_BLIT
-	move.l d3,bltcon0(a5)	| sets con0 and con1
-    move.w  #0,bltamod(a5)	|A (mask) modulo: object data is contiguous
-    move.w  #NB_BYTES_PER_ROW-32/8,bltdmod(a5)	|D modulo
 
-	move.w	#NB_PLAYFIELD_PLANES-1,d3
-1:
-	move.l	a0,bltapt(a5)	|source graphic top left corner
-	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	add.w	#32,a0			| next source plane
-	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
-
-    * now just wait for blitter ready to write all registers
-	WAIT_BLIT
-	dbf		d3,1b
-0:
-	.endif
 	
 	
 	WAIT_BLIT
@@ -2699,6 +2665,13 @@ platform_init:
     move.w #0x2289,diwstop(a5)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
 
+	move.l	monitor,d0
+	cmp.l	#NTSC_MONITOR_ID,D0
+	bne		0f
+	* disable extra mid-screen interrupt, as it would be too fast (NTSC)
+	move.w	#0x1FE,intreq_block
+	move.w	#0x1FE,intreq_block+4
+0:
 	move.l	chiprevbits,d0
 	and.l	#SETCHIPREV_AA,d0
 	cmp.l	#SETCHIPREV_AA,d0
@@ -3043,6 +3016,10 @@ update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 	and.w	#0xFF,d1	| mask up to 255
 
+	cmp.w	#0x46,d7
+	bne	0f
+	move.b	#1,0x200
+0:	
 	.ifne	OPT_ENABLE_LOGGING
 	* when logging is enabled, play a while
 	* and break. Get the address in 0x100 then do
@@ -3928,6 +3905,9 @@ return_address:
 	
 	
 _tag:
+		.long	WHDLTAG_MONITOR_GET
+monitor:
+		.long	0
 		.long	WHDLTAG_CHIPREVBITS_GET
 chiprevbits:
 		.long	0
@@ -4189,6 +4169,8 @@ color_line_copper:
 	.endr
 	* multiplexed sprites + mid-screen interrupt (disabled ATM
 	* as it crashes the machine when calling mpatrol_irq from it...)
+	
+intreq_block:
 	.ifne	OPT_ENABLE_MULTIPLEXED_SPRITES
 
 	* now wait some lines until we're sure bitmap only contains

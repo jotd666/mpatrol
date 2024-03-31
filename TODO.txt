@@ -1,12 +1,11 @@
 general:
 
-- start lives is wrong, anything not default makes 4 lives + 1 coin => 6 credits
 - minor: sometimes still floor tile missing after a slope (maybe normal?)
 
 ECS:
 
-- highscore temporarily erased on section score screen
-- "TIME" not displayed sometimes
+- minor: highscore temporarily erased on section score screen
+- minor "TIME" not displayed sometimes (continue screen)
 - minor: tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
 

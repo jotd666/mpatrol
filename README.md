@@ -33,6 +33,11 @@ Amiga version (AGA):
 - original colors & graphics
 - highest sound quality
 
+Highscores & best times are saved
+
+From whdload, game runs at 55Hz in PAL (close to original 56Hz), and 60Hz in NTSC (slightly faster)
+Outside whdload, game runs at 66Hz in NTSC (sorry for this, it's not really designed for NTSC)
+
 Controls:
 
 - joystick left/right: brake/accelerate
