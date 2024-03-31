@@ -4570,8 +4570,8 @@ display_section_results_28ba:
 28CC: 3E 05       ld   a,$05
 28CE: 5F          ld   e,a                        ; * J28C5,J28C9
 28CF: 3A 13 E5    ld   a,(nb_sections_to_clear_E513)
-28D2: 01 80 00    ld   bc,$0080
-28D5: FE 08       cp   $08
+28D2: 01 80 00    ld   bc,$0080                  ; default record time: 80, 100 or 120
+28D5: FE 08       cp   $08                       ; seconds depending on level
 28D7: 30 09       jr   nc,$28E2
 28D9: 01 00 01    ld   bc,$0100
 28DC: FE 03       cp   $03
@@ -4588,7 +4588,7 @@ display_section_results_28ba:
 28F2: 28 02       jr   z,$28F6
 28F4: 1E 14       ld   e,$14
 28F6: 16 00       ld   d,$00                      ; * J28EB,J28F2
-28F8: 21 0C E0    ld   hl,unknown_E00C
+28F8: 21 0C E0    ld   hl,course_record_times_E00C
 28FB: 19          add  hl,de
 28FC: 7E          ld   a,(hl)
 28FD: 23          inc  hl

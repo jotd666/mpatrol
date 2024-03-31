@@ -75,6 +75,7 @@ def get_used_tile_cluts():
     for i in range(ord('A'),ord("Z")+1):
         used_cluts[i].add(5)  # beginner
         used_cluts[i].add(6)  # champion
+        used_cluts[i].add(0Xe)  # champion
         used_cluts[i].add(8)  # beginner/champion course text
     used_cluts[0x5B].add(8)        # exclamation mark
 
@@ -86,13 +87,20 @@ def get_used_tile_cluts():
     # digits
     for i in range(0x30,0x3A):
         used_cluts[i].add(0)
+    for i in range(0x30,ord("Z")+1):
+        used_cluts[i].add(9)
 
     # champion
-    for i in range(0x12,0x40):
+    for i in range(0x12,0x41):
+        used_cluts[i].add(2)
         used_cluts[i].add(8)
         used_cluts[i].add(0xE)
-    for i in range(0xE,0x1C):
+    for i in range(0x4,0x1C):
         used_cluts[i].add(0xD)
+
+    used_cluts[0].add(0xc)
+
+
 
     # map bar, beginner,champion
     for c in [2,0xD]:

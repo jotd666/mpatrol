@@ -289,11 +289,6 @@ no_floppy:
 	or.l	#2,cheat_flags
 	st.b	cheat_used
 2:
-	move.l	(A0)+,D0	| INFTIME/S
-	beq.b	2f
-	or.l	#4,cheat_flags
-	st.b	cheat_used
-2:
 	move.l	(A0)+,D0	| SECTORSELECT/S
 	beq.b	2f
 	or.l	#8,cheat_flags
@@ -3756,7 +3751,7 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,SECTORSELECT/S,"
+	.ascii	"INVINCIBLE/S,INFLIVES/S,SECTORSELECT/S,"
 	.ascii	"CHEATKEYS/S,STARTCOURSE/K/N,STARTLIVES/K/N"
 read_args_string_end:
 	.align	2

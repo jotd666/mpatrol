@@ -287,11 +287,6 @@ no_floppy:
 	or.l	#2,cheat_flags
 	st.b	cheat_used
 2:
-	move.l	(A0)+,D0	| INFTIME/S
-	beq.b	2f
-	or.l	#4,cheat_flags
-	st.b	cheat_used
-2:
 	move.l	(A0)+,D0	| SECTORSELECT/S
 	beq.b	2f
 	or.l	#8,cheat_flags
@@ -871,6 +866,7 @@ refresh_tiles:
 	movem.l	(a7)+,a0/a1/d7/d2
 	addq.w	#1,d7
 	dbf		d2,0b
+
 	rts
 	
 clear_background:
@@ -3016,10 +3012,7 @@ update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 	and.w	#0xFF,d1	| mask up to 255
 
-	cmp.w	#0x46,d7
-	bne	0f
-	move.b	#1,0x200
-0:	
+
 	.ifne	OPT_ENABLE_LOGGING
 	* when logging is enabled, play a while
 	* and break. Get the address in 0x100 then do
@@ -3851,7 +3844,7 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,SECTORSELECT/S,"
+	.ascii	"INVINCIBLE/S,INFLIVES/S,SECTORSELECT/S,"
 	.ascii	"CHEATKEYS/S,STARTCOURSE/K/N,STARTLIVES/K/N"
 read_args_string_end:
 	.align	2

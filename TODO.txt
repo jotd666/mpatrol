@@ -1,10 +1,11 @@
 general:
 
+- floppy Y sprite position is perfect but whdload: shifted by 1 or 2 !!!
+  (for all versions OCS/ECS/AGA)
 - minor: sometimes still floor tile missing after a slope (maybe normal?)
 
 ECS:
 
-- minor: highscore temporarily erased on section score screen
 - minor "TIME" not displayed sometimes (continue screen)
 - minor: tip of brown rocks can be blue on slopes..: use sprites for rocks / rolling rocks
   if jeep is not exploding
