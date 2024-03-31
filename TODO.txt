@@ -14,7 +14,6 @@ ECS:
 AGA:
 
 - slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
-- "game over" should be displayed on front layer (on mountains)
 
 converter:
 

@@ -2582,7 +2582,6 @@ store_system:
 	move.w	dmaconr(a6),old_dmacon
 	lea		old_sysvectors,a0
 	move.l	system_vbr(pc),a1
-	move.l	(0x64,a1),(a0)+
 	move.l	(0x68,a1),(a0)+
 	move.l	(0x6c,a1),(a0)+
 	move.l	(0x70,a1),(a0)+
@@ -2598,7 +2597,6 @@ restore_system:
 	move.w	#0x4000,intena(a6)	| ints off
 	lea		old_sysvectors,a0
 	move.l	system_vbr(pc),a1
-	move.l	(a0)+,(0x64,a1)
 	move.l	(a0)+,(0x68,a1)
 	move.l	(a0)+,(0x6c,a1)
 	move.l	(a0)+,(0x70,a1)
@@ -3067,10 +3065,10 @@ update_bg_tile:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
-*	jbsr	is_game_over_displayed
-*	bne.b	0f
-*	
-*	rts
+	jbsr	is_game_over_displayed
+	bne.b	0f
+	cmp.b	#0x10,d3		| row where "GAME OVER" is printed
+	jeq		copy_third_plane_game_over
 
 0:
 	* we have to copy the shot on the FRONT layer, not back
@@ -3125,11 +3123,31 @@ update_bg_tile:
 copy_third_plane:
 	bsr		load_3rd_fg_bitplane
 
-	.set	offset,0
 	addq	#8,a0		| non-zero shot bitplane (first bitplane is empty)
 	.set	offset,0
 	.rept	8
-	move.b	(a0),d0
+	move.b	(a0)+,d0
+	beq.b	0f
+	move.b	d0,(offset,a1)
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	move.b	d0,(offset,a2)
+	.endif
+0:
+
+	.set	offset,offset+FG_NB_BYTES_PER_ROW
+	.endr
+
+
+0:
+	rts
+	
+copy_third_plane_game_over:
+	bsr		load_3rd_fg_bitplane
+	* copy data of first letters bitplane to 3rd bitplane
+	* => GAME OVER written in white over the mountains!
+	.set	offset,0
+	.rept	8
+	move.b	(a0)+,d0
 	move.b	d0,(offset,a1)
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	move.b	d0,(offset,a2)
