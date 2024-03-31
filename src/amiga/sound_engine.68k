@@ -1,6 +1,126 @@
 		.global osd_sound_start
 		.global osd_sound_stop
 		.global music_tick
+		.global osd_read_high_scores
+		.global osd_write_high_scores
+		.global	load_highscores
+		.global	save_highscores
+		
+* sound engine and also highscore management, common to all versions
+	
+.include "dos_lvos.i"
+
+
+SCORE_FILE_SIZE = 44
+
+	
+osd_read_high_scores:
+	movem.l	d0-d7/a0-a6,-(a7)
+	move.l	a0,a4
+	move.l	_resload,d0
+	beq.b	0f
+	move.l	d0,a2
+	move.l	a0,a3
+	bsr		get_hiscore_name
+ 	jsr		resload_GetFileSize(a2)		
+	tst.l	d0
+	beq.b	1f
+	bsr		get_hiscore_name
+	move.l	a3,a1
+	jsr		resload_LoadFile(a2)
+	* set highest score entry
+    move.b    (a3)+,(a4)+
+    move.b    (a3)+,(a4)+
+    move.b    (a3)+,(a4)+		
+	bra.b	1f
+0:
+	tst.b	highscore_loaded
+	beq.b	1f
+	* from DOS: just copy buffer
+	lea		high_score_buffer(pc),a1
+	* set highest score entry
+	move.w	#SCORE_FILE_SIZE-1,d0
+0:
+    move.b    (a1)+,(a4)+
+	dbf		d0,0b
+1:
+	movem.l	(a7)+,d0-d7/a0-a6
+	rts
+	
+osd_write_high_scores:
+	movem.l	d0-d7/a0-a6,-(a7)
+	tst.b	cheat_used		| don't save score if cheat on
+	bne.b	1f
+	move.l	_resload,d0
+	beq.b	0f
+	move.l	d0,a2
+	move.l	#SCORE_FILE_SIZE,d0
+	move.l	a0,a1
+	bsr		get_hiscore_name
+	jsr		resload_SaveFile(a2)
+	bra.b	1f
+0:
+	* from DOS: just copy buffer
+	lea		high_score_buffer(pc),a1
+	move.w	#SCORE_FILE_SIZE-1,d0
+0:
+	move.b	(a0)+,(a1)+
+	dbf		d0,0b
+
+	st.b	highscore_needs_saving
+1:
+	movem.l	(a7)+,d0-d7/a0-a6
+	rts
+
+
+get_hiscore_name:
+    lea normal_hiscorename,a0
+	rts
+	
+load_highscores:
+	bsr.b		get_hiscore_name
+    move.l  _resload,d0
+    bne.b   1f
+
+    move.l  _dosbase,a6
+    move.l  a0,d1
+    move.l  #1005,d2
+    jsr     (_LVOOpen,a6)
+    move.l  d0,d1
+    beq.b   1f
+    move.l  d1,d4
+    move.l  #SCORE_FILE_SIZE,d3
+    move.l  #high_score_buffer,d2
+    jsr (_LVORead,a6)
+    move.l  d4,d1
+    jsr (_LVOClose,a6)   
+	st.b	highscore_loaded
+1:
+    rts
+
+save_highscores:
+	tst.l	_resload
+	bne.b	1f
+    tst.b   highscore_needs_saving
+    beq.b   1f
+    move.l  _dosbase,a6
+	bsr.b		get_hiscore_name
+    move.l  a0,d1
+    move.l  #1006,d2
+    jsr     (_LVOOpen,a6)
+    move.l  d0,d1
+    beq.b   1f
+    move.l  d1,d4
+    move.l  #SCORE_FILE_SIZE,d3
+    move.l  #high_score_buffer,d2
+    jsr (_LVOWrite,a6)
+    move.l  d4,d1
+    jsr (_LVOClose,a6)   
+1:	
+    rts
+    
+	
+
 
 osd_sound_stop:
 	movem.l	d0/a0/a6,-(a7)
@@ -118,4 +238,11 @@ music_tick:
 	.word	0
 music_duration:
 	.word	0
-	
+high_score_buffer:
+	.skip	SCORE_FILE_SIZE
+highscore_needs_saving:
+	.byte	0
+highscore_loaded:
+	.byte	0
+normal_hiscorename:
+	.asciz	"mpatrol.high"

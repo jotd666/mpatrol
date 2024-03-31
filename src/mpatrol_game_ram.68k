@@ -2,7 +2,7 @@
 	.global	high_score_e008
 	.global	high_score2_e00a
 	.global	high_point_e00b
-	.global	unknown_E00C
+	.global	course_record_times_E00C
 	.global	jeep_base_y_e03c
 	.global x_scroll_horizon_e03d
 	.global	unknown_E03E
@@ -32,7 +32,7 @@
 	.global	unknown_E062
 	.global	unknown_E068
 	.global	course_section_record_E094
-	.global	unknown_pointer_E096
+	.global	current_course_record_pointer_E096
 	.global	good_bonus_points_E098
 	.global	unknown_E099
 	.global	temp_object_structure_E0D4
@@ -165,13 +165,15 @@
 
 revolving_buffer_8_E000:
 	ds.b	8
+	* highscore: 4 bytes
 high_score_e008:
 	ds.b	2
 high_score2_e00a:
 	ds.b	1
 high_point_e00b:
 	ds.b	1
-unknown_E00C:
+	* E00C->E034: 40 bytes, total 44 bytes to make persistent
+course_record_times_E00C:
 	ds.b	48
 jeep_base_y_e03c:
 	ds.b	1
@@ -235,7 +237,7 @@ unknown_E068:
 	ds.b	44
 course_section_record_E094:
 	ds.b	2
-unknown_pointer_E096:
+current_course_record_pointer_E096:
 	ds.l	1
 good_bonus_points_E098:
 	ds.b	1

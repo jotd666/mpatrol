@@ -51,7 +51,6 @@ SCROLLABLE_STRIP_NB_COLS = 66
 NB_BYTES_PER_SCROLLABLE_STRIP_ROW = SCROLLABLE_STRIP_NB_COLS
 SCROLLABLE_PLANE_SIZE = SCROLLABLE_STRIP_NB_COLS*8*(32-SCROLLABLE_TILE_Y_START)
 
-SCORE_FILE_SIZE = 0x6
 
 * if the alloc_sprite & update_sprite routines
 * are reused, changing those offsets can make
@@ -186,6 +185,9 @@ start:
 	  .global _user
 		.global _player_start
 		.global _demo_end
+	.global		_resload
+	.global		_dosbase
+	.global		cheat_used
 
 * osd layer		
 		.global osd_disable_interrupts
@@ -247,7 +249,7 @@ _user:
     jsr _LVOOpenLibrary(a6)
     move.l  d0,_dosbase
 
-	bsr		load_highscores
+	jbsr		load_highscores
 
     * check if "floppy" file is here
     
@@ -586,58 +588,7 @@ call_bcpl:
 	movem.l (sp)+,d2-d7/a2-a6
 	rts
 
-* change return address from vblank
-* D0: return address (0: no change)
-osd_set_vblank_return_address:
-	move.l	d0,return_address
-	rts
-	
-get_hiscore_name:
-    lea normal_hiscorename,a0
-	rts
-	
-load_highscores:
-	bsr.b		get_hiscore_name
-    move.l  _resload(pc),d0
-    bne.b   1f
 
-    move.l  _dosbase(pc),a6
-    move.l  a0,d1
-    move.l  #1005,d2
-    jsr     (_LVOOpen,a6)
-    move.l  d0,d1
-    beq.b   1f
-    move.l  d1,d4
-    move.l  #SCORE_FILE_SIZE,d3
-    move.l  #high_score_buffer,d2
-    jsr (_LVORead,a6)
-    move.l  d4,d1
-    jsr (_LVOClose,a6)   
-	st.b	highscore_loaded
-1:
-    rts
-
-save_highscores:
-	tst.l	_resload
-	bne.b	1f
-    tst.b   highscore_needs_saving
-    beq.b   1f
-    move.l  _dosbase(pc),a6
-	bsr.b		get_hiscore_name
-    move.l  a0,d1
-    move.l  #1006,d2
-    jsr     (_LVOOpen,a6)
-    move.l  d0,d1
-    beq.b   1f
-    move.l  d1,d4
-    move.l  #SCORE_FILE_SIZE,d3
-    move.l  #high_score_buffer,d2
-    jsr (_LVOWrite,a6)
-    move.l  d4,d1
-    jsr (_LVOClose,a6)   
-1:	
-    rts
-    
 	
 
 demo_game:
@@ -2579,7 +2530,7 @@ quit_to_os:
 	* it works as quit_to_os is called from an interrupt
 	move.w	#0,SR
 	move.l	old_stack(pc),a7
-	bsr		save_highscores
+	jbsr		save_highscores
 	moveq	#0,d0
 	rts
 0:
@@ -3628,65 +3579,6 @@ osd_read_dsw_2:
 	
 
 
-		
-osd_read_high_scores:
-	movem.l	d0-d7/a0-a6,-(a7)
-	move.l	a0,a4
-	move.l	_resload(pc),d0
-	beq.b	0f
-	move.l	d0,a2
-	move.l	a0,a3
-	bsr		get_hiscore_name
- 	jsr		resload_GetFileSize(a2)		
-	tst.l	d0
-	beq.b	1f
-	bsr		get_hiscore_name
-	move.l	a3,a1
-	jsr		resload_LoadFile(a2)
-	* set highest score entry
-    move.b    (a3)+,(a4)+
-    move.b    (a3)+,(a4)+
-    move.b    (a3)+,(a4)+		
-	bra.b	1f
-0:
-	tst.b	highscore_loaded
-	beq.b	1f
-	* from DOS: just copy buffer
-	lea		high_score_buffer(pc),a1
-	* set highest score entry
-	move.w	#SCORE_FILE_SIZE-1,d0
-0:
-    move.b    (a1)+,(a4)+
-	dbf		d0,0b
-1:
-	movem.l	(a7)+,d0-d7/a0-a6
-	rts
-	
-osd_write_high_scores:
-	movem.l	d0-d7/a0-a6,-(a7)
-	tst.b	cheat_used		| don't save score if cheat on
-	bne.b	1f
-	move.l	_resload(pc),d0
-	beq.b	0f
-	move.l	d0,a2
-	move.l	#SCORE_FILE_SIZE,d0
-	move.l	a0,a1
-	bsr		get_hiscore_name
-	jsr		resload_SaveFile(a2)
-	bra.b	1f
-0:
-	* from DOS: just copy buffer
-	lea		high_score_buffer(pc),a1
-	move.w	#SCORE_FILE_SIZE-1,d0
-0:
-	move.b	(a0)+,(a1)+
-	dbf		d0,0b
-
-	st.b	highscore_needs_saving
-1:
-	movem.l	(a7)+,d0-d7/a0-a6
-	rts
-
 
 level2_interrupt:
 	bsr		handle_keyboard
@@ -3955,13 +3847,7 @@ orig_color_4:
 toggle_blitter_draw:
 	.word	0
 	
-high_score_buffer:
-	ds.b	SCORE_FILE_SIZE
 
-highscore_needs_saving:
-	.byte	0
-highscore_loaded:
-	.byte	0
 flip_flop:
 	.byte	0
 nb_displayed_wheels:

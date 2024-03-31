@@ -1,8 +1,7 @@
 general:
 
-- save highscore & best course times
 - start lives is wrong, anything not default makes 4 lives + 1 coin => 6 credits
-- still floor tile missing after a slope
+- minor: sometimes still floor tile missing after a slope (maybe normal?)
 
 ECS:
 
@@ -13,7 +12,7 @@ ECS:
 
 AGA:
 
-- slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
+- minor: slowdowns chip only when UFOs attacking maybe use 30FPS too for BOBs in that case
 
 converter:
 

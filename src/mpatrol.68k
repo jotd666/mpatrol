@@ -246,6 +246,13 @@ obj_absolute_x = 0xF		| for ground objects
 assert_failed:
 	jra		osd_break
 	
+save_highscores:
+	move.l	a0,-(a7)
+	lea		high_score_e008,a0
+	jbsr	osd_write_high_scores
+	move.l	(a7)+,a0
+	rts
+	
 get_ram_address_d5_to_a0:
 	lea		revolving_buffer_8_E000-0xE000,a0	| virtual ram start
 	.ifndef	RELEASE
@@ -309,7 +316,7 @@ mpatrol_reset:
 	.ifndef	RELEASE
 	tst.b	break_at_startup_flag
 	beq.b	0f
-	* put anything here that you need to track addresses
+	* put anything here that you need to track addresses of
 	move.l	#credits_e048,d7
 	jbsr	osd_break
 0:
@@ -324,6 +331,10 @@ l_0000:
 	*jpl	service_mode_3300                  	| [$000a: jp   p,service_mode_3300] -  0=Yes ... go do service mode (not in the same ROM chip but should be)
 	jbsr	clear_ram_05f4                    	| [$000d: call clear_ram_05f4] -  Clear RAM (E000..E6FF)
 	jbsr	read_settings_06f2                            	| [$0010: call $06F2] -  Read the dip-switch settings
+	* good time to read highscores now
+	lea		high_score_e008,a0
+	jbsr	osd_read_high_scores
+	
 	jbsr	l_0d29                            	| [$0013: call $0D29] -  ?? Clear screen, screen flip, clear ram mirror, clear sound queue
 	jra	startup_cont_0068                             	| [$0016: jp   $0068] -  Continue startup
 
@@ -516,6 +527,10 @@ l_0176:
 l_0184:
 	jbsr	delay3_sec_05e8                            	| [$0184: call $05E8] -  * J017F
 	jbsr	l_0d29                            	| [$0187: call $0D29]
+	
+	* save highscores & best times now
+	bsr		save_highscores
+	
 	* write continue prompt (with typo, that I have fixed in ROM)
 	lea	game_rom+0x2A2A,a0                      	| [$018a: ld   hl,$2A2A] -  "TO COUNTINUE GAME" (sic) script
 	jbsr	write_to_screen_possible_typing_effect_300                            	| [$018d: call $0300] -  Print it
@@ -6059,7 +6074,7 @@ l_27f9:
 l_2805:
 	STORE_LEW	d5,good_bonus_points_E098                 	| [$2805: ld   (good_bonus_points_E098),hl] -  * J2802
 	jbsr	display_good_bonus_points_2971                            	| [$2808: call $2971]
-	move.l	unknown_pointer_E096,a0             	| [$280b: ld   hl,(unknown_pointer_E096)]
+	move.l	current_course_record_pointer_E096,a0             	| [$280b: ld   hl,(current_course_record_pointer_E096)]
 	move.b	(a0),d3                         	| [$280e: ld   d,(hl)]
 	                           	| [$280f: dec  hl]
 	move.b	-(a0),d4                         	| [$2810: ld   e,(hl)]
@@ -6070,7 +6085,7 @@ l_2805:
 	jcc	l_2827                             	| [$2817: jr   nc,$2827]
 	add.w	d3,d5                            	| [$2819: add  hl,de]
 	exg	d3,d5                             	| [$281a: ex   de,hl]
-	move.l	unknown_pointer_E096,a0             	| [$281b: ld   hl,(unknown_pointer_E096)]
+	move.l	current_course_record_pointer_E096,a0             	| [$281b: ld   hl,(current_course_record_pointer_E096)]
 	LOAD_D3D4_FROM_D3_16
 	move.b	d3,(a0)                         	| [$281e: ld   (hl),d]
 	                           	| [$281f: dec  hl]
@@ -6166,17 +6181,18 @@ l_28ce:
 l_28ce_2:
 	move.b	d0,d4                           	| [$28ce: ld   e,a] -  * J28C5,J28C9
 	move.b	nb_sections_to_clear_E513,d0                 	| [$28cf: ld   a,(nb_sections_to_clear_E513)]
-	move.b	#0x00,d1                        	| [$28d2: ld   bc,$0080] 128
-	move.b	#0x80,d2                        	| [$28d2: ld   bc,$0080] 128
+	* default record time: 80, 100 or 120 seconds depending on level
+	move.w	#0x0080,d1                        	| [$28d2: ld   bc,$0080] 128
+	                        	| [$28d2: ld   bc,$0080] 128
 	cmp.b	#0x08,d0                         	| [$28d5: cp   $08]
 	jcc	l_28e2                             	| [$28d7: jr   nc,$28E2]
-	move.b	#0x01,d1                        	| [$28d9: ld   bc,$0100] 256
-	move.b	#0x00,d2                        	| [$28d9: ld   bc,$0100] 256
+	move.w	#0x0100,d1                        	| [$28d9: ld   bc,$0100] 256
+											| [$28d9: ld   bc,$0100] 256
 	cmp.b	#0x03,d0                         	| [$28dc: cp   $03]
 	jcc	l_28e2                             	| [$28de: jr   nc,$28E2]
-	move.b	#0x20,d2                        	| [$28e0: ld   c,$20]
+	* 120 for higher sections
+	move.b	#0x20,d1                        	| [$28e0: ld   c,$20]
 l_28e2:
-	LOAD_D1_16_FROM_D1D2
 	STORE_LEW	d1,course_section_record_E094                 	| [$28e2: ld   (course_section_record_E094),bc] -  * J28D7,J28DE
 	add.b	d4,d0                            	| [$28e6: add  a,e]
 	add.b	d0,d0                            	| [$28e7: add  a,a]
@@ -6190,17 +6206,20 @@ l_28e2:
 l_28f6:
 	clr.w	d3                               	| [$28f6: ld   d,$00] -  * J28EB,J28F2
 	move.b	d4,d3
-	lea	unknown_E00C,a0                	| [$28f8: ld   hl,unknown_E00C]
+	lea	course_record_times_E00C,a0                	| [$28f8: ld   hl,course_record_times_E00C]
 	add.w	d3,a0                            	| [$28fb: add  hl,de]
 	move.b	(a0)+,d0                         	| [$28fc: ld   a,(hl)]
 	                          	| [$28fd: inc  hl]
-	move.l	a0,unknown_pointer_E096                 	| [$28fe: ld   (unknown_pointer_E096),hl]
+	move.l	a0,current_course_record_pointer_E096    	| [$28fe: ld   (current_course_record_pointer_E096),hl]
 	LOAD_D1D2_FROM_D1_16
 	or.b	(a0),d0                           	| [$2901: or   (hl)]
 	jne	l_2907                             	| [$2902: jr   nz,$2907]
+	* store if was zeroed
 	move.b	d1,(a0)                         	| [$2904: ld   (hl),b]
 	                           	| [$2905: dec  hl]
 	move.b	d2,-(a0)                         	| [$2906: ld   (hl),c]
+	* we have to save the scores+best times now
+	bsr		save_highscores
 l_2907:
 	lea	game_rom+0x2B79,a0                      	| [$2907: ld   hl,$2B79] -  "TIME TO REACH POINT " script * J2902
 	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$290a: call $034E]
@@ -6226,7 +6245,7 @@ l_2915:
 	jbsr	write_course_section_record_2968                            	| [$292d: call $2968]
 	lea	game_rom+0x2BCC,a0                      	| [$2930: ld   hl,$2BCC] -  "TOP RECORD " script
 	jbsr	write_text_to_screen_at_xy_with_delay_034e                            	| [$2933: call $034E]
-	move.l	unknown_pointer_E096,a0             	| [$2936: ld   hl,(unknown_pointer_E096)]
+	move.l	current_course_record_pointer_E096,a0             	| [$2936: ld   hl,(current_course_record_pointer_E096)]
 	addq.w	#1,a1                           	| [$2939: inc  de]
 	jbsr	write_2_digits_to_screen_039a                            	| [$293a: call $039A]
 	LOAD_LEW	course_section_record_E094,d5             	| [$293d: ld   hl,(course_section_record_E094)]
