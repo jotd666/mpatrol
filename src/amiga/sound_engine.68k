@@ -27,11 +27,7 @@ osd_read_high_scores:
 	beq.b	1f
 	bsr		get_hiscore_name
 	move.l	a3,a1
-	jsr		resload_LoadFile(a2)
-	* set highest score entry
-    move.b    (a3)+,(a4)+
-    move.b    (a3)+,(a4)+
-    move.b    (a3)+,(a4)+		
+	jsr		resload_LoadFile(a2)	
 	bra.b	1f
 0:
 	tst.b	highscore_loaded
