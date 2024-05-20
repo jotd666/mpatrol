@@ -1,4 +1,4 @@
-; Bagman slave
+; Moon Patrol AGA slave
 	INCDIR	Include:
 	INCLUDE	whdload.i
 	INCLUDE	whdmacros.i
@@ -8,7 +8,7 @@
 _base	SLAVE_HEADER					; ws_security + ws_id
 	dc.w	17					; ws_version (was 10)
 	dc.w	WHDLF_NoError|WHDLF_ReqAGA|WHDLF_Req68020
-	dc.l	$180000					; ws_basememsize
+	dc.l	$E0000					; ws_basememsize
 	dc.l	0					; ws_execinstall
 	dc.w	start-_base		; ws_gameloader
 	dc.w	_data-_base					; ws_currentdir

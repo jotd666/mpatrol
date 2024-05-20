@@ -437,16 +437,23 @@ no_floppy:
 	move.l	cheat_flags,d0
 	btst	#0,d0
 	beq.b	0f
+	st		cheat_used
 	bset	#6,dip_switches_2
 0:
 	btst	#1,d0
-	sne		infinite_lives_flag
+	beq.b	0f
+	st		infinite_lives_flag
+	st		cheat_used
+0:
 	btst	#2,d0
-	sne		infinite_time_flag
-
+	beq.b	0f
+	st		infinite_time_flag
+	st		cheat_used
+0:
 	move.l	cheat_flags,d0
 	btst	#3,d0
 	beq.b	0f
+	st		cheat_used
 	bset	#5,dip_switches_2
 0:
 	
@@ -2533,6 +2540,7 @@ store_system:
 	rts
 
 restore_system:
+	move.l	system_vbr(pc),a0
 	lea	_custom,a6
 	jsr		_mt_remove_cia
 
