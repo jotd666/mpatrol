@@ -1478,7 +1478,6 @@ update_hardware_sprites:
 update_bobs:
 
 	move.l	bob_previous_drawed_sprites(pc),a4
-	lea		hardware_sprite_flag_table,a6
 	lea		_custom,a5
 	
 
@@ -4146,8 +4145,7 @@ sprites_lower_cols:
 intreq_block:
 	* now wait some lines until we're sure bitmap only contains
 	* non-black: we can set color 0 to light blue now
-	.word	 intreq,0x8004	| flag so copper interrupt knows that we're going to call copper int
-	.word	 intreq,0x8010  | call copper interrupt in the middle of a frame
+	.word	 intreq,0x8014  | call copper interrupt in the middle of a frame, also flag so copper interrupt knows that we're going to call copper int
 
 blue_mountains_end_copper_wait:
 	.word	0x0001

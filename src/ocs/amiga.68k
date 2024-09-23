@@ -3853,8 +3853,7 @@ toggle_blitter_draw:
 	.word	0
 	
 
-flip_flop:
-	.byte	0
+
 nb_displayed_wheels:
 	.byte	0
 nb_displayed_ships:
