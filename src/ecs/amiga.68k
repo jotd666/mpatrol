@@ -436,8 +436,6 @@ no_floppy:
 	move.w	#0x4000,_custom+intena
 	jsr	 _detect_controller_types 
 	move.w	#0xC000,_custom+intena
-	clr.b	controller_joypad_0
-	clr.b	controller_joypad_1
 
 	jra		demo_game
 

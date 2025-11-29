@@ -457,9 +457,9 @@ no_floppy:
 	bset	#5,dip_switches_2
 0:
 	
+	move.w	#0x4000,_custom+intena
 	jsr	 _detect_controller_types 
-	clr.b	controller_joypad_0
-	clr.b	controller_joypad_1
+	move.w	#0xC000,_custom+intena
 
 	jra		demo_game
 
