@@ -1,7 +1,7 @@
 general:
 
 - floppy Y sprite position is perfect but whdload: shifted by 1 or 2 !!!
-  (for all versions OCS/ECS/AGA)
+  (for all versions OCS/ECS/AGA): check again now with whdload 20
 - minor: sometimes still floor tile missing after a slope (maybe normal?)
 
 ECS:
