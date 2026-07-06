@@ -1,4 +1,4 @@
-import os,re,bitplanelib,ast
+import os,re,bitplanelib,ast,pathlib
 from PIL import Image,ImageOps
 
 import shared
@@ -24,7 +24,7 @@ def ensure_empty(sd):
             if os.path.isfile(n):
                 os.remove(n)
     else:
-        os.mkdir(sd)
+        pathlib.Path(sd).mkdir(parents=True)
 
 dump_tiles = True
 dump_sprites = True
